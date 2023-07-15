@@ -1,0 +1,5 @@
+{
+  "C_Cpp.default.compilerPath": "/usr/bin/c++",
+  "C_Cpp.default.cppStandard": "c++98",
+  "C_Cpp.formatting": "vcFormat"
+}
