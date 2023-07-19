@@ -1,14 +1,19 @@
 PROJECT_NAME = Webserv
 NAME = webserv
 
-SRC_FILES = main.cpp
+SRC_FILES = Events/Events.cpp \
+						Socket/Events.cpp Socket/Exceptions.cpp \
+						Socket/Connection.cpp Socket/Socket.cpp \
+						main.cpp
 
 SRC_DIR = src
 
 SRCS = $(addprefix $(SRC_DIR)/, $(SRC_FILES))
 
+INCLUDES = -Iincludes
+
 CXX = c++
-CXXFLAGS = -I. -Wall -Wextra -Werror -std=c++98  -g -fsanitize=address
+CXXFLAGS = $(INCLUDES) -I. -Wall -Wextra -Werror -std=c++98  -g -fsanitize=address
 
 OBJ_DIR = objs
 OBJ_FILES = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
