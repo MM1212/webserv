@@ -65,14 +65,17 @@ namespace Socket
   class Connection {
   private:
     int clientId;
-    Server* server;
+    const Server* server;
     std::string address;
     int port;
     uint32_t timeout;
     uint32_t heartbeat;
+    Connection();
   public:
     std::string buffer;
-    Connection(int clientId, Server* server);
+    Connection(const int clientId, const Server* server);
+    Connection(const Connection& other);
+    Connection& operator=(const Connection& other);
     int getId() const;
     const Server* getServer() const;
     const std::string& getAddress() const;
@@ -88,19 +91,37 @@ namespace Socket
   };
 
   namespace Dispatch {
+    class StartedEvent : public Events::Event {
+    private:
+      const Server& sock;
+    public:
+      StartedEvent(const Server& sock);
+      ~StartedEvent();
+      const Server& getServer() const;
+    };
+
     class NewConnectionEvent : public Events::Event {
     private:
-      const Connection connection;
+      const Connection& connection;
     public:
       NewConnectionEvent(const Connection& connection);
       ~NewConnectionEvent();
-      inline const Connection& getConnection() const;
+      const Connection& getConnection() const;
+    };
+
+    class DisconnectedEvent : public Events::Event {
+    private:
+      const Connection& connection;
+    public:
+      DisconnectedEvent(const Connection& connection);
+      ~DisconnectedEvent();
+      const Connection& getConnection() const;
     };
 
     template <typename T>
     class DataEvent : public Events::Event {
     private:
-      Connection connection;
+      const Connection& connection;
       T data;
     public:
       DataEvent(const Connection& connection, const T& data)
@@ -115,25 +136,31 @@ namespace Socket
   }
 
   namespace Handling {
-    class NewConnectionHandler
-      : public Events::EventListener<void (*)(const Connection&)> {
+    class StartedHandler
+      : public Events::EventListener<Dispatch::StartedEvent> {
     public:
-      NewConnectionHandler(void (*callback)(const Connection&));
-      void onEvent(const Events::Event& ev) const;
+      StartedHandler(const Events::EventListener<Dispatch::StartedEvent>::Handler);
+      ~StartedHandler();
+    };
+    class NewConnectionHandler
+      : public Events::EventListener<Dispatch::NewConnectionEvent> {
+    public:
+      NewConnectionHandler(const Events::EventListener<Dispatch::NewConnectionEvent>::Handler);
+      ~NewConnectionHandler();
+    };
+
+    class DisconnectedHandler
+      : public Events::EventListener<Dispatch::DisconnectedEvent> {
+    public:
+      DisconnectedHandler(const Events::EventListener<Dispatch::DisconnectedEvent>::Handler);
+      ~DisconnectedHandler();
     };
 
     class RawDataHandler
-      : public Events::EventListener<void (*)(const Connection&, const std::string&)> {
+      : public Events::EventListener<Dispatch::DataEvent<std::string> > {
     public:
-      RawDataHandler(void (*callback)(const Connection&, const std::string&))
-        : Events::EventListener<void (*)(const Connection&, const std::string&)>(callback) {}
-      void onEvent(const Events::Event& e) const {
-        const Dispatch::DataEvent<std::string>& ev = dynamic_cast<const Dispatch::DataEvent<std::string>&>(e);
-        this->handler(ev.getConnection(), ev.getData());
-      }
-      void onEvent(const Dispatch::DataEvent<std::string>& ev) {
-        this->handler(ev.getConnection(), ev.getData());
-      }
+      RawDataHandler(const Events::EventListener<Dispatch::DataEvent<std::string> >::Handler);
+      ~RawDataHandler();
     };
   }
 
@@ -173,6 +200,8 @@ namespace Socket
     inline Domain::Handle getDomain() const;
     inline Type::Handle getType() const;
     inline Protocol::Handle getProtocol() const;
+    inline const std::string& getAddress() const;
+    int getPort() const;
     bool listen(
       const std::string& address,
       const int port,

@@ -11,7 +11,7 @@ namespace Events {
   private:
     Event();
     Event(const Event& other);
-    Event& operator=(const Event& other);
+    virtual Event& operator=(const Event& other);
   protected:
     Event(const std::string& type);
   public:
@@ -19,24 +19,38 @@ namespace Events {
     const std::string& getType() const;
   private:
     std::string type;
-
   };
 
   template <typename T>
   class EventListener {
-  protected:
-    T handler;
+  public:
+    typedef void (*Handler)(const T&);
   private:
-    EventListener() : handler(NULL) {}
-    EventListener(const EventListener<T>& other) : handler(other.handler) {}
+    std::string type;
+    Handler handler;
+  private:
+    EventListener() : type(""), handler(NULL) {}
+  protected:
+    EventListener(const std::string& _type, Handler _handler)
+      : type(_type), handler(_handler) {}
+  public:
+    EventListener(const EventListener<T>& other) : type(other.type), handler(other.handler) {}
     EventListener<T>& operator=(const EventListener<T>& other) {
+      this->type = other.type;
       this->handler = other.handler;
       return *this;
     }
-  public:
-    EventListener(T handler) : handler(handler) {}
     virtual ~EventListener() {}
-    virtual void onEvent(const Event& event) const = 0;
+    inline const std::string& getType() const {
+      return this->type;
+    }
+    inline const Handler getHandler() const {
+      return this->handler;
+    }
+    void onEvent(const Event& event) const {
+      const T& ev = dynamic_cast<const T&>(event);
+      this->handler(ev);
+    }
     inline void operator()(const Event& event) const {
       this->onEvent(event);
     }
@@ -46,19 +60,31 @@ namespace Events {
   public:
     EventDispatcher();
     virtual ~EventDispatcher();
-    void addEventListener(const std::string& type, EventListener<void*>* listener);
+    void addEventListener(const EventListener<Event>& listener);
     template <typename T>
-    inline void on(const std::string& type, T* listener) {
-      this->addEventListener(type, reinterpret_cast<EventListener<void*>*>(listener));
+    inline void on(const EventListener<T>& listener) {
+      const EventListener<Event>& l = reinterpret_cast<const EventListener<Event>&>(listener);
+      this->addEventListener(l);
     }
-    void removeEventListener(const std::string& type, EventListener<void*>* listener);
+    template <typename T, typename K>
+    inline void on(const K& handler) {
+      const T listener = T(handler);
+      this->on(listener);
+    }
+    void removeEventListener(const EventListener<Event>& listener);
     template <typename T>
-    inline void off(const std::string& type, T* listener) {
-      this->removeEventListener(type, reinterpret_cast<EventListener<void*>*>(listener));
+    inline void off(const EventListener<Event>& listener) {
+      const EventListener<Event>& l = reinterpret_cast<const EventListener<Event>&>(listener);
+      this->removeEventListener(l);
+    }
+    template <typename T, typename K>
+    inline void off(const K& handler) {
+      const T listener = T(handler);
+      this->off(listener);
     }
     void dispatchEvent(const Event& event) const;
     inline void emit(const Event& event) const;
   private:
-    std::map<std::string, std::vector<EventListener<void*>*> > listeners;
+    std::map<std::string, std::vector<EventListener<Event> > > listeners;
   };
 }

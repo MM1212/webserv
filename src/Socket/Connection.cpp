@@ -2,7 +2,7 @@
 
 using Socket::Connection;
 
-Connection::Connection(int clientId, Server* server)
+Connection::Connection(const int clientId, const Server* server)
   : clientId(clientId), server(server), address(""), port(0), timeout(0), heartbeat(0), buffer() {
   // TODO: Get address and port from client
   sockaddr_in clientAddress;
@@ -10,6 +10,21 @@ Connection::Connection(int clientId, Server* server)
   getpeername(clientId, (sockaddr*)&clientAddress, &clientAddressLength);
   this->address = inet_ntoa(clientAddress.sin_addr);
   this->port = ntohs(clientAddress.sin_port);
+}
+
+Connection::Connection(const Connection& other) {
+  *this = other;
+}
+
+Connection& Connection::operator=(const Connection& other) {
+  if (this == &other) return *this;
+  this->clientId = other.clientId;
+  this->server = other.server;
+  this->address = other.address;
+  this->port = other.port;
+  this->timeout = other.timeout;
+  this->heartbeat = other.heartbeat;
+  return *this;
 }
 
 int Connection::getId() const {
@@ -43,11 +58,8 @@ bool Connection::send(const T& data, const int flags, const int timeout) const {
 }
 
 bool Connection::disconnect() const {
-  if (this->isAlive()) {
-    SYS_CLOSE(this->clientId);
-    return true;
-  }
-  return false;
+  SYS_CLOSE(this->clientId);
+  return true;
 }
 
 void Connection::ping() {

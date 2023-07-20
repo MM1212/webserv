@@ -45,6 +45,14 @@ inline Socket::Protocol::Handle Server::getProtocol() const {
   return this->protocol;
 }
 
+inline const std::string& Server::getAddress() const {
+  return this->address;
+}
+
+int Server::getPort() const {
+  return this->port;
+}
+
 bool Server::listen(
   const std::string& address,
   const int port,
@@ -64,6 +72,7 @@ bool Server::listen(
   if (SYS_LISTEN(this->handleFd, backlog) < 0) {
     return false;
   }
+  this->dispatcher.dispatchEvent(Dispatch::StartedEvent(*this));
   while (1) {
     this->pollNewConnections();
     this->pollData();
@@ -85,9 +94,10 @@ bool Server::disconnect(const int clientId) {
 }
 
 bool Server::disconnect(const Connection& connection) {
-  std::cout << "disconnecting " << connection.getId() << std::endl;
-  if (connection.disconnect())
+  if (connection.disconnect()) {
+    this->dispatcher.dispatchEvent(Dispatch::DisconnectedEvent(connection));
     return this->clients.erase(connection) > 0;
+  }
   return false;
 }
 
@@ -129,11 +139,7 @@ Connection Server::acceptNewConnection() {
 
 void Server::pollNewConnections() {
   Connection connection = this->acceptNewConnection();
-  if (connection.getId() > 0) {
-    std::cout << "new connection from" << connection.getId() << " alive: " << connection.isAlive() << std::endl;
-  }
   if (connection.getId() > 0 && connection.isAlive()) {
-    std::cout << "new connection" << std::endl;
     this->clients.insert(connection);
     this->dispatcher.dispatchEvent(Dispatch::NewConnectionEvent(connection));
   }
@@ -186,7 +192,6 @@ void Server::pollData() {
     }
     else if (!connection.buffer.empty())
     {
-      std::cout << "dispatching event.." << std::endl;
       this->dispatcher.dispatchEvent(Dispatch::DataEvent<std::string>(connection, connection.buffer));
       connection.buffer.clear();
     }
