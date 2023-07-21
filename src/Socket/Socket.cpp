@@ -148,44 +148,20 @@ void Server::pollNewConnections() {
 void Server::pollData() {
   if (this->clients.empty())
     return;
-  // fd_set readFds, writeFds, errorFds;
-  // FD_ZERO(&readFds);
-  // FD_ZERO(&writeFds);
-  // FD_ZERO(&errorFds);
-  // int maxFd = this->clients.empty() ? this->handleFd : (this->clients.end()--)->getId();
-  // for (
-  //   std::set<Connection>::iterator it = this->clients.begin();
-  //   it != this->clients.end();
-  //   ++it
-  //   ) {
-  //   FD_SET(it->getId(), &readFds);
-  //   FD_SET(it->getId(), &writeFds);
-  //   FD_SET(it->getId(), &errorFds);
-  // }
-  // struct timeval waitd = {1, 0}; 
-  // select(maxFd + 1, &readFds, &writeFds, &errorFds, &waitd);
   for (
     std::set<Connection>::iterator it = this->clients.begin();
     it != this->clients.end();
     ++it
     ) {
     Connection& connection = const_cast<Connection&>(*it);
-    // if (FD_ISSET(it->getId(), &errorFds)) {
-    //   std::cout << "error on connection " << it->getId() << std::endl;
-    //   this->disconnect(connection);
-    //   continue;
-    // }
-    // if (FD_ISSET(it->getId(), &readFds)) {
-    //   std::cout << "reading data from " << it->getId() << std::endl;
-    //   if (this->connectionTimeout > 0) {
-    //     connection.ping();
-    //   }
-    char data[6];
-    bzero(data, sizeof(data));
+    char data[1024];
 
-    int bytes = recv(it->getId(), data, 5, 0);
+    int bytes = recv(it->getId(), data, 1024, 0);
     if (bytes > 0)
+    {
+      data[bytes] = '\0';
       connection.buffer.append(data, bytes);
+    }
     else if (bytes == 0) {
       this->disconnect(connection);
       continue;
@@ -195,6 +171,5 @@ void Server::pollData() {
       this->dispatcher.dispatchEvent(Dispatch::DataEvent<std::string>(connection, connection.buffer));
       connection.buffer.clear();
     }
-    // }
   }
 }

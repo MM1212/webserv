@@ -65,7 +65,7 @@ namespace Socket
   class Connection {
   private:
     int clientId;
-    const Server* server;
+    Server* server;
     std::string address;
     int port;
     uint32_t timeout;
@@ -73,16 +73,15 @@ namespace Socket
     Connection();
   public:
     std::string buffer;
-    Connection(const int clientId, const Server* server);
+    Connection(const int clientId, Server* server);
     Connection(const Connection& other);
     Connection& operator=(const Connection& other);
     int getId() const;
-    const Server* getServer() const;
+    Server* getServer() const;
     const std::string& getAddress() const;
     int getPort() const;
     bool isAlive() const;
-    template <typename T>
-    bool send(const T& data, const int flags, const int timeout) const;
+    bool send(const void* data, const uint32_t size, const int flags, const int timeout) const;
     bool disconnect() const;
     void ping();
     bool timedOut() const;

@@ -2,7 +2,7 @@
 
 using Socket::Connection;
 
-Connection::Connection(const int clientId, const Server* server)
+Connection::Connection(const int clientId, Server* server)
   : clientId(clientId), server(server), address(""), port(0), timeout(0), heartbeat(0), buffer() {
   // TODO: Get address and port from client
   sockaddr_in clientAddress;
@@ -31,7 +31,7 @@ int Connection::getId() const {
   return this->clientId;
 }
 
-const Socket::Server* Connection::getServer() const {
+Socket::Server* Connection::getServer() const {
   return this->server;
 }
 
@@ -49,11 +49,10 @@ bool Connection::isAlive() const {
   return !(pfd.revents & POLLERR);
 }
 
-template <typename T>
-bool Connection::send(const T& data, const int flags, const int timeout) const {
+bool Connection::send(const void* data, const uint32_t size, const int flags, const int timeout) const {
   (void)timeout;
   if (this->isAlive())
-    return SYS_SEND(this->clientId, &data, sizeof(T), flags) > 0;
+    return SYS_SEND(this->clientId, data, size, flags) > 0;
   return false;
 }
 
