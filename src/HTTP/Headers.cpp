@@ -51,3 +51,8 @@ std::string Headers::toString() const {
   }
   return result;
 }
+
+std::ostream& HTTP::operator<<(std::ostream& os, const Headers& headers) {
+  os << headers.toString();
+  return os;
+}
