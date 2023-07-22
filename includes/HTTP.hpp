@@ -174,8 +174,9 @@ namespace HTTP {
     std::map<std::string, std::map<Methods::Method, Route> > routes;
 
     void onData(const Socket::Dispatch::DataEvent<std::string>& ev);
+  public:
     class OnSocketDataHandler
-      : public Events::EventListener<Socket::Dispatch::DataEvent<std::string> > {
+      : public Events::EventListener {
     public:
       OnSocketDataHandler(
         Server* server

@@ -68,5 +68,17 @@
       "unordered_set": "cpp",
       "set": "cpp"
     }
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Launch",
+        "type": "cppdbg",
+        "request": "launch",
+        "cwd": "${workspaceRoot}",
+        "program": "${workspaceRoot}/webserv"
+      }
+    ]
   }
 }

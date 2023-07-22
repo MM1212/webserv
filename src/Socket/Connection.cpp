@@ -55,7 +55,8 @@ Connection::IO Connection::poll(const int timeout) const {
   return (Connection::IO){
     static_cast<bool>(pfd.revents & POLLIN),
     static_cast<bool>(pfd.revents & POLLOUT),
-    static_cast<bool>(pfd.revents & POLLERR)
+    static_cast<bool>(pfd.revents & POLLERR),
+    pfd.revents
   };
 }
 

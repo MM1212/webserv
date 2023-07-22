@@ -36,18 +36,18 @@ const Connection& DisconnectedEvent::getConnection() const {
   return this->connection;
 }
 
-StartedHandler::StartedHandler(const Events::EventListener<StartedEvent>::Handler handler)
-  : Events::EventListener<StartedEvent>("socket::started", handler) {}
+StartedHandler::StartedHandler(const Events::EventListener::Handler handler)
+  : Events::EventListener("socket::started", handler) {}
 StartedHandler::~StartedHandler() {}
 
-NewConnectionHandler::NewConnectionHandler(const Events::EventListener<NewConnectionEvent>::Handler handler)
-  : Events::EventListener<NewConnectionEvent>("socket::connection::on", handler) {}
+NewConnectionHandler::NewConnectionHandler(const Events::EventListener::Handler handler)
+  : Events::EventListener("socket::connection::on", handler) {}
 NewConnectionHandler::~NewConnectionHandler() {}
 
-DisconnectedHandler::DisconnectedHandler(const Events::EventListener<DisconnectedEvent>::Handler handler)
-  : Events::EventListener<DisconnectedEvent>("socket::connection::off", handler) {}
+DisconnectedHandler::DisconnectedHandler(const Events::EventListener::Handler handler)
+  : Events::EventListener("socket::connection::off", handler) {}
 DisconnectedHandler::~DisconnectedHandler() {}
 
-RawDataHandler::RawDataHandler(const Events::EventListener<Dispatch::DataEvent<std::string> >::Handler handler)
-  : Events::EventListener<Dispatch::DataEvent<std::string> >("socket::data", handler) {}
+RawDataHandler::RawDataHandler(const Events::EventListener::Handler handler)
+  : Events::EventListener("socket::data", handler) {}
 RawDataHandler::~RawDataHandler() {}

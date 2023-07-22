@@ -30,7 +30,8 @@ void Server::listen(
   const std::string& address,
   const int port
 ) {
-  this->socket.dispatcher.on(OnSocketDataHandler(this));
+  const OnSocketDataHandler listener(this);
+  this->socket.dispatcher.on<OnSocketDataHandler>(listener);
   this->socket.listen(address, port, 128, 500);
 }
 

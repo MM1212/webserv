@@ -69,7 +69,9 @@ namespace Socket
       bool read;
       bool write;
       bool error;
+      int raw;
     };
+
   private:
     int clientId;
     Server* server;
@@ -145,29 +147,29 @@ namespace Socket
 
   namespace Handling {
     class StartedHandler
-      : public Events::EventListener<Dispatch::StartedEvent> {
+      : public Events::EventListener {
     public:
-      StartedHandler(const Events::EventListener<Dispatch::StartedEvent>::Handler);
+      StartedHandler(const Events::EventListener::Handler);
       ~StartedHandler();
     };
     class NewConnectionHandler
-      : public Events::EventListener<Dispatch::NewConnectionEvent> {
+      : public Events::EventListener {
     public:
-      NewConnectionHandler(const Events::EventListener<Dispatch::NewConnectionEvent>::Handler);
+      NewConnectionHandler(const Events::EventListener::Handler);
       ~NewConnectionHandler();
     };
 
     class DisconnectedHandler
-      : public Events::EventListener<Dispatch::DisconnectedEvent> {
+      : public Events::EventListener {
     public:
-      DisconnectedHandler(const Events::EventListener<Dispatch::DisconnectedEvent>::Handler);
+      DisconnectedHandler(const Events::EventListener::Handler);
       ~DisconnectedHandler();
     };
 
     class RawDataHandler
-      : public Events::EventListener<Dispatch::DataEvent<std::string> > {
+      : public Events::EventListener {
     public:
-      RawDataHandler(const Events::EventListener<Dispatch::DataEvent<std::string> >::Handler);
+      RawDataHandler(const Events::EventListener::Handler);
       ~RawDataHandler();
     };
   }
@@ -222,3 +224,5 @@ namespace Socket
     bool close();
   };
 }
+
+std::ostream& operator<<(std::ostream& os, const Socket::Connection::IO& other);

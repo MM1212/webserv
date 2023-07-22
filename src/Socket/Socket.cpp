@@ -2,9 +2,18 @@
 #include "stdio.h"
 #include <errno.h>
 #include <string.h>
+#include <iomanip>
 
 using Socket::Server;
 using Socket::Connection;
+
+std::ostream& operator<<(std::ostream& os, const Connection::IO& io) {
+  return os <<
+    "IO(read: " << io.read << ", "
+    "write: " << io.write << ", "
+    "error: " << io.error << ", "
+    "raw: " << std::hex << io.raw << ")";
+}
 
 Server::Server(
   const Socket::Domain::Handle domain,
@@ -161,20 +170,24 @@ void Server::pollData() {
     }
     if (!io.read)
       continue;
+    std::cout << io << std::endl;
     char data[1024];
-
-    int bytes = recv(it->getId(), data, 1024, 0);
-    if (bytes > 0)
-    {
-      data[bytes] = '\0';
-      connection.buffer.append(data, bytes);
+    int bytes = 1;
+    while (bytes > 0) {
+      bytes = recv(it->getId(), data, 1024, 0);
+      if (bytes > 0)
+      {
+        data[bytes] = '\0';
+        connection.buffer.append(data, bytes);
+      }
     }
-    else if (bytes == 0) {
+    if (bytes == 0) {
       this->disconnect(connection);
       continue;
     }
     else if (!connection.buffer.empty())
     {
+      std::cout << "dispatching.." << std::endl;
       this->dispatcher.dispatchEvent(Dispatch::DataEvent<std::string>(connection, connection.buffer));
       connection.buffer.clear();
     }

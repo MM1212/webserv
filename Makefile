@@ -17,7 +17,7 @@ SRCS = $(addprefix $(SRC_DIR)/, $(SRC_FILES))
 INCLUDES = -Iincludes
 
 CXX = c++
-CXXFLAGS = $(INCLUDES) -I. -Wall -Wextra -Werror -std=c++98  -g -fsanitize=address
+CXXFLAGS = $(INCLUDES) -I. -Wall -Wextra -Werror -std=c++98  -g
 
 OBJ_DIR = objs
 OBJ_FILES = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
