@@ -45,8 +45,18 @@ int Connection::getPort() const {
 
 bool Connection::isAlive() const {
   pollfd pfd = { this->clientId, POLLERR, 0 };
-  poll(&pfd, 1, 0);
+  SYS_POLL(&pfd, 1, 0);
   return !(pfd.revents & POLLERR);
+}
+
+Connection::IO Connection::poll(const int timeout) const {
+  pollfd pfd = { this->clientId, POLLIN | POLLOUT | POLLERR, 0 };
+  SYS_POLL(&pfd, 1, timeout);
+  return (Connection::IO){
+    static_cast<bool>(pfd.revents & POLLIN),
+    static_cast<bool>(pfd.revents & POLLOUT),
+    static_cast<bool>(pfd.revents & POLLERR)
+  };
 }
 
 bool Connection::send(const void* data, const uint32_t size, const int flags, const int timeout) const {

@@ -1,5 +1,6 @@
 #include <Socket.hpp>
 #include <cstdlib>
+#include <utils/misc.hpp>
 
 namespace HTTP {
   struct Methods {
@@ -9,6 +10,7 @@ namespace HTTP {
       PUT,
       DELETE
     };
+    static Method fromString(const std::string& str);
   };
 
   class Server;
@@ -39,12 +41,12 @@ namespace HTTP {
   public:
     Request(
       Server* server,
+      Socket::Connection* client,
       Methods::Method method,
       const std::string& path,
       const std::string& body,
       const std::string& protocol,
-      const Headers& headers,
-      const std::map<std::string, std::string>& params
+      const Headers& headers
     );
     ~Request();
     Request(const Request& other);
@@ -65,20 +67,20 @@ namespace HTTP {
     }
 
     template <typename T>
-    const T getParam(const std::string& key) const {
+    T getParam(const std::string& key) const {
       return static_cast<T>(this->params.at(key));
     }
     template <>
-    const std::string getParam<std::string>(const std::string& key) const {
+    std::string getParam<std::string>(const std::string& key) const {
       return this->params.at(key);
     }
     template <>
-    const int getParam<int>(const std::string& key) const {
+    int getParam<int>(const std::string& key) const {
       return atoi(this->params.at(key).c_str());
     }
 
     template <>
-    const bool getParam<bool>(const std::string& key) const {
+    bool getParam<bool>(const std::string& key) const {
       return this->params.at(key) == "true";
     }
 
@@ -114,7 +116,6 @@ namespace HTTP {
 
     operator std::string();
     std::string toString() const;
-    void sendBody();
     void send();
     template <typename T>
     void send(const T& body) {
@@ -129,11 +130,10 @@ namespace HTTP {
     std::string body;
     uint32_t status;
     std::string statusMessage;
-    bool headersSent;
+    bool sent;
 
     void init();
     std::string getHeader() const;
-    bool sendHead();
   };
 
   class Route {
@@ -159,9 +159,31 @@ namespace HTTP {
   class Server {
   public:
     Server();
+    ~Server();
     Server(const Server& other);
     Server& operator=(const Server& other);
+    void listen(
+      const std::string& address,
+      const int port
+    );
+
+    Events::EventDispatcher& getSocketDispatcher();
   private:
-    Socket::Server& socket;
+    Socket::Server socket;
+    // Path -> Method -> Handler
+    std::map<std::string, std::map<Methods::Method, Route> > routes;
+
+    void onData(const Socket::Dispatch::DataEvent<std::string>& ev);
+    class OnSocketDataHandler
+      : public Events::EventListener<Socket::Dispatch::DataEvent<std::string> > {
+    public:
+      OnSocketDataHandler(
+        Server* server
+      );
+      ~OnSocketDataHandler();
+      virtual void onEvent(const Events::Event& ev) const;
+    private:
+      Server* server;
+    };
   };
 }

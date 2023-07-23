@@ -154,6 +154,13 @@ void Server::pollData() {
     ++it
     ) {
     Connection& connection = const_cast<Connection&>(*it);
+    Connection::IO io = connection.poll(this->connectionTimeout);
+    if (io.error) {
+      this->disconnect(connection);
+      continue;
+    }
+    if (!io.read)
+      continue;
     char data[1024];
 
     int bytes = recv(it->getId(), data, 1024, 0);

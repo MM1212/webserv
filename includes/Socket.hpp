@@ -21,6 +21,7 @@
 #define SYS_ACCEPT ::accept
 #define SYS_CLOSE ::close
 #define SYS_FNCTL ::fcntl
+#define SYS_POLL ::poll
 
 namespace Socket
 {
@@ -63,6 +64,12 @@ namespace Socket
 
   class Server;
   class Connection {
+  public:
+    struct IO {
+      bool read;
+      bool write;
+      bool error;
+    };
   private:
     int clientId;
     Server* server;
@@ -80,7 +87,9 @@ namespace Socket
     Server* getServer() const;
     const std::string& getAddress() const;
     int getPort() const;
+    // @deprecated
     bool isAlive() const;
+    IO poll(const int timeout) const;
     bool send(const void* data, const uint32_t size, const int flags, const int timeout) const;
     bool disconnect() const;
     void ping();

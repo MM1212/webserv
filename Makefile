@@ -2,9 +2,12 @@ PROJECT_NAME = Webserv
 NAME = webserv
 
 SRC_FILES = Events/Events.cpp \
-						utils/Logger.cpp \
+						utils/Logger.cpp utils/misc.cpp \
 						Socket/Events.cpp Socket/Exceptions.cpp \
 						Socket/Connection.cpp Socket/Socket.cpp \
+						HTTP/Methods.cpp HTTP/Headers.cpp HTTP/Events.cpp \
+						HTTP/Request.cpp HTTP/Response.cpp \
+						HTTP/Route.cpp HTTP/Server.cpp \
 						main.cpp
 
 SRC_DIR = src

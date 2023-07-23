@@ -47,7 +47,7 @@ namespace Events {
     inline const Handler getHandler() const {
       return this->handler;
     }
-    void onEvent(const Event& event) const {
+    void virtual onEvent(const Event& event) const {
       const T& ev = dynamic_cast<const T&>(event);
       this->handler(ev);
     }

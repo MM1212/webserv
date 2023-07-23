@@ -35,6 +35,7 @@ void Response::init() {
     this->headers.append("Connection", this->req.getHeaders().get("Connection"));
   else
     this->headers.append("Connection", "close");
+  this->headers.append("Content-Length", 0);
 }
 
 
@@ -99,20 +100,10 @@ std::string Response::toString() const {
   return ss.str();
 }
 
-bool Response::sendHead() {
-  if (this->headersSent) return true;
-  this->headersSent = true;
-  const std::string header = this->getHeader();
-  return this->req.getClient().send(header.c_str(), header.length(), 0, 0);
-}
-
-void Response::sendBody() {
-  if (!this->headersSent) return this->send();
-  this->req.getClient().send(this->body.c_str(), this->body.length(), 0, 0);
-}
-
 void Response::send() {
-  if (!this->sendHead()) return;
-  this->sendBody();
+  if (this->sent) return;
+  const std::string resp = this->toString();
+  if (this->req.getClient().send(resp.c_str(), resp.length(), 0, 0))
+    this->sent = true;
 }
 
