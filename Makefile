@@ -7,7 +7,7 @@ SRC_FILES = utils/Logger.cpp utils/misc.cpp \
 						Socket/Connection.cpp Socket/Server.cpp \
 						HTTP/Methods.cpp HTTP/Headers.cpp HTTP/Events.cpp \
 						HTTP/Request.cpp HTTP/Response.cpp HTTP/WebSocket.cpp \
-						HTTP/Route.cpp HTTP/Server.cpp \
+						HTTP/Route.cpp HTTP/Router.cpp HTTP/Server.cpp \
 						main.cpp
 
 SRC_DIR = src

@@ -5,24 +5,20 @@ using HTTP::Methods;
 
 Route::Route(
   Methods::Method method,
-  const std::string& path,
-  Handler handler
+  const std::string& path
 ) :
   method(method),
-  path(path),
-  handler(handler) {}
+  path(path) {}
 
 Route::Route(const Route& other) :
   method(other.method),
-  path(other.path),
-  handler(other.handler) {}
+  path(other.path) {}
 
 Route::~Route() {}
 
 Route& Route::operator=(const Route& other) {
   this->path = other.path;
   this->method = other.method;
-  this->handler = other.handler;
   return *this;
 }
 
@@ -42,6 +38,10 @@ const std::string& Route::getPath() const {
   return this->path;
 }
 
-Route::Handler Route::getHandler() const {
-  return this->handler;
+void Route::setMethod(Methods::Method method) {
+  this->method = method;
+}
+
+void Route::setPath(const std::string& path) {
+  this->path = path;
 }

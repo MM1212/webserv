@@ -35,25 +35,11 @@ Node::Node(const Node& other)
 }
 
 std::ostream& operator<<(std::ostream& os, const Node& node) {
-  os << "Node(key: " << node.getKey() << ", type: " << Types::GetLabel(node.getType());
-  switch (node.getType()) {
-  case Types::Scalar:
-    os << ", value: " << node.getValue();
-    break;
-  case Types::Sequence:
-  case Types::Map:
-    os << ", size: " << node.size();
-    break;
-  case Types::Undefined:
-  case Types::Null:
-  default:
-    break;
-  }
-  return os << ");";
+  return os << node.toString();
 }
 
 const Node& Node::operator[](const std::string& key) const {
-  if (!this->isMap())
+  if (!this->is<Types::Map>())
     throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
   if (this->map.count(key) == 0)
     throw std::runtime_error("Key not found: " + key);
@@ -61,7 +47,7 @@ const Node& Node::operator[](const std::string& key) const {
 }
 
 const Node& Node::operator[](const size_t idx) const {
-  if (!this->isSequence())
+  if (!this->is<Types::Sequence>())
     throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
   if (idx >= this->sequence.size())
     throw std::runtime_error("Index out of bounds");
@@ -69,7 +55,7 @@ const Node& Node::operator[](const size_t idx) const {
 }
 
 Node& Node::operator[](const std::string& key) {
-  if (!this->isMap())
+  if (!this->is<Types::Map>())
     throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
   if (this->map.count(key) == 0)
     this->map[key].setKey(key);
@@ -77,11 +63,35 @@ Node& Node::operator[](const std::string& key) {
 }
 
 Node& Node::operator[](const size_t idx) {
-  if (!this->isSequence())
+  if (!this->is<Types::Sequence>())
     throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
   if (idx > this->size())
     this->sequence[idx] = Node(Utils::toString(idx));
   return this->sequence[idx];
+}
+
+std::string Node::toString() const {
+  std::stringstream ss;
+  ss << "Node(key: " << this->getKey() << ", type: " << Types::GetLabel(this->getType());
+  switch (this->getType()) {
+  case Types::Scalar:
+    ss << ", value: " << this->getValue();
+    break;
+  case Types::Sequence:
+  case Types::Map:
+    ss << ", size: " << this->size();
+    break;
+  case Types::Undefined:
+  case Types::Null:
+  default:
+    break;
+  }
+  ss << ");";
+  return ss.str();
+}
+
+Node::operator std::string() const {
+  return this->toString();
 }
 
 uint32_t Node::size() const {
@@ -112,13 +122,13 @@ const Node& Node::insert(const Node& node) {
 }
 
 void Node::remove(const std::string& key) {
-  if (!this->isMap())
+  if (!this->is<Types::Map>())
     throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
   this->map.erase(key);
 }
 
 void Node::remove(size_t idx) {
-  if (!this->isSequence())
+  if (!this->is<Types::Sequence>())
     throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
   this->remove<Sequence>(this->begin<Sequence>() + idx);
 }

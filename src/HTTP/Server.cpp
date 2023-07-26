@@ -10,21 +10,25 @@ using HTTP::Headers;
 
 Server::Server()
   :
-  routes(), socket(this),
-   log("Webserv")
-{}
+  router(),
+  socket(this),
+  log("Webserv") {
+  this->loadStatusCodes();
+}
 
 Server::Server(const Server& other)
   :
-  routes(other.routes),
+  router(),
   socket(other.socket),
-  log(other.log) {}
+  log(other.log) {
+  this->loadStatusCodes();
+}
 
 Server::~Server() {}
 
 Server& Server::operator=(const Server& other) {
   this->socket = other.socket;
-  this->routes = other.routes;
+  this->router = other.router;
   this->log = other.log;
   return *this;
 }
@@ -48,21 +52,7 @@ void Server::onDisconnected(Socket::Connection& connection) {
   std::cout << "Disconnected from " << connection.getAddress() << ":" << connection.getPort() << std::endl;
 }
 
-template <typename T>
-void print_container(const std::vector<T>& c)
-{
-  std::cout << "The container c contains:" << std::endl;
-  for (size_t i = 0; i < c.size(); ++i)
-    std::cout << c[i] << " ";
-  std::cout << '\n';
-
-  std::cout << "End of container." << std::endl;
-
-}
-
 void Server::onData(Socket::Connection& connection, const std::string& buffer) {
-  std::cout << "onData" << std::endl;
-  std::cout << buffer << std::endl;
   std::vector<std::string> head_body = Utils::split(buffer, "\r\n\r\n");
   if (head_body.size() < 1) {
     this->log.error("Invalid request");
@@ -95,7 +85,6 @@ void Server::onData(Socket::Connection& connection, const std::string& buffer) {
     std::string value = it->substr(pos + 2);
     headers.append(key, value);
   }
-  std::cout << headers << std::endl;
   Request req(
     const_cast<Server*>(this),
     const_cast<Socket::Connection*>(&connection),
@@ -107,11 +96,16 @@ void Server::onData(Socket::Connection& connection, const std::string& buffer) {
   );
   Response res(req);
 
-  std::map<Methods::Method, Route>& routes = this->routes[req.getPath()];
-  if (routes.count(req.getMethod()) == 0) {
-    res.setStatus(404, "Not Found").send();
-    return;
+  this->router.run(req, res);
+}
+
+void Server::loadStatusCodes() {
+  try {
+    this->statusCodes = YAML::LoadFile("config/bin/status.yaml");
+    if (!this->statusCodes.is<YAML::Types::Map>())
+      throw std::runtime_error("Expected a Map, got: " + this->statusCodes.toString());
   }
-  Route& route = routes.at(req.getMethod());
-  route.getHandler()(req, res);
+  catch (const std::exception& e) {
+    throw std::runtime_error("Failed to load HTTP status codes: " + std::string(e.what()));
+  }
 }

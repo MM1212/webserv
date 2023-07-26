@@ -112,7 +112,7 @@ void Parser::parse(bool skipIndent) {
   if (this->doc.peek() == '-') {
     this->doc.ignore();
     // std::cout << "handling sequence entry @ " << std::dec << this->doc.peek() << std::endl;
-    if (!this->current->isSequence()) {
+    if (!this->current->is<Types::Sequence>()) {
       *this->current = Node::NewSequence(this->current->key);
       this->current->indent = indent;
     }
@@ -127,7 +127,7 @@ void Parser::parse(bool skipIndent) {
   if (this->doc.peek() == ':') {
     this->doc.ignore();
     // std::cout << "handling map entry @ " << std::dec << this->doc.peek() << std::endl;
-    if (!this->current->isMap()) {
+    if (!this->current->is<Types::Map>()) {
       *this->current = Node::NewMap(this->current->key);
       this->current->indent = indent;
     }
@@ -144,7 +144,7 @@ void Parser::parse(bool skipIndent) {
   }
   Node node = Node::NewScalar(this->scalar, key);
   node.indent = indent;
-  if (this->current->isNull())
+  if (this->current->is<Types::Null>())
     *this->current = node;
   else
     this->current->insert(node);

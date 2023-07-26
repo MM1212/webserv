@@ -97,6 +97,9 @@ namespace YAML {
     Node& operator[](const std::string& key);
     Node& operator[](const size_t index);
 
+    std::string toString() const;
+    operator std::string() const;
+
     template <typename T>
     T as() const {
       T value;
@@ -120,17 +123,15 @@ namespace YAML {
         throw std::runtime_error("Expected a boolean, got: " + this->value);
     }
 
+    template <Types::Type T>
+    inline bool is() const { return this->type == T; }
     inline bool isValid() const { return this->type != Types::Undefined; };
-    inline bool isNull() const { return this->type == Types::Null; }
-    inline bool isScalar() const { return this->type == Types::Scalar; }
-    inline bool isSequence() const { return this->type == Types::Sequence; }
-    inline bool isMap() const { return this->type == Types::Map; }
 
     inline void setKey(const std::string& key) { this->key = key; };
 
     template <typename T>
     Node& operator=(const T& val) {
-      if (!this->isScalar())
+      if (!this->is<Types::Scalar>())
         throw std::runtime_error("Node is not a scalar");
       std::stringstream ss;
       ss << val;
@@ -152,7 +153,7 @@ namespace YAML {
 
     template <>
     Node& operator=(const Map& other) {
-      if (!this->isMap())
+      if (!this->is<Types::Map>())
         throw std::runtime_error("Node is not a map");
       this->map = other;
       return *this;
@@ -160,7 +161,7 @@ namespace YAML {
 
     template <>
     Node& operator=(const Sequence& other) {
-      if (!this->isSequence())
+      if (!this->is<Types::Sequence>())
         throw std::runtime_error("Node is not a sequence");
       this->sequence = other;
       return *this;
@@ -177,50 +178,50 @@ namespace YAML {
 
     template <>
     inline Map::const_iterator begin<Map>() const {
-      if (!this->isMap())
+      if (!this->is<Types::Map>())
         throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
       return this->map.begin();
     }
     template <>
     inline Sequence::const_iterator begin<Sequence>() const {
-      if (!this->isSequence())
+      if (!this->is<Types::Sequence>())
         throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
       return this->sequence.begin();
     }
     template <>
     inline Map::iterator begin<Map>() {
-      if (!this->isMap())
+      if (!this->is<Types::Map>())
         throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
       return this->map.begin();
     }
     template <>
     inline Sequence::iterator begin<Sequence>() {
-      if (!this->isSequence())
+      if (!this->is<Types::Sequence>())
         throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
       return this->sequence.begin();
     }
 
     template <>
     inline Map::const_iterator end<Map>() const {
-      if (!this->isMap())
+      if (!this->is<Types::Map>())
         throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
       return this->map.end();
     }
     template <>
     inline Sequence::const_iterator end<Sequence>() const {
-      if (!this->isSequence())
+      if (!this->is<Types::Sequence>())
         throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
       return this->sequence.end();
     }
     template <>
     inline Map::iterator end<Map>() {
-      if (!this->isMap())
+      if (!this->is<Types::Map>())
         throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
       return this->map.end();
     }
     template <>
     inline Sequence::iterator end<Sequence>() {
-      if (!this->isSequence())
+      if (!this->is<Types::Sequence>())
         throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
       return this->sequence.end();
     }
@@ -248,6 +249,12 @@ namespace YAML {
     template <>
     inline Node& last<Sequence>() {
       return *this->sequence.rbegin();
+    }
+
+    inline bool has(const std::string& key) const {
+      if (!this->is<Types::Map>())
+        throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+      return this->map.count(key) > 0;
     }
 
     const Node& insert(const Node& node);

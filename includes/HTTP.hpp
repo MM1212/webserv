@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <utils/misc.hpp>
 #include <utils/Logger.hpp>
+#include <Yaml.hpp>
 
 namespace HTTP {
   class Server;
@@ -30,8 +31,6 @@ namespace HTTP {
     };
     static Method fromString(const std::string& str);
   };
-
-  class Server;
 
   class Headers {
   public:
@@ -127,9 +126,9 @@ namespace HTTP {
 
     Response& setHeaders(const Headers& headers);
     Response& setBody(const std::string& body);
-    Response& setStatus(uint32_t status);
-    Response& setStatus(uint32_t status, const std::string& message);
-
+    Response& status(uint32_t status);
+    Response& status(uint32_t status, const std::string& message);
+    
     const Headers& getHeaders() const;
     const std::string& getBody() const;
     uint32_t getStatus() const;
@@ -149,7 +148,7 @@ namespace HTTP {
     const Request& req;
     Headers headers;
     std::string body;
-    uint32_t status;
+    uint32_t statusCode;
     std::string statusMessage;
     bool sent;
 
@@ -158,26 +157,66 @@ namespace HTTP {
 
   };
 
+  class Router;
+
   class Route {
   public:
-    typedef void (*Handler)(Request& req, Response& res);
-    Route(Methods::Method method, const std::string& path, Handler handler);
+    Route(Methods::Method method, const std::string& path);
     Route(const Route& other);
-    ~Route();
+    virtual ~Route();
     Route& operator=(const Route& other);
 
     operator std::string();
     operator Methods::Method();
 
     Methods::Method getMethod() const;
+    void setMethod(Methods::Method method);
     const std::string& getPath() const;
-    Handler getHandler() const;
+    void setPath(const std::string& path);
   private:
     Methods::Method method;
     std::string path;
-    Handler handler;
     Route();
+    virtual void run(Request& req, Response& res) const = 0;
+
+    friend class Router;
   };
+  class Router {
+  public:
+    class NotFoundException : std::exception {
+    public:
+      const char* what() const throw() {
+        return "Route not found";
+      }
+    };
+  public:
+    Router();
+    ~Router();
+    Router(const Router& other);
+    Router& operator=(const Router& other);
+
+    const Route& search(const std::string& path, Methods::Method method) const;
+    bool has(const std::string& path, Methods::Method method) const;
+    bool has(const std::string& path) const;
+    bool has(const Route& route) const;
+    bool add(const Route& route);
+    template <typename T>
+    bool add() {
+      const T route;
+      return this->add(route);
+    }
+    bool get(Route& route);
+    bool post(Route& route);
+    bool put(Route& route);
+    bool del(Route& route);
+  private:
+    void run(Request& req, Response& res) const;
+
+    std::map<std::string, std::map<Methods::Method, Route*> > routes;
+
+    friend class Server;
+  };
+
   class Server {
   public:
     Server();
@@ -189,18 +228,19 @@ namespace HTTP {
       const int port
     );
 
-    Events::Dispatcher& getSocketDispatcher();
-    // Path -> Method -> Handler
-    std::map<std::string, std::map<Methods::Method, Route> > routes;
+    Router router;
   private:
     WebSocket socket;
     Utils::Logger log;
+    YAML::Node statusCodes;
 
 
     void onStart();
     void onNewConnection(Socket::Connection& connection);
     void onDisconnected(Socket::Connection& connection);
     void onData(Socket::Connection& connection, const std::string& buffer);
+
+    void loadStatusCodes();
 
     friend class WebSocket;
     friend class Request;

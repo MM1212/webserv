@@ -11,7 +11,7 @@ Response::Response(const Request& request)
   req(request),
   headers(),
   body(),
-  status(-1),
+  statusCode(-1),
   statusMessage() {
   this->init();
 }
@@ -23,7 +23,7 @@ Response::Response(const Response& other)
   req(other.req),
   headers(other.headers),
   body(other.body),
-  status(other.status),
+  statusCode(other.statusCode),
   statusMessage(other.statusMessage) {
   this->init();
 }
@@ -50,13 +50,18 @@ Response& Response::setBody(const std::string& body) {
   return *this;
 }
 
-Response& Response::setStatus(uint32_t status) {
-  this->status = status;
+Response& Response::status(uint32_t status) {
+  this->statusCode = status;
+  std::string statusCodeStr = Utils::toString(status);
+  if (this->req.server->statusCodes.has(statusCodeStr))
+    this->statusMessage = this->req.server->statusCodes[statusCodeStr].as<std::string>();
+  else
+    this->statusMessage = "";
   return *this;
 }
 
-Response& Response::setStatus(uint32_t status, const std::string& message) {
-  this->status = status;
+Response& Response::status(uint32_t status, const std::string& message) {
+  this->statusCode = status;
   this->statusMessage = message;
   return *this;
 }
@@ -70,7 +75,7 @@ const std::string& Response::getBody() const {
 }
 
 uint32_t Response::getStatus() const {
-  return status;
+  return statusCode;
 }
 
 const std::string& Response::getStatusMessage() const {
@@ -85,7 +90,7 @@ std::string Response::getHeader() const {
   std::stringstream ss;
   ss
     << req.getProtocol() << " "
-    << this->status << " "
+    << this->statusCode << " "
     << this->statusMessage << "\r\n"
     << headers;
 
