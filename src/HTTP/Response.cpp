@@ -35,7 +35,7 @@ void Response::init() {
     this->headers.append("Connection", this->req.getHeaders().get("Connection"));
   else
     this->headers.append("Connection", "close");
-  this->headers.append("Content-Length", 0);
+  this->headers.append("Content-Length", "0");
 }
 
 
@@ -96,13 +96,16 @@ std::string Response::toString() const {
   std::stringstream ss;
   ss << this->getHeader()
     << "\r\n"
-    << this->body;
+    << this->body
+    << "\r\n";
   return ss.str();
 }
 
 void Response::send() {
+  this->req.server->log.debug("Sending response: \n%d\n", this->sent);
   if (this->sent) return;
   const std::string resp = this->toString();
+  this->req.server->log.debug("Sending response: \n%s\n", resp.c_str());
   if (this->req.getClient().send(resp.c_str(), resp.length(), 0, 0))
     this->sent = true;
 }

@@ -121,7 +121,7 @@ void Logger::logToFile(const std::string& str) {
 
 // manually parse fmt
 void Logger::doLog(const Levels::Level& level, const std::string& fmt, va_list args) {
-  if (level > this->config.level) return;
+  if (this->config.level > level ) return;
   const Color& color = this->getColor(level);
   std::stringstream stream;
   stream << this->getHeader(color);

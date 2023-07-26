@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iomanip>
 #include <stdint.h>
+#include <stdarg.h>
 
 # define COLORS_RESET "\033[0m"
 # define COLORS_RED "\033[0;31m"

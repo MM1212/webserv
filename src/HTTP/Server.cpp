@@ -10,67 +10,95 @@ using HTTP::Headers;
 
 Server::Server()
   :
-  socket(Socket::Domain::INET, Socket::Type::TCP, Socket::Protocol::IP),
-  routes() {}
+  routes(), socket(this),
+   log("Webserv")
+{}
 
 Server::Server(const Server& other)
   :
+  routes(other.routes),
   socket(other.socket),
-  routes(other.routes) {}
+  log(other.log) {}
 
 Server::~Server() {}
 
 Server& Server::operator=(const Server& other) {
   this->socket = other.socket;
   this->routes = other.routes;
+  this->log = other.log;
   return *this;
 }
 
-void Server::listen(
+bool Server::listen(
   const std::string& address,
   const int port
 ) {
-  const OnSocketDataHandler listener(this);
-  this->socket.dispatcher.on<OnSocketDataHandler>(listener);
-  this->socket.listen(address, port, 128, 500);
+  return this->socket.listen(address, port, 128, 500);
 }
 
-Events::EventDispatcher& Server::getSocketDispatcher() {
-  return this->socket.dispatcher;
+void Server::onStart() {
+  std::cout << "Listening on " << this->socket.getAddress() << ":" << this->socket.getPort() << std::endl;
 }
 
-void Server::onData(const Socket::Dispatch::DataEvent<std::string>& ev) {
+void Server::onNewConnection(Socket::Connection& connection) {
+  std::cout << "New connection from " << connection.getAddress() << ":" << connection.getPort() << std::endl;
+}
+
+void Server::onDisconnected(Socket::Connection& connection) {
+  std::cout << "Disconnected from " << connection.getAddress() << ":" << connection.getPort() << std::endl;
+}
+
+template <typename T>
+void print_container(const std::vector<T>& c)
+{
+  std::cout << "The container c contains:" << std::endl;
+  for (size_t i = 0; i < c.size(); ++i)
+    std::cout << c[i] << " ";
+  std::cout << '\n';
+
+  std::cout << "End of container." << std::endl;
+
+}
+
+void Server::onData(Socket::Connection& connection, const std::string& buffer) {
   std::cout << "onData" << std::endl;
-  std::cout << ev.getData() << std::endl;
-  std::vector<std::string> head_body = Utils::split(ev.getData(), "\r\n\r\n");
+  std::cout << buffer << std::endl;
+  std::vector<std::string> head_body = Utils::split(buffer, "\r\n\r\n");
   if (head_body.size() < 1) {
-    ev.getConnection().disconnect();
+    this->log.error("Invalid request");
+    connection.disconnect();
     return;
   }
   std::vector<std::string> head = Utils::split(head_body[0], "\r\n");
   if (head.size() < 1) {
-    ev.getConnection().disconnect();
+    this->log.error("Invalid head size");
+    connection.disconnect();
     return;
   }
   std::string first_line = head[0];
   head.erase(head.begin());
   std::vector<std::string> first_line_parts = Utils::split(first_line, " ");
   if (first_line_parts.size() < 3) {
-    ev.getConnection().disconnect();
+    this->log.error("Invalid first line size");
+    connection.disconnect();
     return;
   }
   Headers headers;
   for (std::vector<std::string>::iterator it = head.begin(); it != head.end(); ++it) {
-    size_t pos = it->find(": ");
+    size_t pos = it->find_first_of(": ");
     if (pos == std::string::npos) {
-      ev.getConnection().disconnect();
+      this->log.error("Invalid header format in %s", it->c_str());
+      connection.disconnect();
       return;
     }
-    headers.append(it->substr(0, pos), it->substr(pos + 2));
+    std::string key = it->substr(0, pos);
+    std::string value = it->substr(pos + 2);
+    headers.append(key, value);
   }
+  std::cout << headers << std::endl;
   Request req(
     const_cast<Server*>(this),
-    const_cast<Socket::Connection*>(&ev.getConnection()),
+    const_cast<Socket::Connection*>(&connection),
     Methods::fromString(first_line_parts[0]),
     first_line_parts[1],
     head_body[1],
@@ -78,6 +106,7 @@ void Server::onData(const Socket::Dispatch::DataEvent<std::string>& ev) {
     headers
   );
   Response res(req);
+
   std::map<Methods::Method, Route>& routes = this->routes[req.getPath()];
   if (routes.count(req.getMethod()) == 0) {
     res.setStatus(404, "Not Found").send();

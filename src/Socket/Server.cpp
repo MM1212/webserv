@@ -27,8 +27,7 @@ Server::Server(
   port(0),
   address(""),
   clients(),
-  connectionTimeout(0),
-  dispatcher() {
+  connectionTimeout(0) {
   this->handleFd = socket(this->domain, this->type, this->protocol);
   if (this->handleFd < 0) {
     throw Errors::FailedToCreateSocket();
@@ -40,26 +39,6 @@ Server::Server(
 Server::~Server() {
   std::cout << "closing server .." << std::endl;
   this->close();
-}
-
-inline Socket::Domain::Handle Server::getDomain() const {
-  return this->domain;
-}
-
-inline Socket::Type::Handle Server::getType() const {
-  return this->type;
-}
-
-inline Socket::Protocol::Handle Server::getProtocol() const {
-  return this->protocol;
-}
-
-inline const std::string& Server::getAddress() const {
-  return this->address;
-}
-
-int Server::getPort() const {
-  return this->port;
 }
 
 bool Server::listen(
@@ -81,7 +60,7 @@ bool Server::listen(
   if (SYS_LISTEN(this->handleFd, backlog) < 0) {
     return false;
   }
-  this->dispatcher.dispatchEvent(Dispatch::StartedEvent(*this));
+  this->onStarted();
   while (1) {
     this->pollNewConnections();
     this->pollData();
@@ -104,7 +83,7 @@ bool Server::disconnect(const int clientId) {
 
 bool Server::disconnect(const Connection& connection) {
   if (connection.disconnect()) {
-    this->dispatcher.dispatchEvent(Dispatch::DisconnectedEvent(connection));
+    this->onDisconnected(const_cast<Connection&>(connection));
     return this->clients.erase(connection) > 0;
   }
   return false;
@@ -150,7 +129,7 @@ void Server::pollNewConnections() {
   Connection connection = this->acceptNewConnection();
   if (connection.getId() > 0 && connection.isAlive()) {
     this->clients.insert(connection);
-    this->dispatcher.dispatchEvent(Dispatch::NewConnectionEvent(connection));
+    this->onNewConnection(const_cast<Connection&>(connection));
   }
 }
 
@@ -188,7 +167,7 @@ void Server::pollData() {
     else if (!connection.buffer.empty())
     {
       std::cout << "dispatching.." << std::endl;
-      this->dispatcher.dispatchEvent(Dispatch::DataEvent<std::string>(connection, connection.buffer));
+      this->onData(connection, connection.buffer);
       connection.buffer.clear();
     }
   }

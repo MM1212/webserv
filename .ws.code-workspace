@@ -1,8 +1,8 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
+  "folders": [
+    {
+      "path": "."
+    }
   ],
   "settings": {
     "files.associations": {
@@ -77,7 +77,18 @@
         "type": "cppdbg",
         "request": "launch",
         "cwd": "${workspaceRoot}",
-        "program": "${workspaceRoot}/webserv"
+        "program": "${workspaceRoot}/webserv",
+        "preLaunchTask": "Build"
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Build",
+        "command": "make", // Could be any other shell command
+        "args": []
       }
     ]
   }

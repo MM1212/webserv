@@ -2,6 +2,7 @@
 #include <error.h>
 #include <stdio.h>
 #include <utils/Logger.hpp>
+#include <Yaml.hpp>
 
 Utils::Logger log("Test");
 
@@ -59,10 +60,27 @@ Utils::Logger log("Test");
 //   return 0;
 // }
 
+void indexRoute(HTTP::Request& req, HTTP::Response& res) {
+  (void)req;
+  std::ifstream file;
+  file.open("Makefile");
+  std::string line, buff;
+  while (std::getline(file, line))
+    buff.append(line + "\n");
+  res.setStatus(200, "OK").send(buff);
+}
+
 int main(void) {
+  YAML::RunTests();
   try {
     HTTP::Server server;
-    server.listen("0.0.0.0", 8080);
+    server.routes["/"].insert(std::make_pair(HTTP::Methods::GET, HTTP::Route(
+      HTTP::Methods::GET,
+      std::string("/"),
+      &indexRoute
+    )));
+    if (!server.listen("0.0.0.0", 8080))
+      throw std::runtime_error("Failed to listen");
   }
   catch (const std::exception& e) {
     perror("Error");

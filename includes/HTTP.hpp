@@ -1,8 +1,26 @@
 #include <Socket.hpp>
 #include <cstdlib>
 #include <utils/misc.hpp>
+#include <utils/Logger.hpp>
 
 namespace HTTP {
+  class Server;
+
+  class WebSocket : public Socket::Server {
+    WebSocket();
+  public:
+    WebSocket(HTTP::Server* server);
+    ~WebSocket();
+    WebSocket(const WebSocket& other);
+    WebSocket& operator=(const WebSocket& other);
+
+    void onStarted();
+    void onNewConnection(Socket::Connection& connection);
+    void onDisconnected(Socket::Connection& connection);
+    void onData(Socket::Connection& connection, const std::string& buffer);
+  private:
+    HTTP::Server* server;
+  };
   struct Methods {
     enum Method {
       GET,
@@ -37,6 +55,7 @@ namespace HTTP {
 
   std::ostream& operator<<(std::ostream& os, const Headers& headers);
 
+  class Response;
   class Request {
   public:
     Request(
@@ -97,6 +116,8 @@ namespace HTTP {
 
     Request();
     void parseParams();
+
+    friend class Response;
   };
   class Response {
   public:
@@ -134,6 +155,7 @@ namespace HTTP {
 
     void init();
     std::string getHeader() const;
+
   };
 
   class Route {
@@ -162,29 +184,26 @@ namespace HTTP {
     ~Server();
     Server(const Server& other);
     Server& operator=(const Server& other);
-    void listen(
+    bool listen(
       const std::string& address,
       const int port
     );
 
-    Events::EventDispatcher& getSocketDispatcher();
-  private:
-    Socket::Server socket;
+    Events::Dispatcher& getSocketDispatcher();
     // Path -> Method -> Handler
     std::map<std::string, std::map<Methods::Method, Route> > routes;
+  private:
+    WebSocket socket;
+    Utils::Logger log;
 
-    void onData(const Socket::Dispatch::DataEvent<std::string>& ev);
-  public:
-    class OnSocketDataHandler
-      : public Events::EventListener {
-    public:
-      OnSocketDataHandler(
-        Server* server
-      );
-      ~OnSocketDataHandler();
-      virtual void onEvent(const Events::Event& ev) const;
-    private:
-      Server* server;
-    };
+
+    void onStart();
+    void onNewConnection(Socket::Connection& connection);
+    void onDisconnected(Socket::Connection& connection);
+    void onData(Socket::Connection& connection, const std::string& buffer);
+
+    friend class WebSocket;
+    friend class Request;
+    friend class Response;
   };
 }

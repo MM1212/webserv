@@ -1,12 +1,12 @@
 PROJECT_NAME = Webserv
 NAME = webserv
 
-SRC_FILES = Events/Events.cpp \
-						utils/Logger.cpp utils/misc.cpp \
-						Socket/Events.cpp Socket/Exceptions.cpp \
-						Socket/Connection.cpp Socket/Socket.cpp \
+SRC_FILES = utils/Logger.cpp utils/misc.cpp \
+						Yaml/Node.cpp Yaml/Parser.cpp Yaml/tests.cpp \
+						Socket/Exceptions.cpp \
+						Socket/Connection.cpp Socket/Server.cpp \
 						HTTP/Methods.cpp HTTP/Headers.cpp HTTP/Events.cpp \
-						HTTP/Request.cpp HTTP/Response.cpp \
+						HTTP/Request.cpp HTTP/Response.cpp HTTP/WebSocket.cpp \
 						HTTP/Route.cpp HTTP/Server.cpp \
 						main.cpp
 
@@ -17,7 +17,7 @@ SRCS = $(addprefix $(SRC_DIR)/, $(SRC_FILES))
 INCLUDES = -Iincludes
 
 CXX = c++
-CXXFLAGS = $(INCLUDES) -I. -Wall -Wextra -Werror -std=c++98  -g
+CXXFLAGS = $(INCLUDES) -I. -Wall -Wextra -Werror -std=c++98 -g -fsanitize=address
 
 OBJ_DIR = objs
 OBJ_FILES = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))

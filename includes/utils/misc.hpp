@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <iostream>
 #include <iomanip>
 
 namespace Utils
@@ -18,4 +19,5 @@ namespace Utils
   }
 
   std::string getJSONDate();
+  void showStackTrace();
 }

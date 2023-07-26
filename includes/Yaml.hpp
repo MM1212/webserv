@@ -1,0 +1,310 @@
+#pragma once
+
+#include <string>
+#include <vector>
+#include <map>
+#include <sstream>
+#include <stack>
+#include <stdint.h>
+#include <shared.hpp>
+#include <typeinfo>
+
+namespace YAML {
+  class Node;
+
+  struct Types {
+    enum Type {
+      Undefined,
+      Null,
+      Scalar,
+      Sequence,
+      Map
+    };
+    static std::string GetLabel(Type type);
+  };
+
+  class Parser;
+
+  class Node {
+  public:
+    typedef std::vector<Node> Sequence;
+    typedef std::map<std::string, Node> Map;
+
+    typedef Sequence::iterator iterator;
+    typedef Sequence::const_iterator const_iterator;
+    typedef Map::iterator map_iterator;
+    typedef Map::const_iterator map_const_iterator;
+  private:
+    std::string key;
+    std::string value;
+    Sequence sequence;
+    Map map;
+    Types::Type type;
+    size_t indent;
+    Node* parent;
+    friend class Parser;
+  public:
+    Node();
+    Node(const std::string& key);
+    template <typename T>
+    Node(const std::string& key, const T& value)
+      : key(key), sequence(), map(), type(Types::Scalar), indent(0) {
+      std::stringstream ss;
+      ss << value;
+      if (ss.fail())
+        this->type = Types::Undefined;
+      else
+        this->value = ss.str();
+    }
+    template <>
+    Node(const std::string& key, const Sequence& sequence)
+      : key(key), sequence(sequence),
+      type(Types::Sequence), indent(0) {}
+    template <>
+    Node(const std::string& key, const Map& map)
+      : key(key), map(map),
+      type(Types::Map), indent(0) {}
+    Node(const Node& other);
+    ~Node() {}
+    inline const std::string& getKey() const {
+      return this->key;
+    }
+    inline const std::string& getValue() const {
+      return this->value;
+    }
+    inline const Sequence& getSequence() const {
+      return this->sequence;
+    }
+    inline Sequence& getSequence() {
+      return this->sequence;
+    }
+    inline const Map& getMap() const {
+      return this->map;
+    }
+    inline Map& getMap() {
+      return this->map;
+    }
+    inline Types::Type getType() const {
+      return this->type;
+    }
+    inline Node* getParent() const {
+      return this->parent;
+    }
+
+    const Node& operator[](const std::string& key) const;
+    const Node& operator[](const size_t index) const;
+
+    Node& operator[](const std::string& key);
+    Node& operator[](const size_t index);
+
+    template <typename T>
+    T as() const {
+      T value;
+      std::stringstream ss(this->value);
+      ss >> value;
+      return value;
+    }
+
+    template <>
+    std::string as<std::string>() const {
+      return this->value;
+    }
+
+    template <>
+    bool as<bool>() const { 
+      if (this->value == "true" || this->as<int>() != 0)
+        return true;
+      else if (this->value == "false" || this->as<int>() == 0)
+        return false;
+      else
+        throw std::runtime_error("Expected a boolean, got: " + this->value);
+    }
+
+    inline bool isValid() const { return this->type != Types::Undefined; };
+    inline bool isNull() const { return this->type == Types::Null; }
+    inline bool isScalar() const { return this->type == Types::Scalar; }
+    inline bool isSequence() const { return this->type == Types::Sequence; }
+    inline bool isMap() const { return this->type == Types::Map; }
+
+    inline void setKey(const std::string& key) { this->key = key; };
+
+    template <typename T>
+    Node& operator=(const T& val) {
+      if (!this->isScalar())
+        throw std::runtime_error("Node is not a scalar");
+      std::stringstream ss;
+      ss << val;
+      this->value = ss.str();
+      return *this;
+    }
+
+    template <>
+    Node& operator=(const Node& other) {
+      if (this == &other) return *this;
+      this->key = other.key;
+      this->value = other.value;
+      this->sequence = other.sequence;
+      this->map = other.map;
+      this->type = other.type;
+      this->indent = other.indent;
+      return *this;
+    }
+
+    template <>
+    Node& operator=(const Map& other) {
+      if (!this->isMap())
+        throw std::runtime_error("Node is not a map");
+      this->map = other;
+      return *this;
+    }
+
+    template <>
+    Node& operator=(const Sequence& other) {
+      if (!this->isSequence())
+        throw std::runtime_error("Node is not a sequence");
+      this->sequence = other;
+      return *this;
+    }
+
+    template <typename T>
+    inline typename T::iterator begin();
+    template <typename T>
+    inline typename T::const_iterator begin() const;
+    template <typename T>
+    inline typename T::iterator end();
+    template <typename T>
+    inline typename T::const_iterator end() const;
+
+    template <>
+    inline Map::const_iterator begin<Map>() const {
+      if (!this->isMap())
+        throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+      return this->map.begin();
+    }
+    template <>
+    inline Sequence::const_iterator begin<Sequence>() const {
+      if (!this->isSequence())
+        throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+      return this->sequence.begin();
+    }
+    template <>
+    inline Map::iterator begin<Map>() {
+      if (!this->isMap())
+        throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+      return this->map.begin();
+    }
+    template <>
+    inline Sequence::iterator begin<Sequence>() {
+      if (!this->isSequence())
+        throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+      return this->sequence.begin();
+    }
+
+    template <>
+    inline Map::const_iterator end<Map>() const {
+      if (!this->isMap())
+        throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+      return this->map.end();
+    }
+    template <>
+    inline Sequence::const_iterator end<Sequence>() const {
+      if (!this->isSequence())
+        throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+      return this->sequence.end();
+    }
+    template <>
+    inline Map::iterator end<Map>() {
+      if (!this->isMap())
+        throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+      return this->map.end();
+    }
+    template <>
+    inline Sequence::iterator end<Sequence>() {
+      if (!this->isSequence())
+        throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+      return this->sequence.end();
+    }
+
+    template <typename T>
+    inline Node& last();
+    template <typename T>
+    inline const Node& last() const;
+
+    template <>
+    inline const Node& last<Map>() const {
+      return this->map.rbegin()->second;
+    }
+
+    template <>
+    inline const Node& last<Sequence>() const {
+      return *this->sequence.rbegin();
+    }
+
+    template <>
+    inline Node& last<Map>() {
+      return this->map.rbegin()->second;
+    }
+
+    template <>
+    inline Node& last<Sequence>() {
+      return *this->sequence.rbegin();
+    }
+
+    const Node& insert(const Node& node);
+    void remove(const std::string& key);
+    void remove(size_t idx);
+    template <typename T>
+    void remove(typename T::iterator it);
+    template <typename T>
+    void remove(typename T::const_iterator it);
+
+    template <>
+    void remove<Map>(Map::iterator it) {
+      this->map.erase(it);
+    }
+
+    template <>
+    void remove<Sequence>(Sequence::iterator it) {
+      this->sequence.erase(it);
+    }
+
+    uint32_t size() const;
+    static Node NewNull(const std::string& key);
+    template <typename T>
+    static Node NewScalar(const std::string& key, const T& value) {
+      return Node(key, value);
+    }
+    static Node NewMap(const std::string& key);
+    static Node NewSequence(const std::string& key);
+  };
+
+  class Parser {
+  private:
+    std::stringstream doc;
+    std::string scalar;
+    Node root;
+    Node* current;
+    std::stack<Node*> stack;
+  public:
+    Parser(const std::stringstream& stream);
+    Parser(const std::string& path);
+    ~Parser() {}
+    inline Node& getRoot() { return this->root; }
+    inline const Node& getRoot() const { return this->root; }
+    void parse(bool skipIndent = false);
+
+  private:
+    // skips doc's whitespace and counts its indentation
+    void skipWhitespace();
+    int countWhitespace();
+    bool isEmptyLine();
+    void skipComment();
+    std::string retrieveScalar();
+
+    void handleContext(size_t indent, const Node* node);
+  };
+  Node LoadFile(const std::string& path);
+
+  void RunTests();
+}
+std::ostream& operator<<(std::ostream& os, const YAML::Node& node);

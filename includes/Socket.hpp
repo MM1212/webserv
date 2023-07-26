@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Events.hpp>
+#include <events.hpp>
 #include <Buffer.hpp>
 
 #include <shared.hpp>
@@ -101,7 +101,7 @@ namespace Socket
   };
 
   namespace Dispatch {
-    class StartedEvent : public Events::Event {
+    class StartedEvent {
     private:
       const Server& sock;
     public:
@@ -110,7 +110,7 @@ namespace Socket
       const Server& getServer() const;
     };
 
-    class NewConnectionEvent : public Events::Event {
+    class NewConnectionEvent {
     private:
       const Connection& connection;
     public:
@@ -119,7 +119,7 @@ namespace Socket
       const Connection& getConnection() const;
     };
 
-    class DisconnectedEvent : public Events::Event {
+    class DisconnectedEvent {
     private:
       const Connection& connection;
     public:
@@ -129,51 +129,21 @@ namespace Socket
     };
 
     template <typename T>
-    class DataEvent : public Events::Event {
+    class DataEvent {
     private:
       const Connection& connection;
-      T data;
+      T* data;
     public:
-      DataEvent(const Connection& connection, const T& data)
-        : Events::Event("socket::data"), connection(connection), data(data) {}
+      DataEvent(const Connection& connection, T* data)
+        : connection(connection), data(data) {}
       inline const Connection& getConnection() const {
         return this->connection;
       }
       inline const T& getData() const {
-        return this->data;
+        return *this->data;
       }
     };
   }
-
-  namespace Handling {
-    class StartedHandler
-      : public Events::EventListener {
-    public:
-      StartedHandler(const Events::EventListener::Handler);
-      ~StartedHandler();
-    };
-    class NewConnectionHandler
-      : public Events::EventListener {
-    public:
-      NewConnectionHandler(const Events::EventListener::Handler);
-      ~NewConnectionHandler();
-    };
-
-    class DisconnectedHandler
-      : public Events::EventListener {
-    public:
-      DisconnectedHandler(const Events::EventListener::Handler);
-      ~DisconnectedHandler();
-    };
-
-    class RawDataHandler
-      : public Events::EventListener {
-    public:
-      RawDataHandler(const Events::EventListener::Handler);
-      ~RawDataHandler();
-    };
-  }
-
 
   namespace Errors {
     class FailedToCreateSocket : public std::exception {
@@ -200,18 +170,27 @@ namespace Socket
     Connection acceptNewConnection();
     void pollData();
   public:
-    Events::EventDispatcher dispatcher;
     Server(
       const Domain::Handle domain,
       const Type::Handle type,
       const Protocol::Handle protocol
     );
     ~Server();
-    inline Domain::Handle getDomain() const;
-    inline Type::Handle getType() const;
-    inline Protocol::Handle getProtocol() const;
-    inline const std::string& getAddress() const;
-    int getPort() const;
+    inline Domain::Handle getDomain() const {
+      return this->domain;
+    }
+    inline Type::Handle getType() const {
+      return this->type;
+    }
+    inline Protocol::Handle getProtocol() const {
+      return this->protocol;
+    }
+    inline const std::string& getAddress() const {
+      return this->address;
+    }
+    inline int getPort() const {
+      return this->port;
+    }
     bool listen(
       const std::string& address,
       const int port,
@@ -222,6 +201,13 @@ namespace Socket
     bool disconnect(const Connection& connection);
     bool disconnectAll();
     bool close();
+  protected:
+    virtual void onStarted() = 0;
+    virtual void onNewConnection(Connection& connection) = 0;
+    virtual void onDisconnected(Connection& connection) = 0;
+    virtual void onData(Connection& connection, const std::string& buffer) = 0;
+
+    friend class Connection;
   };
 }
 
