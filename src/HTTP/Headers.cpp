@@ -7,12 +7,12 @@ Headers::~Headers() {}
 Headers::Headers(const Headers& other) : headers(other.headers) {}
 Headers& Headers::operator=(const Headers& other) {
   if (this == &other) return *this;
-  headers = other.headers;
+  this->headers = other.headers;
   return *this;
 }
 
 void Headers::clear() {
-  headers.clear();
+  this->headers.clear();
 }
 
 bool Headers::append(const std::string& key, const std::string& value) {
@@ -23,18 +23,22 @@ bool Headers::append(const std::string& key, const std::string& value) {
 }
 
 void Headers::set(const std::string& key, const std::string& value) {
-  headers[key] = value;
+  this->headers[key] = value;
+}
+
+void Headers::remove(const std::string& key) {
+  this->headers.erase(key);
 }
 
 bool Headers::has(const std::string& key) const {
-  return headers.find(key) != headers.end();
+  return this->headers.find(key) != this->headers.end();
 }
 
 const std::string& Headers::get(const std::string& key) const {
   static const std::string empty;
   if (!this->has(key))
     return empty;
-  return headers.at(key);
+  return this->headers.at(key);
 }
 
 Headers::operator std::string() {
@@ -44,8 +48,8 @@ Headers::operator std::string() {
 std::string Headers::toString() const {
   std::string result;
   for (
-    std::map<std::string, std::string>::const_iterator it = headers.begin();
-    it != headers.end();
+    std::map<std::string, std::string>::const_iterator it = this->headers.begin();
+    it != this->headers.end();
     it++) {
     result += it->first + ": " + it->second + "\r\n";
   }

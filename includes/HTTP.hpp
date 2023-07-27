@@ -42,6 +42,7 @@ namespace HTTP {
     void clear();
     bool append(const std::string& key, const std::string& value);
     void set(const std::string& key, const std::string& value);
+    void remove(const std::string& key);
     bool has(const std::string& key) const;
     const std::string& get(const std::string& key) const;
 
