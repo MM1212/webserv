@@ -122,6 +122,14 @@ namespace HTTP {
   };
   class Response {
   public:
+
+    class StreamException : std::exception {
+    public:
+      const char* what() const throw() {
+        return "Stream error";
+      }
+    };
+
     Response(const Request& req);
     ~Response();
     Response(const Response& other);
@@ -130,7 +138,7 @@ namespace HTTP {
     Response& setBody(const std::string& body);
     Response& status(uint32_t status);
     Response& status(uint32_t status, const std::string& message);
-    
+
     const Headers& getHeaders() const;
     const std::string& getBody() const;
     uint32_t getStatus() const;
@@ -144,6 +152,23 @@ namespace HTTP {
       this->setBody(Utils::toString(body));
       this->send();
     }
+    void sendHeader();
+
+  private:
+    bool _sendChunk(const char* buffer, std::istream& buff, bool last = false);
+    void _preStream();
+  public:
+    void stream(std::istream& buff);
+    inline void stream(const std::string& filePath) {
+      std::ifstream file(filePath.c_str());
+      if (!file.is_open())
+        throw StreamException();
+      this->stream(reinterpret_cast<std::fstream&>(file));
+      file.close();
+    }
+
+    void sendFile(const std::string& filePath);
+    void redirect(const std::string& path);
   private:
     Response();
     Response& operator=(const Response& other);
@@ -156,7 +181,6 @@ namespace HTTP {
 
     void init();
     std::string getHeader() const;
-
   };
 
   class Router;
