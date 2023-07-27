@@ -4,27 +4,13 @@
 #include <utils/Logger.hpp>
 #include <Yaml.hpp>
 
-class IndexRoute : public HTTP::Route {
-public:
-  IndexRoute()
-    : HTTP::Route(HTTP::Methods::GET, "/") {}
-  void run(HTTP::Request& req, HTTP::Response& res) const {
-    (void)req;
-    std::ifstream file;
-    file.open("Makefile");
-    std::string line, buff;
-    while (std::getline(file, line))
-      buff.append(line + "\n");
-    res.status(200).send(buff);
-  }
-};
-
 int main(void) {
   YAML::RunTests();
   try {
     HTTP::Server server;
-    IndexRoute route;
-    server.router.add(route);
+    HTTP::FileRoute route(HTTP::Methods::GET, "/", "Makefile");
+    if (!server.router.hookFile(route))
+      throw std::runtime_error("Failed to hook file");
     if (!server.listen("0.0.0.0", 8080))
       throw std::runtime_error("Failed to listen");
   }

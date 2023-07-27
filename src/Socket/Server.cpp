@@ -32,7 +32,8 @@ Server::Server(
   if (this->handleFd < 0) {
     throw Errors::FailedToCreateSocket();
   }
-  setsockopt(this->handleFd, SOL_SOCKET, SO_REUSEADDR, NULL, 0);
+  int opt = 1;
+  setsockopt(this->handleFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
   SYS_FNCTL(this->handleFd, F_SETFL, O_NONBLOCK);
 }
 

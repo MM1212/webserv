@@ -76,9 +76,17 @@ bool Router::del(Route& route) {
   return this->add(route);
 }
 
+bool Router::head(Route& route) {
+  if (route.getMethod() != Methods::HEAD)
+    route.setMethod(Methods::HEAD);
+  return this->add(route);
+}
+
 void Router::run(Request& req, Response& res) const {
-  if (!this->has(req.getPath(), req.getMethod()))
+  if (!this->has(req.getPath()))
     return res.status(404).send();
+  else if (!this->has(req.getPath(), req.getMethod()))
+    return res.status(405).send();
   try {
     const Route& route = this->search(req.getPath(), req.getMethod());
     route.run(req, res);
@@ -86,4 +94,13 @@ void Router::run(Request& req, Response& res) const {
   catch (const std::exception& e) {
     return res.status(500).send();
   }
+}
+
+bool Router::hookFile(FileRoute& route) {
+  if (this->has(route))
+    return false;
+  this->add(route);
+  if (route.getMethod() == Methods::GET)
+    this->head(route);
+  return true;
 }

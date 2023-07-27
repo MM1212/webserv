@@ -207,6 +207,19 @@ namespace HTTP {
 
     friend class Router;
   };
+
+  class FileRoute : public Route {
+  public:
+    FileRoute(Methods::Method method, const std::string& path, const std::string& filePath);
+    FileRoute(const FileRoute& other);
+    virtual ~FileRoute();
+    FileRoute& operator=(const FileRoute& other);
+  private:
+    std::string filePath;
+    virtual void run(Request& req, Response& res) const;
+    void sendHeaders(Response& res) const;
+  };
+
   class Router {
   public:
     class NotFoundException : std::exception {
@@ -231,10 +244,14 @@ namespace HTTP {
       const T route;
       return this->add(route);
     }
+
     bool get(Route& route);
     bool post(Route& route);
     bool put(Route& route);
     bool del(Route& route);
+    bool head(Route& route);
+
+    bool hookFile(FileRoute& route);
   private:
     void run(Request& req, Response& res) const;
 
