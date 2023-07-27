@@ -27,7 +27,8 @@ namespace HTTP {
       GET,
       POST,
       PUT,
-      DELETE
+      DELETE,
+      HEAD
     };
     static Method fromString(const std::string& str);
   };
