@@ -2,29 +2,10 @@
 #include <iostream>
 
 void YAML::RunTests() {
-  const YAML::Node config = YAML::LoadFile("config/tests/1.yaml");
+  const YAML::Node config = YAML::LoadFile("config/tests/yaml/1.yaml");
 
   std::cout << config << std::endl;
   // // Accessing scalar values
-  // std::string name = config["name"].as<std::string>();
-  // int age = config["age"].as<int>();
-
-  // std::cout
-  //   << "name: " << name << std::endl
-  //   << "age: " << age << std::endl;
-  // // Accessing map values
-  // YAML::Node address = config["address"];
-  // std::string street = address["street"].as<std::string>();
-  // std::string city = address["city"].as<std::string>();
-  // std::string state = address["state"].as<std::string>();
-  // int zip = address["zip"].as<int>();
-  // std::cout
-  //   << "name: " << name << std::endl
-  //   << "age: " << age << std::endl
-  //   << "street: " << street << std::endl
-  //   << "city: " << city << std::endl
-  //   << "state: " << state << std::endl
-  //   << "zip: " << zip << std::endl;
   // // Accessing sequence values
   YAML::Node hobbies = config["hobbies"];
   for (

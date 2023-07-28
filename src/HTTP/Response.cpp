@@ -100,9 +100,9 @@ std::string Response::getHeader() const {
 std::string Response::toString() const {
   std::stringstream ss;
   ss << this->getHeader()
-    << "\r\n"
-    << this->body
     << "\r\n";
+  if (this->body.length() > 0)
+    ss << this->body << "\r\n";
   return ss.str();
 }
 
@@ -114,7 +114,6 @@ void Response::sendHeader() {
 }
 
 void Response::send() {
-  this->req.server->log.debug("Sending response: \n%d\n", this->sent);
   if (this->sent) return;
   const std::string resp = this->toString();
   this->req.server->log.debug("Sending response: \n%s\n", resp.c_str());

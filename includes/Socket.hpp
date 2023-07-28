@@ -19,6 +19,7 @@
 #define SYS_CLOSE ::close
 #define SYS_FNCTL ::fcntl
 #define SYS_POLL ::poll
+#define SYS_BIND ::bind
 
 namespace Socket
 {
@@ -153,6 +154,9 @@ namespace Socket
     };
   }
 
+  class Server;
+  class ParallelServer;
+
   class Server {
   private:
     Domain::Handle domain;
@@ -166,13 +170,14 @@ namespace Socket
     void pollNewConnections();
     Connection acceptNewConnection();
     void pollData();
+
   public:
     Server(
       const Domain::Handle domain,
       const Type::Handle type,
       const Protocol::Handle protocol
     );
-    ~Server();
+    virtual ~Server();
     inline Domain::Handle getDomain() const {
       return this->domain;
     }
@@ -188,6 +193,11 @@ namespace Socket
     inline int getPort() const {
       return this->port;
     }
+    bool bind(
+      const std::string& address,
+      const int port,
+      const int backlog
+    );
     bool listen(
       const std::string& address,
       const int port,
@@ -205,6 +215,46 @@ namespace Socket
     virtual void onData(Connection& connection, const std::string& buffer) = 0;
 
     friend class Connection;
+    friend class ParallelServer;
+  };
+
+  class ParallelServer {
+  private:
+    std::vector<Server*> servers;
+    bool running;
+  public:
+    ParallelServer();
+    ~ParallelServer();
+    ParallelServer(const ParallelServer& other);
+    ParallelServer& operator=(const ParallelServer& other);
+    bool add(Server* server, const std::string& address, const int port, const int backlog);
+    template <typename T>
+    Server* create(
+      const Domain::Handle domain,
+      const Type::Handle type,
+      const Protocol::Handle protocol,
+      const std::string& address,
+      const int port,
+      const int backlog
+    ) {
+      Server* server = new T(domain, type, protocol);
+      if (!server)
+        return nullptr;
+      if (!this->add(server, address, port, backlog))
+      {
+        delete server;
+        return nullptr;
+      }
+      return server;
+    }
+
+    inline bool isRunning() const {
+      return this->running;
+    }
+    void start(
+      const int timeout = 0
+    );
+    void stop();
   };
 }
 

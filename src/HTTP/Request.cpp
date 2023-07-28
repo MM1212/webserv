@@ -87,3 +87,16 @@ void Request::parseParams() {
       this->params[pair[0]] = pair[1];
   }
 }
+
+std::ostream& HTTP::operator<<(std::ostream& os, const Request& req) {
+  os
+    << "Request("
+    << req.getMethod()
+    << ", "
+    << req.getPath()
+    << ", "
+    << req.getProtocol()
+    << ") -> headers:\n"
+    << req.getHeaders();
+  return os;
+}

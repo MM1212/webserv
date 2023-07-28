@@ -88,8 +88,7 @@ void Parser::handleContext(size_t indent, const Node* node) {
 }
 
 void Parser::parse(bool skipIndent) {
-  (void)skipIndent;
-  if (this->doc.peek() == EOF) return;
+  if (this->doc.eof() || this->doc.peek() == EOF) return;
   size_t indent = this->countWhitespace();
   // std::cout << "[" << std::dec << this->doc.peek() << "] ";
   // std::cout << "c indent " << indent << " | " << "container " << *this->current << " indent: " << this->current->indent << std::endl;
@@ -113,14 +112,19 @@ void Parser::parse(bool skipIndent) {
     this->doc.ignore();
     // std::cout << "handling sequence entry @ " << std::dec << this->doc.peek() << std::endl;
     if (!this->current->is<Types::Sequence>()) {
+      if (!this->current->is<Types::Null>())
+        throw std::runtime_error("Expected a Null, got: " + Types::GetLabel(this->current->type));
+      const int cIndent = this->current->indent;
       *this->current = Node::NewSequence(this->current->key);
-      this->current->indent = indent;
+      this->current->indent = cIndent;
     }
     this->skipWhitespace();
+    indent += 2;
     const Node& node = this->current->insert(Node::NewNull(Utils::toString(this->current->size())));
+    const_cast<Node&>(node).indent = indent;
     this->stack.push(this->current);
     this->current = const_cast<Node*>(&node);
-    return this->parse();
+    return this->parse(true);
   }
   std::string key = this->retrieveScalar();
   // std::cout << "got key " << key << std::endl;
@@ -128,14 +132,18 @@ void Parser::parse(bool skipIndent) {
     this->doc.ignore();
     // std::cout << "handling map entry @ " << std::dec << this->doc.peek() << std::endl;
     if (!this->current->is<Types::Map>()) {
+      if (!this->current->is<Types::Null>())
+        throw std::runtime_error("Expected a Null, got: " + Types::GetLabel(this->current->type));
+      const int cIndent = this->current->indent;
       *this->current = Node::NewMap(this->current->key);
-      this->current->indent = indent;
+      this->current->indent = cIndent;
     }
     this->scalar = key;
     this->skipWhitespace();
     // std::cout << "going to deeper level " << std::boolalpha << (!skipIndent && this->doc.peek() == '\n') << std::endl;
     if (!skipIndent && this->doc.peek() == '\n') {
       Node& node = const_cast<Node&>(this->current->insert(Node::NewNull(key)));
+      node.indent = skipIndent ? this->current->indent : indent;
       this->stack.push(this->current);
       this->current = const_cast<Node*>(&node);
       return this->parse();
@@ -143,7 +151,7 @@ void Parser::parse(bool skipIndent) {
     return this->parse(true);
   }
   Node node = Node::NewScalar(this->scalar, key);
-  node.indent = indent;
+  node.indent = skipIndent ? this->current->indent : indent;
   if (this->current->is<Types::Null>())
     *this->current = node;
   else

@@ -11,7 +11,6 @@ using HTTP::Headers;
 Server::Server()
   :
   router(),
-  socket(this),
   log("Webserv") {
   this->loadStatusCodes();
 }
@@ -19,7 +18,6 @@ Server::Server()
 Server::Server(const Server& other)
   :
   router(),
-  socket(other.socket),
   log(other.log) {
   this->loadStatusCodes();
 }
@@ -27,22 +25,11 @@ Server::Server(const Server& other)
 Server::~Server() {}
 
 Server& Server::operator=(const Server& other) {
-  this->socket = other.socket;
   this->router = other.router;
   this->log = other.log;
   return *this;
 }
 
-bool Server::listen(
-  const std::string& address,
-  const int port
-) {
-  return this->socket.listen(address, port, 128, 500);
-}
-
-void Server::onStart() {
-  std::cout << "Listening on " << this->socket.getAddress() << ":" << this->socket.getPort() << std::endl;
-}
 
 void Server::onNewConnection(Socket::Connection& connection) {
   std::cout << "New connection from " << connection.getAddress() << ":" << connection.getPort() << std::endl;
@@ -95,7 +82,7 @@ void Server::onData(Socket::Connection& connection, const std::string& buffer) {
     headers
   );
   Response res(req);
-
+  std::cout << req << std::endl;
   this->router.run(req, res);
 }
 

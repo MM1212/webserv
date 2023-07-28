@@ -9,6 +9,7 @@
 namespace Utils
 {
   std::vector<std::string> split(const std::string& str, std::string delim);
+  std::string& capitalize(std::string& str);
 
   template <typename T>
   std::string toString(const T& value)

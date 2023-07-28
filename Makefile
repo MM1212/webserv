@@ -4,12 +4,13 @@ NAME = webserv
 SRC_FILES = utils/Logger.cpp utils/misc.cpp \
 						Yaml/Node.cpp Yaml/Parser.cpp Yaml/tests.cpp \
 						Socket/Exceptions.cpp \
-						Socket/Connection.cpp Socket/Server.cpp \
+						Socket/Connection.cpp Socket/Parallel.cpp Socket/Server.cpp \
 						HTTP/Methods.cpp HTTP/Headers.cpp HTTP/Events.cpp \
 						HTTP/Request.cpp HTTP/Response.cpp HTTP/WebSocket.cpp \
 						HTTP/Route.cpp HTTP/Router.cpp \
 						HTTP/Routes/FileRoute.cpp \
 						HTTP/Server.cpp \
+						HTTP/Servers/Single.cpp HTTP/Servers/Parallel.cpp \
 						main.cpp
 
 SRC_DIR = src

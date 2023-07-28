@@ -2,8 +2,8 @@
 
 using namespace HTTP;
 
-FileRoute::FileRoute(Methods::Method method, const std::string& path, const std::string& filePath)
-  : Route(method, path), filePath(filePath) {}
+FileRoute::FileRoute(const std::string& path, const std::string& filePath)
+  : Route(path), filePath(filePath) {}
 
 FileRoute::FileRoute(const FileRoute& other)
   : Route(other), filePath(other.filePath) {}

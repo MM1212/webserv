@@ -1,3 +1,4 @@
+- [] Support request streaming.
 - [] Choose the port and host of each ’server’.
 - [] Setup the server_names or not.
 - [] The first server for a host:port will be the default for this host:port (that means

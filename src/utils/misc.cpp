@@ -15,6 +15,14 @@ std::vector<std::string> Utils::split(const std::string& str, std::string delim)
   tokens.push_back(copy);
   return tokens;
 }
+
+std::string& Utils::capitalize(std::string& str)
+{
+  if (str.length() > 0)
+    str[0] = std::toupper(str[0]);
+  return str;
+}
+
 // formats time in this format Fri, 21 Jul 2023 19:27:34 GMT
 std::string Utils::getJSONDate()
 {

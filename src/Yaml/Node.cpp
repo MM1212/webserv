@@ -106,14 +106,13 @@ uint32_t Node::size() const {
 }
 
 const Node& Node::insert(const Node& node) {
+  // std::cout << "inserted " << node << " into " << *this << std::endl;
   switch (this->type) {
   case Types::Map:
-    // std::cout << "inserted " << node << " into " << *this << std::endl;
     this->map.insert(std::make_pair(node.getKey(), node));
     return this->map.at(node.getKey());
   case Types::Sequence:
     const_cast<Node&>(node).setKey(Utils::toString(this->sequence.size()));
-    // std::cout << "inserted " << node << " into " << *this << std::endl;
     this->sequence.push_back(node);
     return this->sequence.back();
   default:

@@ -120,6 +120,8 @@ namespace HTTP {
 
     friend class Response;
   };
+
+  std::ostream& operator<<(std::ostream& os, const Request& req);
   class Response {
   public:
 
@@ -175,7 +177,7 @@ namespace HTTP {
     const Request& req;
     Headers headers;
     std::string body;
-    uint32_t statusCode;
+    long statusCode;
     std::string statusMessage;
     bool sent;
 
@@ -185,23 +187,32 @@ namespace HTTP {
 
   class Router;
 
+  struct Routes {
+    enum Type {
+      Normal,
+      File,
+      Directory,
+      Upload
+    };
+    static std::string GetLabel(const Type type);
+  };
+
   class Route {
   public:
-    Route(Methods::Method method, const std::string& path);
+    Route(const std::string& path);
     Route(const Route& other);
     virtual ~Route();
     Route& operator=(const Route& other);
 
     operator std::string();
-    operator Methods::Method();
 
-    Methods::Method getMethod() const;
-    void setMethod(Methods::Method method);
     const std::string& getPath() const;
+    Routes::Type getType() const;
     void setPath(const std::string& path);
+    void setType(const Routes::Type type);
   private:
-    Methods::Method method;
     std::string path;
+    Routes::Type type;
     Route();
     virtual void run(Request& req, Response& res) const = 0;
 
@@ -210,7 +221,7 @@ namespace HTTP {
 
   class FileRoute : public Route {
   public:
-    FileRoute(Methods::Method method, const std::string& path, const std::string& filePath);
+    FileRoute(const std::string& path, const std::string& filePath);
     FileRoute(const FileRoute& other);
     virtual ~FileRoute();
     FileRoute& operator=(const FileRoute& other);
@@ -235,23 +246,23 @@ namespace HTTP {
     Router& operator=(const Router& other);
 
     const Route& search(const std::string& path, Methods::Method method) const;
-    bool has(const std::string& path, Methods::Method method) const;
+    bool has(const std::string& path, const Methods::Method method) const;
     bool has(const std::string& path) const;
-    bool has(const Route& route) const;
-    bool add(const Route& route);
+    bool has(const Route& route, const Methods::Method method) const;
+    bool add(const Route& route, const Methods::Method method);
     template <typename T>
     bool add() {
       const T route;
       return this->add(route);
     }
 
-    bool get(Route& route);
-    bool post(Route& route);
-    bool put(Route& route);
-    bool del(Route& route);
-    bool head(Route& route);
+    bool get(const Route& route);
+    bool post(const Route& route);
+    bool put(const Route& route);
+    bool del(const Route& route);
+    bool head(const Route& route);
 
-    bool hookFile(FileRoute& route);
+    bool hookFile(const FileRoute& route);
   private:
     void run(Request& req, Response& res) const;
 
@@ -260,25 +271,22 @@ namespace HTTP {
     friend class Server;
   };
 
+  class ParallelServer;
+
   class Server {
   public:
     Server();
-    ~Server();
+    virtual ~Server();
     Server(const Server& other);
     Server& operator=(const Server& other);
-    bool listen(
-      const std::string& address,
-      const int port
-    );
 
     Router router;
   private:
-    WebSocket socket;
     Utils::Logger log;
     YAML::Node statusCodes;
 
 
-    void onStart();
+    virtual void onStart() = 0;
     void onNewConnection(Socket::Connection& connection);
     void onDisconnected(Socket::Connection& connection);
     void onData(Socket::Connection& connection, const std::string& buffer);
@@ -288,5 +296,57 @@ namespace HTTP {
     friend class WebSocket;
     friend class Request;
     friend class Response;
+    friend class ParallelServer;
   };
+
+  class SingleServer : public Server {
+  private:
+    WebSocket socket;
+  public:
+    SingleServer();
+    ~SingleServer();
+    SingleServer(const SingleServer& other);
+    SingleServer& operator=(const SingleServer& other);
+    bool listen(
+      const std::string& address,
+      const int port
+    );
+    void onStart();
+  };
+
+  class ParallelServer {
+  private:
+    Socket::ParallelServer sockets;
+    std::vector<Server*> servers;
+  public:
+    ParallelServer();
+    ~ParallelServer();
+    ParallelServer(const ParallelServer& other);
+    ParallelServer& operator=(const ParallelServer& other);
+    bool add(Server* server, const std::string& address, const int port, const int backlog);
+    template <typename T>
+    Server* create(
+      const std::string& address,
+      const int port,
+      const int backlog = 128
+    ) {
+      Server* server = new T();
+      if (!server)
+        return nullptr;
+      if (!this->add(server, address, port, backlog))
+      {
+        delete server;
+        return nullptr;
+      }
+      return server;
+    }
+    inline bool isRunning() const {
+      return this->sockets.isRunning();
+    }
+    void start(
+      const int timeout = 0
+    );
+    void stop();
+  };
+
 }

@@ -42,25 +42,37 @@ Server::~Server() {
   this->close();
 }
 
+bool Server::bind(
+  const std::string& address,
+  const int port,
+  const int backlog
+) {
+  this->address = address;
+  this->port = port;
+  sockaddr_in serverAddress;
+  serverAddress.sin_family = this->domain;
+  serverAddress.sin_addr.s_addr = inet_addr(this->address.c_str());
+  serverAddress.sin_port = htons(this->port);
+  if (SYS_BIND(this->handleFd, (sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
+    return false;
+  }
+  if (SYS_LISTEN(this->handleFd, backlog) < 0) {
+    this->close();
+    return false;
+  }
+
+  return true;
+}
+
 bool Server::listen(
   const std::string& address,
   const int port,
   const int backlog,
   const int timeout
 ) {
-  this->address = address;
-  this->port = port;
+  if (!this->bind(address, port, backlog))
+    return false;
   this->connectionTimeout = timeout;
-  sockaddr_in serverAddress;
-  serverAddress.sin_family = this->domain;
-  serverAddress.sin_addr.s_addr = inet_addr(this->address.c_str());
-  serverAddress.sin_port = htons(this->port);
-  if (bind(this->handleFd, (sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
-    return false;
-  }
-  if (SYS_LISTEN(this->handleFd, backlog) < 0) {
-    return false;
-  }
   this->onStarted();
   while (1) {
     this->pollNewConnections();
@@ -150,14 +162,15 @@ void Server::pollData() {
     }
     if (!io.read)
       continue;
-    std::cout << io << std::endl;
-    char data[1024];
+    char data[1025];
     int bytes = 1;
     while (bytes > 0) {
       bytes = recv(it->getId(), data, 1024, 0);
       if (bytes > 0)
       {
         data[bytes] = '\0';
+        std::cout << "received " << bytes << " bytes." << std::endl;
+        std::cout << "data: " << data << std::endl;
         connection.buffer.append(data, bytes);
       }
     }
