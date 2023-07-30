@@ -20,7 +20,14 @@ void FileRoute::sendHeaders(Response& res) const {
   std::ifstream file(this->filePath.c_str());
   if (!file.is_open() || !file.good())
     return res.status(404).send();
+  Headers& headers = res.getHeaders();
+  headers.set("Content-Type", "text/plain");
+  struct stat fileStat;
+  if (stat(this->filePath.c_str(), &fileStat) == -1)
+    return res.status(500).send();
+  headers.set("Content-Length", Utils::toString(fileStat.st_size));
   file.close();
+
   res.status(200).sendHeader();
 }
 

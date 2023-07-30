@@ -66,12 +66,12 @@ Response& Response::status(uint32_t status, const std::string& message) {
   return *this;
 }
 
-const Headers& Response::getHeaders() const {
-  return headers;
+Headers& Response::getHeaders() const {
+  return const_cast<Response*>(this)->headers;
 }
 
 const std::string& Response::getBody() const {
-  return body;
+  return this->body;
 }
 
 uint32_t Response::getStatus() const {
@@ -101,7 +101,7 @@ std::string Response::toString() const {
   std::stringstream ss;
   ss << this->getHeader()
     << "\r\n";
-  if (this->body.length() > 0)
+  if (this->body.length() > 0 && this->req.getMethod() != Methods::HEAD)
     ss << this->body << "\r\n";
   return ss.str();
 }
@@ -146,6 +146,9 @@ void Response::_preStream() {
 }
 
 void Response::stream(std::istream& buff) {
+  if (this->req.getMethod() == Methods::HEAD)
+    return;
+
   const Socket::Connection& client = this->req.getClient();
 
   const int n = 1024;
@@ -160,7 +163,6 @@ void Response::stream(std::istream& buff) {
 }
 
 void Response::sendFile(const std::string& filePath) {
-  if (this->sent) return;
   try {
     std::ifstream file(filePath.c_str());
     if (!file.is_open())

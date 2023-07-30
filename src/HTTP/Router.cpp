@@ -10,14 +10,17 @@ Router::~Router() {
   for (
     std::map<std::string, std::map<Methods::Method, Route*> >::iterator it = this->routes.begin();
     it != this->routes.end();
-    ++it
+    it++
     ) {
     for (
       std::map<Methods::Method, Route*>::iterator it2 = it->second.begin();
       it2 != it->second.end();
-      ++it2
+      it2++
       ) {
-      delete it2->second;
+      if (it2->second) {
+        delete it2->second;
+        it->second.at(it2->first) = NULL;
+      }
     }
   }
 }
@@ -61,8 +64,7 @@ bool Router::add(const Route& route, const Methods::Method method) {
   if (this->has(route, method))
     return false;
 
-  const std::pair<Methods::Method, Route*> pair(method, const_cast<Route*>(&route));
-  this->routes[route.getPath()].insert(pair);
+  this->routes[route.getPath()].insert(std::make_pair(method, const_cast<Route*>(&route)));
   return true;
 }
 
@@ -87,23 +89,20 @@ bool Router::head(const Route& route) {
 }
 
 void Router::run(Request& req, Response& res) const {
+  Methods::Method selector = req.getMethod();
   if (!this->has(req.getPath()))
     return res.status(404).send();
-  else if (!this->has(req.getPath(), req.getMethod()))
-    return res.status(405).send();
+  else if (!this->has(req.getPath(), selector)) {
+    if (selector == Methods::HEAD && this->has(req.getPath(), Methods::GET))
+      selector = Methods::GET;
+    else
+      return res.status(405).send();
+  }
   try {
-    const Route& route = this->search(req.getPath(), req.getMethod());
+    const Route& route = this->search(req.getPath(), selector);
     route.run(req, res);
   }
   catch (const std::exception& e) {
     return res.status(500).send();
   }
-}
-
-bool Router::hookFile(const FileRoute& route) {
-  if (this->has(route, Methods::GET))
-    return false;
-  this->get(route);
-  this->head(route);
-  return true;
 }

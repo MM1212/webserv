@@ -141,7 +141,7 @@ namespace HTTP {
     Response& status(uint32_t status);
     Response& status(uint32_t status, const std::string& message);
 
-    const Headers& getHeaders() const;
+    Headers& getHeaders() const;
     const std::string& getBody() const;
     uint32_t getStatus() const;
     const std::string& getStatusMessage() const;
@@ -262,7 +262,6 @@ namespace HTTP {
     bool del(const Route& route);
     bool head(const Route& route);
 
-    bool hookFile(const FileRoute& route);
   private:
     void run(Request& req, Response& res) const;
 

@@ -58,7 +58,7 @@ int main(void) {
   try {
     HTTP::SingleServer server;
     HTTP::FileRoute* route = new HTTP::FileRoute("/", "Makefile");
-    if (!server.router.hookFile(*route))
+    if (!server.router.get(*route))
       throw std::runtime_error("Failed to hook file");
     TestRoute* testRoute = new TestRoute();
     server.router.post(*testRoute);
