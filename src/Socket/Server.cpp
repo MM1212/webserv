@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <string.h>
 #include <iomanip>
+#include <utils/misc.hpp>
 
 using Socket::Server;
 using Socket::Connection;
@@ -77,6 +78,8 @@ bool Server::listen(
   while (1) {
     this->pollNewConnections();
     this->pollData();
+    if (Utils::debugQuit<Server>(this, reinterpret_cast<void (Server::*)()>(&Server::close)))
+      break;
   }
   perror("crashed");
   return true;

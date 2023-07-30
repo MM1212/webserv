@@ -5,6 +5,8 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <sys/socket.h>
+#include <fcntl.h>
 
 namespace Utils
 {
@@ -21,4 +23,19 @@ namespace Utils
 
   std::string getJSONDate();
   void showStackTrace();
+
+  template <typename T>
+  bool debugQuit(T* inst, void (T::* func)()) {
+    static bool disabledSyncIO = false;
+    if (!disabledSyncIO) {
+      fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
+      disabledSyncIO = true;
+    }
+    if (disabledSyncIO && std::cin.peek() == 'q')
+    {
+      (inst->*func)();
+      return true;
+    }
+    return false;
+  }
 }
