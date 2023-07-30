@@ -17,7 +17,8 @@ using namespace YAML;
  */
 
 Parser::Parser(const std::string& path)
-  : root("root"), current(&this->root) {
+  : root("__root__"), current(&this->root) {
+  this->root.indent = -1;
   std::ifstream file;
 
   file.open(path.c_str());
@@ -26,13 +27,21 @@ Parser::Parser(const std::string& path)
   while (file.peek() != EOF) {
     std::string line;
     std::getline(file, line);
+    size_t pos;
+    if ((pos = line.find('#')) != std::string::npos)
+      line = line.substr(0, pos);
+    if (line.empty() || Utils::isWhitespace(line))
+      continue;
+    while (isblank(line.end()[-1]))
+      line = line.substr(0, line.size() - 1);
     this->doc << line << std::endl;
   }
   file.close();
 }
 
 Parser::Parser(const std::stringstream& stream)
-  : root("root"), current(&this->root) {
+  : root("__root__"), current(&this->root) {
+  this->root.indent = -1;
   this->doc << stream;
 }
 
@@ -68,7 +77,7 @@ void Parser::skipComment() {
     this->doc.ignore();
 }
 
-void Parser::handleContext(size_t indent, const Node* node) {
+void Parser::handleContext(int indent, const Node* node) {
   if (!this->current)
     return;
 
@@ -77,9 +86,9 @@ void Parser::handleContext(size_t indent, const Node* node) {
   {
     this->stack.push(this->current);
     this->current = const_cast<Node*>(node);
+    return;
   }
-  else if (this->stack.size() > 0 && indent < this->current->indent)
-  {
+  while (this->stack.size() > 0 && indent <= this->current->indent) {
     Node* parent = this->stack.top();
     // std::cout << "leaving level " << *this->current << " to " << *parent << std::endl;
     this->current = parent;
@@ -87,29 +96,28 @@ void Parser::handleContext(size_t indent, const Node* node) {
   }
 }
 
-void Parser::parse(bool skipIndent) {
+void Parser::parse(bool skipIndent, bool skipTokens) {
   if (this->doc.eof() || this->doc.peek() == EOF) return;
-  size_t indent = this->countWhitespace();
-  // std::cout << "[" << std::dec << this->doc.peek() << "] ";
-  // std::cout << "c indent " << indent << " | " << "container " << *this->current << " indent: " << this->current->indent << std::endl;
-  if (this->doc.peek() == '#')
-  {
-    this->skipComment();
-    return this->parse();
-  }
+  int indent = this->countWhitespace();
+  // std::cout << "[" << std::dec << this->doc.peek() << "](" << (char)this->doc.peek() << ")";
+  // std::cout << "c indent " << indent << " | " << "container " << *this->current << " indent: " << this->current->indent << " | " << "skipIndent: " << std::boolalpha << skipIndent << " | " << "skipTokens: " << std::boolalpha << skipTokens << std::endl;
   if (this->isEmptyLine())
   {
     this->doc.ignore();
     return this->parse();
   }
-  if (!skipIndent && indent < this->current->indent)
+  if (!skipIndent && indent <= this->current->indent)
   {
     this->handleContext(indent, NULL);
     return this->parse();
   }
   this->skipWhitespace();
-  if (this->doc.peek() == '-') {
+  if (this->doc.peek() == '-' && !skipTokens) {
     this->doc.ignore();
+    if (!std::isspace(this->doc.peek())) {
+      this->doc.putback('-');
+      goto skip_sequence;
+    }
     // std::cout << "handling sequence entry @ " << std::dec << this->doc.peek() << std::endl;
     if (!this->current->is<Types::Sequence>()) {
       if (!this->current->is<Types::Null>())
@@ -119,17 +127,21 @@ void Parser::parse(bool skipIndent) {
       this->current->indent = cIndent;
     }
     this->skipWhitespace();
-    indent += 2;
     const Node& node = this->current->insert(Node::NewNull(Utils::toString(this->current->size())));
     const_cast<Node&>(node).indent = indent;
     this->stack.push(this->current);
     this->current = const_cast<Node*>(&node);
-    return this->parse(true);
+    return this->parse(this->doc.peek() != '\n', false);
   }
-  std::string key = this->retrieveScalar();
-  // std::cout << "got key " << key << std::endl;
-  if (this->doc.peek() == ':') {
+skip_sequence:
+  std::string key = this->retrieveScalar(skipTokens);
+  // std::cout << "got key " << key << " " << this->doc.peek() << std::endl;
+  if (this->doc.peek() == ':' && !skipTokens) {
     this->doc.ignore();
+    if (!std::isspace(this->doc.peek())) {
+      this->doc.putback(':');
+      goto skip_map;
+    }
     // std::cout << "handling map entry @ " << std::dec << this->doc.peek() << std::endl;
     if (!this->current->is<Types::Map>()) {
       if (!this->current->is<Types::Null>())
@@ -148,8 +160,9 @@ void Parser::parse(bool skipIndent) {
       this->current = const_cast<Node*>(&node);
       return this->parse();
     }
-    return this->parse(true);
+    return this->parse(true, true);
   }
+skip_map:
   Node node = Node::NewScalar(this->scalar, key);
   node.indent = skipIndent ? this->current->indent : indent;
   if (this->current->is<Types::Null>())
@@ -159,16 +172,22 @@ void Parser::parse(bool skipIndent) {
   this->parse();
 }
 
-std::string Parser::retrieveScalar() {
+std::string Parser::retrieveScalar(bool ignoreTokens) {
   std::string value;
   this->skipWhitespace();
-  while (
-    this->doc.peek() != EOF &&
-    this->doc.peek() != '\n' &&
-    this->doc.peek() != ':' &&
-    this->doc.peek() != '#'
-    ) {
-    value += this->doc.get();
+  char last = 0;
+  while (1) {
+    if (this->doc.peek() == EOF || this->doc.peek() == '\n')
+      break;
+    if (!ignoreTokens && (this->doc.peek() == ':' || this->doc.peek() == '-')) {
+      char c = this->doc.get();
+      char next = this->doc.peek();
+      this->doc.putback(c);
+      if (std::isspace(next) && (c != '-' || std::isspace(last)))
+        break;
+    }
+    last = this->doc.get();
+    value += last;
   }
   return value;
 }

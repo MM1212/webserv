@@ -40,7 +40,7 @@ namespace YAML {
     Sequence sequence;
     Map map;
     Types::Type type;
-    size_t indent;
+    int indent;
     Node* parent;
     friend class Parser;
   public:
@@ -105,6 +105,8 @@ namespace YAML {
       T value;
       std::stringstream ss(this->value);
       ss >> value;
+      if (ss.fail())
+        throw std::runtime_error("Failed to convert " + this->value + " to " + typeid(T).name());
       return value;
     }
 
@@ -114,10 +116,18 @@ namespace YAML {
     }
 
     template <>
-    bool as<bool>() const { 
-      if (this->value == "true" || this->as<int>() != 0)
+    bool as<bool>() const {
+      if (this->value == "true")
         return true;
-      else if (this->value == "false" || this->as<int>() == 0)
+      else if (this->value == "false")
+        return false;
+      else if (this->as<int>() != 0)
+        return true;
+      else if (this->as<double>() != 0.0)
+        return true;
+      else if (this->as<int>() == 0)
+        return false;
+      else if (this->as<double>() == 0.0)
         return false;
       else
         throw std::runtime_error("Expected a boolean, got: " + this->value);
@@ -298,7 +308,7 @@ namespace YAML {
     ~Parser() {}
     inline Node& getRoot() { return this->root; }
     inline const Node& getRoot() const { return this->root; }
-    void parse(bool skipIndent = false);
+    void parse(bool skipIndent = false, bool skipTokens = false);
 
   private:
     // skips doc's whitespace and counts its indentation
@@ -306,9 +316,9 @@ namespace YAML {
     int countWhitespace();
     bool isEmptyLine();
     void skipComment();
-    std::string retrieveScalar();
+    std::string retrieveScalar(bool ignoreTokens = false);
 
-    void handleContext(size_t indent, const Node* node);
+    void handleContext(int indent, const Node* node);
   };
   Node LoadFile(const std::string& path);
 

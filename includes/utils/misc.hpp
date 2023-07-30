@@ -38,4 +38,6 @@ namespace Utils
     }
     return false;
   }
+
+  bool isWhitespace(const std::string& str);
 }

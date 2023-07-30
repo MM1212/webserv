@@ -1,0 +1,27 @@
+servers:
+  - listen: 0.0.0.0:80
+    server_names: localhost
+    default: true
+    static:
+      root: /var/www
+    routes:
+      - uri: /api
+        methods:
+          - GET
+        static:
+          root: /var/api
+      - uri: /cgi-bin
+        methods:
+          - GET
+          - POST
+        cgi:
+          root: /var/www/cgi-bin
+          interpreters:
+            - name: python
+              path: /usr/bin/python
+              extensions:
+                - .py
+              args:
+                - -u
+                - $file
+                - -- $args

@@ -1,0 +1,214 @@
+# nginx type config file in yaml
+servers:
+  - # bind a socket (if it doesn't exist yet, create it) to a specific configuration
+    # can be a sequence of addresses or just a scalar
+    # can be of type <address>:<port> or <port> (in which case it will bind to 0.0.0.0)
+    # presence: required
+    # type: scalar<string> | sequence<scalar<string>>
+    listen:
+      - 0.0.0.0:80
+      - 8080
+    # the server name(s) for this configuration
+    # every request that matches the listen address + port and the server name(s) will be handled by this configuration
+    # can be a sequence of names or just a scalar
+    # presence: required
+    # type: scalar<string> | sequence<scalar<string>>
+    server_names:
+      - localhost
+      - localhost.localdomain
+    # if it is the default server or not
+    # if no default is present, the first server will be the default
+    # presence: optional
+    # type: scalar<boolean>
+    # default: false
+    default: true
+    # static information about the server
+    # if present, the server will serve static files
+    # presence: optional
+    # type: mapping
+    static:
+      # the root directory for the static server
+      # presence: required
+      # type: scalar<string>
+      root: /var/www
+      # index file to serve for a directory
+      # presence: optional
+      # type: scalar<string>
+      # default: index.html
+      index: index.html
+    # error pages for the server
+    # will be served if an status code matches and there's nothing written to the response body
+    # presence: optional
+    # type: mapping
+    error_pages:
+      404: /404.html
+      500: /500.html
+    # maximum body size for the server in bytes
+    # can be overriden by the route
+    # presence: optional
+    # type: scalar<string>
+    # default: 1024
+    max_body_size: 1024
+    # dynamic information about the server
+    # describes how to handle dynamic requests
+    # presence: optional
+    # type: sequence<mapping>
+    routes:
+      - # URI to override
+        # presence: required
+        # type: scalar<string>
+        uri: /api
+        # Allowed methods for this route
+        # presence: optional
+        # type: sequence<scalar<string>>
+        # allowed values: GET, POST, PUT, DELETE, HEAD
+        # default: GET
+        methods:
+          - GET
+          - POST
+        # types of the route
+        # only one type can be present
+        # types: redirect, static, cgi
+        # presence: required
+        # type: mapping
+        redirect:
+          # the URI to redirect to
+          # presence: required
+          # type: scalar<string>
+          uri: /api/v1
+          # the type of redirect
+          # presence: optional
+          # type: scalar<string>
+          # allowed values: permanent, temporary
+          # default: permanent
+          type: temporary
+      - # URI to override
+        # presence: required
+        # type: scalar<string>
+        uri: /api/v1
+        # Allowed methods for this route
+        # presence: optional
+        # type: sequence<scalar<string>>
+        # allowed values: GET, POST, PUT, DELETE, HEAD
+        # default: GET
+        methods:
+          - GET
+          - POST
+        # types of the route
+        # only one type can be present
+        # types: redirect, static, cgi
+        # presence: required
+        # type: mapping
+        static:
+          # the root directory for the static server
+          # will override the default static root for this route
+          # ex: /api/v1 will serve files from /var/log/v1
+          # presence: optional
+          # type: scalar<string>
+          root: /var/log/v1/
+          # index file to serve for a directory
+          # if not present, the default index provided by the server will be used
+          # presence: optional
+          # type: scalar<string>
+          # default: <server::static::index>
+          index: index.html
+      - # URI to override
+        # presence: required
+        # type: scalar<string>
+        uri: /api/v2
+        # Allowed methods for this route
+        # presence: optional
+        # type: sequence<scalar<string>>
+        # allowed values: GET, POST, PUT, DELETE, HEAD
+        # default: GET
+        methods:
+          - GET
+          - POST
+        # types of the route
+        # only one type can be present
+        # types: redirect, static, cgi
+        # presence: required
+        # type: mapping
+        cgi:
+          # the root directory for the cgi server
+          # will serve cfi scripts from this directory
+          # presence: required
+          # type: scalar<string>
+          root: ./scripts/
+          # cgi interpreters
+          # presence: required
+          # type: sequence<mapping>
+          interpreters:
+            - # the name of the interpreter
+              # presence: required
+              # type: scalar<string>
+              name: php
+              # the path to the interpreter
+              # if the path is relative, it will be relative to the root directory
+              # if no path is provided, it will be searched in the PATH environment variable
+              # presence: required
+              # type: scalar<string>
+              path: /usr/bin/php
+              # the extensions allowed for this interpreter
+              # presence: required (at least 1)
+              # type: sequence<scalar<string>>
+              extensions:
+                - .php
+                - .php5
+                - .php7
+              # extra arguments to pass to the interpreter
+              # presence: optional
+              # type: sequence<scalar<string>>
+              # default: []
+              args:
+                - -f
+                - $file
+                - -- $args
+            - # the name of the interpreter
+              # presence: required
+              # type: scalar<string>
+              name: python
+              # the path to the interpreter
+              # if the path is relative, it will be relative to the root directory
+              # if no path is provided, it will be searched in the PATH environment variable
+              # presence: required
+              # type: scalar<string>
+              path:
+                /usr/bin/python
+                # the extensions allowed for this interpreter
+              # presence: required (at least 1)
+              # type: sequence<scalar<string>>
+              extensions:
+                - .py
+              # extra arguments to pass to the interpreter
+              # presence: optional
+              # type: sequence<scalar<string>>
+              # default: []
+              args:
+                - -u
+                - $file
+                - -- $args
+            - # the name of the interpreter
+              # presence: required
+              # type: scalar<string>
+              name: bash
+              # the path to the interpreter
+              # if the path is relative, it will be relative to the root directory
+              # if no path is provided, it will be searched in the PATH environment variable
+              # presence: required
+              # type: scalar<string>
+              path:
+                /usr/bin/bash
+                # the extensions allowed for this interpreter
+              # presence: required (at least 1)
+              # type: sequence<scalar<string>>
+              extensions:
+                - .sh
+              # extra arguments to pass to the interpreter
+              # presence: optional
+              # type: sequence<scalar<string>>
+              # default: []
+              args:
+                - -u
+                - $file
+                - -- $args

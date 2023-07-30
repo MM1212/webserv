@@ -49,3 +49,10 @@ void Utils::showStackTrace() {
     std::cerr << symbols[i] << std::endl;
   }
 }
+
+bool Utils::isWhitespace(const std::string& str) {
+  for (size_t i = 0; i < str.size(); i++)
+    if (!std::isspace(str[i]))
+      return false;
+  return true;
+}
