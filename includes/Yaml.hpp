@@ -316,9 +316,20 @@ namespace YAML {
     int countWhitespace();
     bool isEmptyLine();
     void skipComment();
-    std::string retrieveScalar(bool ignoreTokens = false);
 
     void handleContext(int indent, const Node* node);
+
+    struct ScalarContext {
+      enum Type {
+        None = -1,
+        Normal,
+        SingleQuoted,
+        DoubleQuoted
+      };
+    };
+    std::string retrieveScalar(bool ignoreTokens = false);
+    void parseScalarContext(ScalarContext::Type& ctx, char c);
+    void removeScalarQuotes(std::string& scalar);
   };
   Node LoadFile(const std::string& path);
 

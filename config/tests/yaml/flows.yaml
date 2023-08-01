@@ -1,0 +1,4 @@
+- key: 'tools'
+  value: [wrench, hammer, 'screwdriver: philips', 'screwdriver: flathead']
+- key: misc
+  value: [paper, pen, 'paper: lined', 'paper: blank']

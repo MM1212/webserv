@@ -1,7 +1,56 @@
 #include "Yaml.hpp"
 #include <iostream>
+#include <cstdlib>
 
-static void hobbiesTest(const YAML::Node& config) {
+static void maps(const YAML::Node& config) {
+  if (!config.is<YAML::Types::Map>())
+    throw std::runtime_error("Expected a Map, got: " + YAML::Types::GetLabel(config.getType()));
+  for (
+    YAML::Node::map_const_iterator it = config.begin<YAML::Node::Map>();
+    it != config.end<YAML::Node::Map>();
+    ++it
+    ) {
+    const YAML::Node& node = it->second;
+    if (!node.is<YAML::Types::Scalar>())
+      throw std::runtime_error("Expected a Scalar, got: " + YAML::Types::GetLabel(node.getType()));
+  }
+}
+
+static void sequences(const YAML::Node& config) {
+  if (!config.is<YAML::Types::Sequence>())
+    throw std::runtime_error("Expected a Sequence, got: " + YAML::Types::GetLabel(config.getType()));
+  for (
+    YAML::Node::const_iterator it = config.begin<YAML::Node::Sequence>();
+    it != config.end<YAML::Node::Sequence>();
+    ++it
+    ) {
+    const YAML::Node& node = *it;
+    if (!node.is<YAML::Types::Scalar>())
+      throw std::runtime_error("Expected a Scalar, got: " + YAML::Types::GetLabel(node.getType()));
+  }
+}
+
+static void scalarQuotes(const YAML::Node& config) {
+  if (!config.is<YAML::Types::Sequence>())
+    throw std::runtime_error("Expected a Sequence, got: " + YAML::Types::GetLabel(config.getType()));
+  for (
+    YAML::Node::const_iterator it = config.begin<YAML::Node::Sequence>();
+    it != config.end<YAML::Node::Sequence>();
+    ++it
+    ) {
+    const YAML::Node& node = *it;
+    if (!node.is<YAML::Types::Map>())
+      throw std::runtime_error("Expected a Scalar, got: " + YAML::Types::GetLabel(node.getType()));
+    const YAML::Node& bookName = node["book"];
+    const YAML::Node& releaseData = node["release_date"];
+    if (!bookName.is<YAML::Types::Scalar>())
+      throw std::runtime_error("Expected a Scalar, got: " + YAML::Types::GetLabel(bookName.getType()));
+    if (!releaseData.is<YAML::Types::Scalar>())
+      throw std::runtime_error("Expected a Scalar, got: " + YAML::Types::GetLabel(releaseData.getType()));
+  }
+}
+
+static void sequencesAndMaps(const YAML::Node& config) {
   const YAML::Node hobbies = config["hobbies"];
   for (
     YAML::Node::const_iterator it = hobbies.begin<YAML::Node::Sequence>();
@@ -9,9 +58,38 @@ static void hobbiesTest(const YAML::Node& config) {
     ++it
     ) {
     const YAML::Node& hobby = *it;
-    std::cout << "- type: " << hobby["type"].as<std::string>() << std::endl;
-    std::cout << "- name: " << hobby["name"].as<std::string>() << std::endl;
-    std::cout << "- is a sport: " << std::boolalpha << hobby["is_sport"].as<bool>() << std::endl << std::endl;
+    hobby["type"].as<std::string>();
+    hobby["name"].as<std::string>();
+    hobby["is_sport"].as<bool>();
+  }
+}
+
+static void flows(const YAML::Node& config) {
+  if (!config.is<YAML::Types::Sequence>())
+    throw std::runtime_error("Expected a Sequence, got: " + YAML::Types::GetLabel(config.getType()));
+  for (
+    YAML::Node::const_iterator it = config.begin<YAML::Node::Sequence>();
+    it != config.end<YAML::Node::Sequence>();
+    ++it
+    ) {
+    const YAML::Node& node = *it;
+    if (!node.is<YAML::Types::Map>())
+      throw std::runtime_error("Expected a Map, got: " + YAML::Types::GetLabel(node.getType()));
+    const YAML::Node& key = node["key"];
+    const YAML::Node& value = node["value"];
+    if (!key.is<YAML::Types::Scalar>())
+      throw std::runtime_error("Expected a Scalar, got: " + YAML::Types::GetLabel(key.getType()));
+    if (!value.is<YAML::Types::Sequence>())
+      throw std::runtime_error("Expected a Sequence, got: " + YAML::Types::GetLabel(value.getType()));
+    for (
+      YAML::Node::const_iterator it = value.begin<YAML::Node::Sequence>();
+      it != value.end<YAML::Node::Sequence>();
+      ++it
+      ) {
+      const YAML::Node& node = *it;
+      if (!node.is<YAML::Types::Scalar>())
+        throw std::runtime_error("Expected a Scalar, got: " + YAML::Types::GetLabel(node.getType()));
+    }
   }
 }
 
@@ -29,9 +107,16 @@ static void test(const std::string& path, void (*handler)(const YAML::Node& node
 }
 
 void YAML::RunTests() {
-  (void)hobbiesTest;
-  test("config/tests/yaml/1.yaml", &hobbiesTest);
+  (void)maps;
+  (void)sequences;
+  (void)scalarQuotes;
+  (void)sequencesAndMaps;
+  test("config/tests/yaml/maps.yaml", &maps);
+  test("config/tests/yaml/sequences.yaml", &sequences);
+  test("config/tests/yaml/scalar_quotes.yaml", &scalarQuotes);
+  test("config/tests/yaml/sequences_map.yaml", &sequencesAndMaps);
+  test("config/tests/yaml/flows.yaml", &flows);
   test("config/tests/example.yaml", NULL);
   test("config/tests/wip.yaml", NULL);
-
+  exit(0);
 }

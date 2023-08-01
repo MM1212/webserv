@@ -9,7 +9,6 @@ using namespace YAML;
   Interprets scalars as strings.
   Supports sequences and maps (and nested).
   Does not support anchors, aliases, tags, etc.
-  Supports only comments that start the line with #.
   Does not support multi-line scalars.
   Does not support flow style.
   Does not support directives.
@@ -134,6 +133,30 @@ void Parser::parse(bool skipIndent, bool skipTokens) {
     return this->parse(this->doc.peek() != '\n', false);
   }
 skip_sequence:
+  if (this->doc.peek() == '[') {
+    this->doc.ignore();
+    // std::cout << "handling inline scalar sequence entry @" << std::dec << this->doc.peek() << std::endl;
+    if (!this->current->is<Types::Sequence>()) {
+      const int cIndent = this->current->indent;
+      Node node = Node::NewSequence(this->scalar);
+      node.indent = cIndent;
+      Node& inserted = const_cast<Node&>(this->current->insert(node));
+      this->stack.push(this->current);
+      this->current = &inserted;
+    }
+    while (this->doc.peek() != EOF && this->doc.peek() != ']' && this->doc.peek() != '\n') {
+      std::string scalar = this->retrieveScalar(true);
+      Node node = Node::NewScalar(Utils::toString(this->current->size()), scalar);
+      node.indent = this->current->indent;
+      this->current->insert(node);
+      if (this->doc.peek() == ',')
+        this->doc.ignore();
+      this->skipWhitespace();
+    }
+    if (this->doc.peek() == ']')
+      this->doc.ignore();
+    return this->parse();
+  }
   std::string key = this->retrieveScalar(skipTokens);
   // std::cout << "got key " << key << " " << this->doc.peek() << std::endl;
   if (this->doc.peek() == ':' && !skipTokens) {
@@ -172,23 +195,72 @@ skip_map:
   this->parse();
 }
 
-std::string Parser::retrieveScalar(bool ignoreTokens) {
+void Parser::parseScalarContext(Parser::ScalarContext::Type& ctx, char c) {
+  ScalarContext::Type next = ScalarContext::None;
+  if (c == '\'')
+    next = ScalarContext::SingleQuoted;
+  else if (c == '"')
+    next = ScalarContext::DoubleQuoted;
+  if (next == ScalarContext::None)
+    return;
+  if (next == ctx)
+    next = ScalarContext::Normal;
+  if (
+    next != ScalarContext::Normal &&
+    ctx != ScalarContext::Normal &&
+    next != ctx
+    )
+    return;
+  ctx = next;
+}
+
+void Parser::removeScalarQuotes(std::string& scalar) {
+  ScalarContext::Type ctx = ScalarContext::Normal;
+  for (size_t i = 0; i < scalar.size(); i++) {
+    ScalarContext::Type lastCtx = ctx;
+    this->parseScalarContext(ctx, scalar[i]);
+    if (ctx == lastCtx)
+      continue;
+    if (scalar[i] == '\'' || scalar[i] == '"')
+      scalar.erase(i--, 1);
+  }
+}
+
+std::string Parser::retrieveScalar(bool _ignoreTokens) {
   std::string value;
   this->skipWhitespace();
   char last = 0;
+  bool ignoreTokens = _ignoreTokens;
+  ScalarContext::Type ctx = ScalarContext::Normal;
+  // std::cout << "[RETRIEVE SCALAR]" << std::endl;
   while (1) {
     if (this->doc.peek() == EOF || this->doc.peek() == '\n')
       break;
-    if (!ignoreTokens && (this->doc.peek() == ':' || this->doc.peek() == '-')) {
+    // ScalarContext::Type lastCtx = ctx;
+    this->parseScalarContext(ctx, this->doc.peek());
+    // std::cout << "last: " << lastCtx << " | " << "ctx: " << ctx << " for: " << (char)this->doc.peek() << "[" << this->doc.peek() << "]" << std::endl;
+    ignoreTokens = _ignoreTokens || ctx != ScalarContext::Normal;
+    if (!ignoreTokens && (std::string(":-").find_first_of(this->doc.peek()) != std::string::npos)) {
       char c = this->doc.get();
       char next = this->doc.peek();
       this->doc.putback(c);
-      if (std::isspace(next) && (c != '-' || std::isspace(last)))
+      if ((std::isspace(next) && (c != '-' || std::isspace(last))) ||
+        (c == ',' || c == '[' || c == ']'))
         break;
+    }
+    else if (
+      ctx == ScalarContext::Normal &&
+      std::string(",[]").find_first_of(this->doc.peek()) != std::string::npos
+      ) {
+      break;
     }
     last = this->doc.get();
     value += last;
   }
+  if (ctx != ScalarContext::Normal)
+    throw std::runtime_error("Invalid scalar context. Expected quotes to correctly be closed.");
+  this->removeScalarQuotes(value);
+  // std::cout << "[END RETRIEVE SCALAR]: " << value << std::endl;
   return value;
 }
 
