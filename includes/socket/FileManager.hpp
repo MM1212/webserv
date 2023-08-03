@@ -13,6 +13,8 @@
 #include <netdb.h>
 #include <errno.h>
 
+#include <utils/Logger.hpp>
+
 #define SYS_SEND ::send
 #define SYS_RECV ::recv
 #define SYS_LISTEN ::listen
@@ -26,37 +28,33 @@
 #include <set>
 
 namespace Socket {
+  class File {
+    int fd;
+    int events;
+  public:
+    File() : fd(-1), events(0) {}
+    File(int fd) : fd(fd), events(0) {}
+    ~File() {}
+    File(const File& other) : fd(other.fd), events(other.events) {}
+    File& operator=(const File& other) {
+      if (this == &other) return *this;
+      this->fd = other.fd;
+      this->events = other.events;
+      return *this;
+    }
+
+    inline int getFd() const { return this->fd; }
+    inline bool isReadable() const { return this->events & EPOLLIN; }
+    inline bool isWritable() const { return this->events & EPOLLOUT; }
+    inline bool isClosed() const { return this->events & (EPOLLRDHUP | EPOLLHUP); }
+    inline bool isErrored() const { return this->events & EPOLLERR; }
+
+    operator int() const { return this->fd; }
+    void setEvents(int events) { this->events = events; }
+  };
 
   template <typename T>
   class FileManager {
-  public:
-    class File {
-      int fd;
-      int events;
-    public:
-      File() : fd(-1), events(0) {}
-      File(int fd) : fd(fd), events(0) {}
-      ~File() {}
-      File(const File& other) : fd(other.fd), events(other.events) {}
-      File& operator=(const File& other) {
-        if (this == &other) return *this;
-        this->fd = other.fd;
-        this->events = other.events;
-      }
-
-      inline int getFd() const { return this->fd; }
-      inline bool isReadable() const { return this->events & EPOLLIN; }
-      inline bool isWritable() const { return this->events & EPOLLOUT; }
-      inline bool isClosed() const { return this->events & (EPOLLRDHUP | EPOLLHUP); }
-      inline bool isErrored() const { return this->events & EPOLLERR; }
-
-      operator int() const { return this->fd; }
-    private:
-      void setEvents(int events) { this->events = events; }
-
-      friend class FileManager;
-    };
-  private:
     typedef struct epoll_event epoll_event_t;
 
     std::set<File> fds;
@@ -66,7 +64,7 @@ namespace Socket {
     bool running;
 
     T* instance;
-    void (T::* onTick)(const FileManager<T>&);
+    void (T::* onTick)(const std::vector<File>&);
   public:
     FileManager() :
       fds(), epollFd(-1),
@@ -74,7 +72,7 @@ namespace Socket {
       instance(NULL), onTick(NULL) {
       this->init();
     }
-    FileManager(T* instance, void (T::* onTick)(const FileManager<T>&)) :
+    FileManager(T* instance, void (T::* onTick)(const std::vector<File>&)) :
       fds(), epollFd(-1),
       events(new epoll_event_t[0]), maxEvents(0), running(false),
       instance(instance), onTick(onTick) {
@@ -98,8 +96,12 @@ namespace Socket {
     }
 
     ~FileManager() {
+      this->running = false;
       if (this->events) delete[] this->events;
       if (this->epollFd != -1) SYS_CLOSE(this->epollFd);
+      for (std::set<File>::iterator it = this->fds.begin(); it != this->fds.end(); it++) {
+        SYS_CLOSE(*it);
+      }
     }
   private:
     void init() {
@@ -113,14 +115,14 @@ namespace Socket {
   public:
     bool add(int fd, int flags) {
       if (this->has(fd))
-        this->remove(fd);
+        this->remove(fd, false);
       epoll_event_t event;
       event.events = flags;
       event.data.fd = fd;
       if (::epoll_ctl(this->epollFd, EPOLL_CTL_ADD, fd, &event) == -1) {
         return false;
       }
-      SYS_FNCTL(fd, F_SETFD, FD_CLOEXEC | O_NONBLOCK);
+      SYS_FNCTL(fd, F_SETFD, FD_CLOEXEC /* | O_NONBLOCK */);
       this->fds.insert(File(fd));
       this->maxEvents++;
       if (this->events) delete[] this->events;
@@ -132,7 +134,22 @@ namespace Socket {
       return this->fds.count(fd) > 0;
     }
 
-    inline bool remove(int fd, bool close) {
+    const std::set<File>& getAll() const {
+      return this->fds;
+    }
+    std::set<File>& getAll() {
+      return this->fds;
+    }
+
+    const File& get(int fd) const {
+      std::set<File>::iterator it = this->fds.find(fd);
+      if (it == this->fds.end()) {
+        throw std::runtime_error("File not found");
+      }
+      return *it;
+    }
+
+    bool remove(int fd, bool close) {
       if (!this->has(fd)) return false;
       if (::epoll_ctl(this->epollFd, EPOLL_CTL_DEL, fd, NULL) == -1) {
         return false;
@@ -146,7 +163,7 @@ namespace Socket {
       return true;
     }
 
-    inline bool update(int fd, int flags) {
+    bool update(int fd, int flags) {
       if (!this->has(fd)) return false;
       epoll_event_t event;
       event.events = flags;
@@ -170,15 +187,17 @@ namespace Socket {
           if (errno == EINTR) continue;
           throw std::runtime_error("epoll_wait failed");
         }
+        std::vector<File> changed(n);
         for (int i = 0; i < n; i++) {
           epoll_event_t& event = this->events[i];
           std::set<File>::iterator it = this->fds.find(event.data.fd);
           if (it == this->fds.end()) continue;
-          File& file = *it;
+          File& file = const_cast<File&>(*it);
           file.setEvents(event.events);
+          changed[i] = file;
         }
         if (this->instance && this->onTick) {
-          (this->instance->*this->onTick)(*this);
+          (this->instance->*this->onTick)(changed);
         }
       }
     }

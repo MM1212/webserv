@@ -7,6 +7,8 @@
 #include <iomanip>
 #include <sys/socket.h>
 #include <fcntl.h>
+#include <stdint.h>
+#include <sys/time.h>
 
 namespace Utils
 {
@@ -40,4 +42,7 @@ namespace Utils
   }
 
   bool isWhitespace(const std::string& str);
+
+  // returns the current epoch time in miliseconds
+  uint64_t getCurrentTime();
 }

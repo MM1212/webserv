@@ -49,6 +49,11 @@ servers:
     # type: scalar<string>
     # default: 1024
     max_body_size: 1024
+    # maximum number of connections for the server
+    # presence: optional
+    # type: scalar<integer>
+    # default: 1024
+    max_connections: 1024
     # dynamic information about the server
     # describes how to handle dynamic requests
     # presence: optional

@@ -1,6 +1,7 @@
 #include "Yaml.hpp"
 #include <iostream>
 #include <cstdlib>
+#include <utils/Logger.hpp>
 
 static void maps(const YAML::Node& config) {
   if (!config.is<YAML::Types::Map>())
@@ -94,15 +95,16 @@ static void flows(const YAML::Node& config) {
 }
 
 static void test(const std::string& path, void (*handler)(const YAML::Node& node)) {
-  std::cout << "Testing " << path << ".." << std::endl;
+  Logger::info << "Testing " << Logger::param(path) << ".." << std::endl;
+
   try {
     const YAML::Node root = YAML::LoadFile(path);
     if (handler)
       handler(root);
-    std::cout << "Test " << path << " passed!" << std::endl;
+    Logger::success << "Test " << Logger::param(path) << " passed!" << std::endl;
   }
   catch (const std::exception& e) {
-    std::cerr << "Test " << path << " failed: " << e.what() << std::endl;
+    Logger::error << "Test " << Logger::param(path) << " failed: " << Logger::param(e.what()) << std::endl;
   }
 }
 
@@ -118,5 +120,4 @@ void YAML::RunTests() {
   test("config/tests/yaml/flows.yaml", &flows);
   test("config/tests/example.yaml", NULL);
   test("config/tests/wip.yaml", NULL);
-  exit(0);
 }

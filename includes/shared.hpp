@@ -7,6 +7,8 @@
 #include <set>
 #include <vector>
 #include <exception>
+#include <error.h>
+#include <stdio.h>
 
 #define nullptr NULL
 

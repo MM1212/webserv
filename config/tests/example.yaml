@@ -1,5 +1,5 @@
 servers:
-  - listen: 0.0.0.0:80
+  - listen: 0.0.0.0:8080
     server_names: localhost
     default: true
     static:
@@ -25,3 +25,4 @@ servers:
                 - -u
                 - $file
                 - -- $args
+  - listen: [3000, 3001, 8080]
