@@ -2,6 +2,7 @@
 
 #include <string>
 
+// SOURCE: https://www.rfc-editor.org/rfc/rfc9110.html#name-methods
 namespace HTTP {
   namespace Methods {
     enum Method {

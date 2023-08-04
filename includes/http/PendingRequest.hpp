@@ -9,6 +9,7 @@
 #include "Request.hpp"
 
 namespace HTTP {
+  class WebSocket;
 
   class PendingRequest {
   public:
@@ -18,7 +19,8 @@ namespace HTTP {
         Method,
         Uri,
         Protocol,
-        Version,
+        VersionMajor,
+        VersionMinor,
         Header,
         HeaderKey,
         HeaderValue,
@@ -43,6 +45,7 @@ namespace HTTP {
 
     States::State getState() const;
     void setState(const States::State state);
+    void nextWithCRLF();
     void next();
     Headers& getHeaders();
     const Headers& getHeaders() const;
@@ -90,6 +93,7 @@ namespace HTTP {
 
     friend std::ostream& operator<<(std::ostream& os, const PendingRequest& request);
   private:
+    bool checkCRLF;
     States::State state;
     Headers headers;
     Methods::Method method;
@@ -99,9 +103,12 @@ namespace HTTP {
     Socket::Parallel* server;
     Socket::Connection* client;
     std::map<std::string, std::string> params;
+    std::string buildingHeaderKey;
 
     PendingRequest();
     void parseParams();
+
+    friend class WebSocket;
 
   };
 

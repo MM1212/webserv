@@ -41,7 +41,6 @@ namespace YAML {
     Map map;
     Types::Type type;
     int indent;
-    Node* parent;
     friend class Parser;
   public:
     Node();
@@ -86,9 +85,6 @@ namespace YAML {
     }
     inline Types::Type getType() const {
       return this->type;
-    }
-    inline Node* getParent() const {
-      return this->parent;
     }
 
     const Node& operator[](const std::string& key) const;
@@ -167,6 +163,7 @@ namespace YAML {
       this->map = other.map;
       this->type = other.type;
       this->indent = other.indent;
+
       return *this;
     }
 

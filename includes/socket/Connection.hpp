@@ -19,6 +19,8 @@ namespace Socket {
 
     int timeout;
     uint64_t heartbeat;
+
+    bool closeOnEmptyWriteBuffer;
   public:
     Connection(
       File& handle,
@@ -54,6 +56,13 @@ namespace Socket {
     }
     inline operator std::string() const {
       return this->address + ":" + Utils::toString(this->port);
+    }
+
+    inline void markToClose() {
+      this->closeOnEmptyWriteBuffer = true;
+    }
+    inline bool shouldCloseOnEmptyWriteBuffer() const {
+      return this->closeOnEmptyWriteBuffer;
     }
   private:
     void init();

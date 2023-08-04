@@ -4,7 +4,7 @@
 #include <utils/Logger.hpp>
 #include <utils/misc.hpp>
 #include <cstdlib>
-#include <socket/Parallel.hpp>
+#include <http/WebSocket.hpp>
 #include <string.h>
 #include <Settings.hpp>
 
@@ -59,17 +59,17 @@ int main(int ac, char** av) {
       else
         throw std::runtime_error("Invalid listen address");
     }
-    Socket::Parallel parallel(Instance::Get<Settings>()->getKeepAliveTimeout());
+    HTTP::WebSocket server;
     Logger::debug
       << "Attempting to bind "
       << Logger::param(listenAddresses.size())
       << " addresses.." << std::endl;
     for (std::map<std::string, ListenAddress>::iterator it = listenAddresses.begin(); it != listenAddresses.end(); it++) {
       const ListenAddress& address = it->second;
-      parallel.bind(Socket::Domain::INET, Socket::Type::TCP, Socket::Protocol::IP, address.address, address.port, address.maxConnections);
+      server.bind(Socket::Domain::INET, Socket::Type::TCP, Socket::Protocol::IP, address.address, address.port, address.maxConnections);
       Logger::info << "Listening on " << Logger::param(address.address) << ":" << Logger::param(address.port) << std::endl;
     }
-    parallel.run();
+    server.run();
   }
   catch (const std::exception& e) {
     Logger::error

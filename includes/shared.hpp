@@ -19,5 +19,5 @@ namespace std {
   template<>
   struct static_assertion<true> {};
 
-  std::string clrf("\r\n");  
+  static std::string clrf("\r\n");  
 }

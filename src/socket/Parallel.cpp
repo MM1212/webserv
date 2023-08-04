@@ -139,6 +139,7 @@ void Parallel::disconnect(int client) {
     return;
   const Connection con = this->getClient(client);
   const std::string address(con);
+  this->onClientDisconnect(con);
   Logger::debug
     << "Client disconnected " << Logger::param(address)
     << " with sock " << Logger::param(client)
@@ -162,7 +163,7 @@ void Parallel::onTick(const std::vector<File>& changed) {
     ) {
     const File& file = *it;
     if (this->hasServer(file))
-      this->onNewConnection(this->getServer(file));
+      this->_onNewConnection(this->getServer(file));
     else if (this->hasClient(file)) {
       const Connection& client = this->getClient(file);
       if (!client.isAlive() || client.hasTimedOut()) {
@@ -177,7 +178,7 @@ void Parallel::onTick(const std::vector<File>& changed) {
   }
 }
 
-void Parallel::onNewConnection(const Server& server) {
+void Parallel::_onNewConnection(const Server& server) {
   struct sockaddr_in clientAddress;
   socklen_t clientAddressLength = sizeof(clientAddress);
   Logger::debug
@@ -201,6 +202,7 @@ void Parallel::onNewConnection(const Server& server) {
     << " with sock " << Logger::param(fileHandle)
     << " on sock " << Logger::param(server.sock)
     << std::endl;
+  this->onClientConnect(this->getClient(clientSock));
 }
 
 void Parallel::onClientDisconnect(const Connection& client) {
@@ -228,7 +230,11 @@ void Parallel::_onClientRead(Connection& client) {
 
 void Parallel::_onClientWrite(Connection& client) {
   std::string& buffer = client.getWriteBuffer();
-  if (buffer.size() == 0) return;
+  if (buffer.size() == 0) {
+    if (client.shouldCloseOnEmptyWriteBuffer())
+      this->disconnect(client);
+    return;
+  }
   int wrote = send(client.getHandle(), buffer.c_str(), buffer.size(), 0);
   if (wrote < 0) return;
   this->onClientWrite(client, wrote);

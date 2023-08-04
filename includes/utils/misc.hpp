@@ -45,4 +45,8 @@ namespace Utils
 
   // returns the current epoch time in miliseconds
   uint64_t getCurrentTime();
+
+  std::string& toLowercase(std::string& str);
+  std::string& toUppercase(std::string& str);
+  std::string& trim(std::string& str);
 }

@@ -29,7 +29,7 @@ namespace Socket {
     int timeout;
   public:
     Parallel(int timeout);
-    ~Parallel();
+    virtual ~Parallel();
 
     bool hasServer(const std::string& address, const int port) const;
     bool hasServer(const Server& server) const;
@@ -63,13 +63,17 @@ namespace Socket {
 
     void onTick(const std::vector<File>& changed);
 
-    void onNewConnection(const Server& sock);
-    void onClientDisconnect(const Connection& sock);
+    void _onNewConnection(const Server& sock);
+    void _onClientDisconnect(const Connection& sock);
     void _onClientRead(Connection& sock);
     void _onClientWrite(Connection& sock);
 
+  protected:
+    virtual void onClientConnect(const Connection& sock) = 0;
+    virtual void onClientDisconnect(const Connection& sock) = 0;
     virtual void onClientRead(Connection& sock) = 0;
-    virtual void onClientWrite(Connection& sock, int bytesWrote) = 0;
+    virtual void onClientWrite(Connection& sock, int bytesWritten) = 0;
+
   };
 
 }

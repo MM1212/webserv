@@ -1,5 +1,6 @@
 #include "Settings.hpp"
 #include <utils/Logger.hpp>
+#include <utils/misc.hpp>
 
 const std::string Settings::path = "config/bin/settings.yaml";
 
@@ -27,6 +28,8 @@ bool Settings::isValid() const {
       throw std::runtime_error("keep_alive_timeout isn't an integer");
     if (!this->config["max_body_size"].is<int>())
       throw std::runtime_error("max_body_size isn't an integer");
+    if (!this->config["status_codes"].is<YAML::Types::Map>())
+      throw std::runtime_error("status_codes isn't a map");
     return true;
   }
   catch (const std::exception& e) {
@@ -51,4 +54,12 @@ int Settings::getKeepAliveTimeout() const {
 int Settings::getMaxBodySize() const {
   static int cache = this->config["max_body_size"].as<int>();
   return cache;
+}
+
+const std::string Settings::statusCode(int code) const {
+  static const YAML::Node& codes = this->config["status_codes"];
+  const std::string codeStr = Utils::toString(code);
+  if (!codes.has(codeStr))
+    return "";
+  return codes[codeStr].as<std::string>();
 }

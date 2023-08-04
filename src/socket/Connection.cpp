@@ -9,13 +9,15 @@ Connection::Connection(
   int timeout
 )
   : handle(handle), serverSock(sock),
-  timeout(timeout), heartbeat(Utils::getCurrentTime()) {
+  timeout(timeout), heartbeat(Utils::getCurrentTime()),
+  closeOnEmptyWriteBuffer(false) {
   this->init();
 }
 
 Connection::Connection(const Connection& other)
   : handle(other.handle), serverSock(other.serverSock),
-  timeout(other.timeout), heartbeat(other.heartbeat) {
+  timeout(other.timeout), heartbeat(other.heartbeat),
+  closeOnEmptyWriteBuffer(false) {
   this->init();
 }
 

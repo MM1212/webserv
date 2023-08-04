@@ -62,3 +62,26 @@ uint64_t Utils::getCurrentTime() {
   gettimeofday(&tv, NULL);
   return (uint64_t)tv.tv_sec * 1000 + (uint64_t)tv.tv_usec / 1000;
 }
+
+std::string& Utils::trim(std::string& str) {
+  static const std::string whitespace = " \t\n\r\f\v";
+  size_t start = str.find_first_not_of(whitespace);
+  if (start == std::string::npos)
+    return str;
+  size_t end = str.find_last_not_of(whitespace);
+  str.erase(end + 1);
+  str.erase(0, start);
+  return str;
+}
+
+std::string& Utils::toLowercase(std::string& str) {
+  for (size_t i = 0; i < str.size(); i++)
+    str[i] = std::tolower(str[i]);
+  return str;
+}
+
+std::string& Utils::toUppercase(std::string& str) {
+  for (size_t i = 0; i < str.size(); i++)
+    str[i] = std::toupper(str[i]);
+  return str;
+}

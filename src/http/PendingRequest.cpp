@@ -9,7 +9,7 @@ std::string PendingRequest::States::ToString(State state) {
   case States::Method: return "Method";
   case States::Uri: return "Uri";
   case States::Protocol: return "Protocol";
-  case States::Version: return "Version";
+  case States::VersionMajor: return "Version";
   case States::Header: return "Header";
   case States::HeaderKey: return "HeaderKey";
   case States::HeaderValue: return "HeaderValue";
@@ -27,7 +27,9 @@ PendingRequest::PendingRequest(
   Socket::Parallel* server,
   Socket::Connection* client
 ) :
+  checkCRLF(false),
   state(States::Method),
+  method(Methods::UNK),
   server(server),
   client(client) {}
 
@@ -35,6 +37,8 @@ PendingRequest::PendingRequest() {}
 PendingRequest::~PendingRequest() {}
 
 PendingRequest::PendingRequest(const PendingRequest& other) :
+  checkCRLF(other.checkCRLF),
+  state(other.state),
   headers(other.headers),
   method(other.method),
   path(other.path),
@@ -45,6 +49,8 @@ PendingRequest::PendingRequest(const PendingRequest& other) :
 
 PendingRequest& PendingRequest::operator=(const PendingRequest& other) {
   if (this == &other) return *this;
+  this->checkCRLF = other.checkCRLF;
+  this->state = other.state;
   this->headers = other.headers;
   this->method = other.method;
   this->path = other.path;
@@ -63,7 +69,12 @@ void PendingRequest::setState(const States::State state) {
   this->state = state;
 }
 
+void PendingRequest::nextWithCRLF() {
+  this->checkCRLF = true;
+}
+
 void PendingRequest::next() {
+  this->checkCRLF = false;
   this->state = static_cast<States::State>(this->state + 1);
 }
 
@@ -151,7 +162,7 @@ void PendingRequest::parseParams() {
 std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {
   os
     << "PendingRequest("
-    << req.getMethod()
+    << Methods::ToString(req.getMethod()) << "[" << req.getMethod() << "]"
     << ", "
     << req.getPath()
     << ", "

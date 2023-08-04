@@ -10,8 +10,21 @@
 #include "PendingRequest.hpp"
 
 namespace HTTP {
-  class WebSocket : private Socket::Parallel {
-    private:
-      std::map<int, PendingRequest> pendingRequests;
+  class WebSocket : public Socket::Parallel {
+  private:
+    std::map<int, PendingRequest> pendingRequests;
+  public:
+    WebSocket();
+    ~WebSocket();
+
+  private:
+    virtual void onClientConnect(const Socket::Connection& sock);
+    virtual void onClientDisconnect(const Socket::Connection& sock);
+    virtual void onClientRead(Socket::Connection& sock);
+    virtual void onClientWrite(Socket::Connection&, int) {}
+
+    void handleClientPacket(Socket::Connection& sock);
+
+    void sendBadRequest(Socket::Connection& sock, int statusCode, const std::string& logMsg);
   };
 };

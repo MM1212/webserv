@@ -18,28 +18,35 @@ void Headers::clear() {
 bool Headers::append(const std::string& key, const std::string& value) {
   if (this->has(key))
     return false;
-  this->set(key, value);
+  std::string formatted = key;
+  Utils::toLowercase(formatted);
+  this->headers.insert(std::make_pair(formatted, value));
+  this->keys.push_back(formatted);
   return true;
 }
 
 void Headers::set(const std::string& key, const std::string& value) {
-  this->headers[key] = value;
+  std::string formatted = key;
+  Utils::toLowercase(formatted);
+  if (this->headers.count(formatted) == 0)
+    this->keys.push_back(formatted);
+  this->headers[formatted] = value;
 }
 
 void Headers::remove(const std::string& key) {
-  this->headers.erase(key);
+  std::string formatted = key;
+  Utils::toLowercase(formatted);
+  this->headers.erase(formatted);
+  this->keys.erase(std::remove(this->keys.begin(), this->keys.end(), formatted), this->keys.end());
 }
 
 bool Headers::has(const std::string& key) const {
-  return this->headers.find(key) != this->headers.end();
+  std::string formatted = key;
+  Utils::toLowercase(formatted);
+  return this->headers.find(formatted) != this->headers.end();
 }
 
-const std::string& Headers::get(const std::string& key) const {
-  static const std::string empty;
-  if (!this->has(key))
-    return empty;
-  return this->headers.at(key);
-}
+
 
 const std::map<std::string, std::string>& Headers::getAll() const {
   return this->headers;
@@ -52,10 +59,12 @@ Headers::operator std::string() const {
 std::string Headers::toString() const {
   std::string result;
   for (
-    std::map<std::string, std::string>::const_iterator it = this->headers.begin();
-    it != this->headers.end();
+    std::vector<std::string>::const_iterator it = this->keys.begin();
+    it != this->keys.end();
     it++) {
-    result += it->first + ": " + it->second + "\r\n";
+    std::string key = *it;
+    const std::string& value = this->headers.at(key);
+    result += HTTP::capitalizeHeader(key) + ": " + value + "\r\n";
   }
   return result;
 }

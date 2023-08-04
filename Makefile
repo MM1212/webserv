@@ -6,6 +6,7 @@ SRC_FILES = utils/Logger.cpp utils/misc.cpp \
 						Yaml/Node.cpp Yaml/Parser.cpp Yaml/tests.cpp \
 						socket/Connection.cpp socket/Parallel.cpp \
 						http/Methods.cpp http/Request.cpp http/PendingRequest.cpp \
+						http/Headers.cpp http/utils.cpp http/WebSocket.cpp \
 						main.cpp
 
 SRC_DIR = src
