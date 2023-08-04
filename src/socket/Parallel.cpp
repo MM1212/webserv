@@ -170,9 +170,9 @@ void Parallel::onTick(const std::vector<File>& changed) {
         continue;
       }
       if (client.isReadable())
-        this->onClientRead(const_cast<Connection&>(client));
+        this->_onClientRead(const_cast<Connection&>(client));
       if (client.isWritable())
-        this->onClientWrite(const_cast<Connection&>(client));
+        this->_onClientWrite(const_cast<Connection&>(client));
     }
   }
 }
@@ -207,7 +207,7 @@ void Parallel::onClientDisconnect(const Connection& client) {
   this->disconnect(client);
 }
 
-void Parallel::onClientRead(Connection& client) {
+void Parallel::_onClientRead(Connection& client) {
   char buffer[1025];
   int read = recv(client.getHandle(), buffer, 1024, 0);
   if (read <= 0) {
@@ -223,13 +223,15 @@ void Parallel::onClientRead(Connection& client) {
     << Logger::param(static_cast<std::string>(client))
     << std::endl
     << "  - " << Logger::param(buffer) << std::endl;
+  this->onClientRead(client);
 }
 
-void Parallel::onClientWrite(Connection& client) {
+void Parallel::_onClientWrite(Connection& client) {
   std::string& buffer = client.getWriteBuffer();
   if (buffer.size() == 0) return;
-  int written = send(client.getHandle(), buffer.c_str(), buffer.size(), 0);
-  if (written < 0) return;
-  buffer = buffer.substr(written);
+  int wrote = send(client.getHandle(), buffer.c_str(), buffer.size(), 0);
+  if (wrote < 0) return;
+  this->onClientWrite(client, wrote);
+  buffer = buffer.substr(wrote);
   client.ping();
 }

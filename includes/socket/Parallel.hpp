@@ -65,8 +65,11 @@ namespace Socket {
 
     void onNewConnection(const Server& sock);
     void onClientDisconnect(const Connection& sock);
-    void onClientRead(Connection& sock);
-    void onClientWrite(Connection& sock);
+    void _onClientRead(Connection& sock);
+    void _onClientWrite(Connection& sock);
+
+    virtual void onClientRead(Connection& sock) = 0;
+    virtual void onClientWrite(Connection& sock, int bytesWrote) = 0;
   };
 
 }
