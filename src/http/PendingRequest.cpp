@@ -6,14 +6,18 @@ using namespace HTTP;
 
 std::string PendingRequest::States::ToString(State state) {
   switch (state) {
+  case States::CLRFCheck: return "CLRFCheck";
   case States::Method: return "Method";
   case States::Uri: return "Uri";
   case States::Protocol: return "Protocol";
-  case States::VersionMajor: return "Version";
+  case States::VersionMajor: return "VersionMajor";
+  case States::VersionMinor: return "VersionMinor";
   case States::Header: return "Header";
   case States::HeaderKey: return "HeaderKey";
   case States::HeaderValue: return "HeaderValue";
+  case States::HeaderEnd: return "HeaderEnd";
   case States::Body: return "Body";
+  case States::BodyChunked: return "BodyChunked";
   case States::BodyChunkBytes: return "BodyChunkBytes";
   case States::BodyChunkData: return "BodyChunkData";
   case States::BodyChunkEnd: return "BodyChunkEnd";
@@ -27,17 +31,19 @@ PendingRequest::PendingRequest(
   Socket::Parallel* server,
   Socket::Connection* client
 ) :
-  checkCRLF(false),
+  crlfNextState(States::Method),
   state(States::Method),
   method(Methods::UNK),
   server(server),
-  client(client) {}
+  client(client),
+  storage(""),
+  buildingHeaderKey("") {}
 
 PendingRequest::PendingRequest() {}
 PendingRequest::~PendingRequest() {}
 
 PendingRequest::PendingRequest(const PendingRequest& other) :
-  checkCRLF(other.checkCRLF),
+  crlfNextState(other.crlfNextState),
   state(other.state),
   headers(other.headers),
   method(other.method),
@@ -45,11 +51,13 @@ PendingRequest::PendingRequest(const PendingRequest& other) :
   body(other.body),
   protocol(other.protocol),
   server(other.server),
-  params(other.params) {}
+  params(other.params),
+  storage(other.storage),
+  buildingHeaderKey(other.buildingHeaderKey) {}
 
 PendingRequest& PendingRequest::operator=(const PendingRequest& other) {
   if (this == &other) return *this;
-  this->checkCRLF = other.checkCRLF;
+  this->crlfNextState = other.crlfNextState;
   this->state = other.state;
   this->headers = other.headers;
   this->method = other.method;
@@ -58,6 +66,8 @@ PendingRequest& PendingRequest::operator=(const PendingRequest& other) {
   this->protocol = other.protocol;
   this->server = other.server;
   this->params = other.params;
+  this->storage = other.storage;
+  this->buildingHeaderKey = other.buildingHeaderKey;
   return *this;
 }
 
@@ -70,11 +80,25 @@ void PendingRequest::setState(const States::State state) {
 }
 
 void PendingRequest::nextWithCRLF() {
-  this->checkCRLF = true;
+  this->crlfNextState = this->state;
+  this->state = States::CLRFCheck;
+  Logger::debug
+    << "PendingRequest::crlfCheck(): "
+    << States::ToString(this->crlfNextState)
+    << " -> "
+    << States::ToString(static_cast<States::State>(this->crlfNextState + 1))
+    << std::endl;
 }
 
 void PendingRequest::next() {
-  this->checkCRLF = false;
+  if (this->state == States::CLRFCheck)
+    this->state = this->crlfNextState;
+  Logger::debug
+    << "PendingRequest::next(): "
+    << States::ToString(this->state)
+    << " -> "
+    << States::ToString(static_cast<States::State>(this->state + 1))
+    << std::endl;
   this->state = static_cast<States::State>(this->state + 1);
 }
 
@@ -168,6 +192,9 @@ std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {
     << ", "
     << req.getProtocol()
     << ") -> headers:\n"
-    << req.getHeaders();
+    << req.getHeaders()
+    << " -> body:\n"
+    << req.getBody<std::string>()
+    << std::endl;
   return os;
 }

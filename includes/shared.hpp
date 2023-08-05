@@ -9,6 +9,7 @@
 #include <exception>
 #include <error.h>
 #include <stdio.h>
+#include <utils/std.hpp>
 
 #define nullptr NULL
 
@@ -19,5 +20,5 @@ namespace std {
   template<>
   struct static_assertion<true> {};
 
-  static std::string clrf("\r\n");  
+  static std::string crlf("\r\n");
 }

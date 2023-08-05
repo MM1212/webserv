@@ -5,7 +5,15 @@ bool HTTP::hasFieldToken(char c) {
 }
 
 bool HTTP::hasFieldToken(const std::string& str) {
-  return str.find_first_not_of(HTTP::specialFieldTokens) != std::string::npos;
+  bool insideQuotes = false;
+  for (size_t i = 0; i < str.size(); i++) {
+    char c = str[i];
+    if (c == '"')
+      insideQuotes = !insideQuotes;
+    else if (!insideQuotes && HTTP::hasFieldToken(c))
+      return true;
+  }
+  return false;
 }
 
 bool HTTP::hasDisallowedUriToken(char c) {

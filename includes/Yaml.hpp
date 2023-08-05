@@ -87,6 +87,12 @@ namespace YAML {
       return this->type;
     }
 
+    const Node& get(const std::string& key) const;
+    const Node& get(const size_t index) const;
+
+    Node& get(const std::string& key);
+    Node& get(const size_t index);
+
     const Node& operator[](const std::string& key) const;
     const Node& operator[](const size_t index) const;
 
@@ -271,6 +277,12 @@ namespace YAML {
       if (!this->is<Types::Map>())
         throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
       return this->map.count(key) > 0;
+    }
+
+    inline bool has(const size_t idx) const {
+      if (!this->is<Types::Sequence>())
+        throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+      return idx < this->sequence.size();
     }
 
     const Node& insert(const Node& node);

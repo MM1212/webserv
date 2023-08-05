@@ -1,9 +1,12 @@
 #include "socket/Parallel.hpp"
 #include <utils/Logger.hpp>
 #include <algorithm>
+#include <Settings.hpp>
 
 using Socket::Parallel;
 using Socket::Connection;
+
+static Settings* settings = Instance::Get<Settings>();
 
 Parallel::Parallel(int timeout)
   : fileManager(this, &Parallel::onTick), timeout(timeout) {}
@@ -210,8 +213,9 @@ void Parallel::onClientDisconnect(const Connection& client) {
 }
 
 void Parallel::_onClientRead(Connection& client) {
-  char buffer[1025];
-  int read = recv(client.getHandle(), buffer, 1024, 0);
+  const int bufferSize = settings->get<int>("socket.read_buffer_size");
+  std::unique_ptr<char[]> buffer(bufferSize + 1);
+  int read = recv(client.getHandle(), buffer, bufferSize, 0);
   if (read <= 0) {
     this->onClientDisconnect(client);
     return;

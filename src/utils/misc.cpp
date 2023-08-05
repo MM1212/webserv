@@ -57,6 +57,23 @@ bool Utils::isWhitespace(const std::string& str) {
   return true;
 }
 
+bool Utils::isInteger(const std::string& str, bool unsignedOnly) {
+  if (str.empty())
+    return false;
+  size_t i = 0;
+  if (str[0] == '-' || str[0] == '+') {
+    if (unsignedOnly)
+      return false;
+    i++;
+  }
+  if (i == str.size())
+    return false;
+  for (; i < str.size(); i++)
+    if (!std::isdigit(str[i]))
+      return false;
+  return true;
+}
+
 uint64_t Utils::getCurrentTime() {
   struct timeval tv;
   gettimeofday(&tv, NULL);

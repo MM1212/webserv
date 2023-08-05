@@ -81,13 +81,18 @@ namespace Socket {
     FileManager(const FileManager& other) :
       fds(other.fds), epollFd(other.epollFd),
       events(new epoll_event_t[other.maxEvents]), maxEvents(other.maxEvents), running(false),
-      instance(other.instance), onTick(other.onTick) {}
+      instance(other.instance), onTick(other.onTick) {
+      for (int i = 0; i < this->maxEvents; i++)
+        this->events[i] = other.events[i];
+    }
     FileManager& operator=(const FileManager& other) {
       if (this == &other) return *this;
       this->fds = other.fds;
       this->epollFd = other.epollFd;
       if (this->events) delete[] this->events;
       this->events = new epoll_event_t[other.maxEvents];
+      for (int i = 0; i < this->maxEvents; i++)
+        this->events[i] = other.events[i];
       this->maxEvents = other.maxEvents;
       this->instance = other.instance;
       this->onTick = other.onTick;

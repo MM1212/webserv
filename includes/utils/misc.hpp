@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include <cstdlib>
 
 namespace Utils
 {
@@ -42,6 +43,7 @@ namespace Utils
   }
 
   bool isWhitespace(const std::string& str);
+  bool isInteger(const std::string& str, bool unsignedOnly = false);
 
   // returns the current epoch time in miliseconds
   uint64_t getCurrentTime();

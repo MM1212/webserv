@@ -15,7 +15,8 @@ namespace HTTP {
   public:
     struct States {
       enum State {
-        Unk = -1,
+        Unk = -2,
+        CLRFCheck = -1,
         Method,
         Uri,
         Protocol,
@@ -30,6 +31,7 @@ namespace HTTP {
         BodyChunkBytes,
         BodyChunkData,
         BodyChunkEnd,
+        BodyEnd,
         Done
       };
       static std::string ToString(State state);
@@ -92,8 +94,13 @@ namespace HTTP {
     operator Request() const;
 
     friend std::ostream& operator<<(std::ostream& os, const PendingRequest& request);
+
+    // quick helpers for request builder
+    inline size_t getContentLength() const {
+      return this->getHeaders().get<size_t>("Content-Length");
+    }
   private:
-    bool checkCRLF;
+    States::State crlfNextState;
     States::State state;
     Headers headers;
     Methods::Method method;
@@ -103,7 +110,10 @@ namespace HTTP {
     Socket::Parallel* server;
     Socket::Connection* client;
     std::map<std::string, std::string> params;
+    std::string storage;
     std::string buildingHeaderKey;
+    size_t chunkSize;
+    std::vector<uint8_t> chunkData;
 
     PendingRequest();
     void parseParams();

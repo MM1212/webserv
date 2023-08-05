@@ -11,7 +11,7 @@ typedef HTTP::PendingRequest::States ReqStates;
 static Settings* settings = Instance::Get<Settings>();
 
 WebSocket::WebSocket()
-  : Socket::Parallel(settings->get<int>("keep_alive_timeout")) {}
+  : Socket::Parallel(settings->get<int>("socket.keep_alive_timeout")) {}
 
 WebSocket::~WebSocket() {}
 
@@ -47,156 +47,259 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
   packet << sock.getReadBuffer().rdbuf();
   sock.getReadBuffer().str("");
 
-  while (packet.peek() != EOF) {
-    if (pendingRequest.checkCRLF) {
-      std::string clrf = "";
-      clrf += packet.get();
-      clrf += packet.get();
-      if (clrf != std::clrf) {
+  bool skip = false;
+
+  while (skip || (packet.peek() != EOF && pendingRequest.getState() != ReqStates::Done)) {
+    if (skip)
+      skip = false;
+    if (std::isprint(packet.peek())) {
+      Logger::debug
+        << "peek: " << Logger::param<char>(packet.peek())
+        << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
+        << std::endl;
+    }
+    else {
+      Logger::debug
+        << "peek: " << std::hex << Logger::param(packet.peek()) << std::dec
+        << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
+        << std::endl;
+    }
+    switch (pendingRequest.state) {
+    case ReqStates::CLRFCheck:
+    {
+      if (pendingRequest.storage == std::crlf) {
+        pendingRequest.storage.clear();
+        pendingRequest.next();
+        skip = true;
+        continue;
+      }
+      else if (pendingRequest.storage.size() >= std::crlf.size()) {
         // send 400 (Bad Request)
         return this->sendBadRequest(sock, 400, "Invalid CRLF at " + ReqStates::ToString(pendingRequest.getState()));
       }
-      pendingRequest.next();
-      continue;
+      break;
     }
-    switch (pendingRequest.state) {
     case ReqStates::Method:
     {
-      std::string methodStr = "";
-      std::getline(packet, methodStr, ' ');
-      const Methods::Method method = Methods::FromString(methodStr);
-      Logger::debug
-        << "method: " << Logger::param(methodStr) << " (" << Logger::param(method) << ")"
-        << std::endl;
-      if (method == Methods::UNK) {
-        // send 501 (Not Implemented)
-        return this->sendBadRequest(sock, 501, "Unknown method " + methodStr);
+      if (packet.peek() == ' ') {
+        packet.ignore();
+        const std::string methodStr = pendingRequest.storage;
+        pendingRequest.storage.clear();
+        const Methods::Method method = Methods::FromString(methodStr);
+        Logger::debug
+          << "method: " << Logger::param(methodStr) << " (" << Logger::param(method) << ")"
+          << std::endl;
+        if (method == Methods::UNK) {
+          // send 501 (Not Implemented)
+          return this->sendBadRequest(sock, 501, "Unknown method " + methodStr);
+        }
+        pendingRequest.setMethod(method);
+        pendingRequest.next();
+        continue;
       }
-      pendingRequest.setMethod(method);
-      pendingRequest.next();
       break;
     }
     case ReqStates::Uri:
     {
-      std::string uri = "";
-      std::getline(packet, uri, ' ');
-      if (uri.empty() || uri[0] != '/' || HTTP::hasDisallowedUriToken(uri)) {
-        // send 400 (Bad Request)
-        return this->sendBadRequest(sock, 400, "Invalid URI " + uri);
+      if (packet.peek() == ' ') {
+        packet.ignore();
+        std::string uri = pendingRequest.storage;
+        pendingRequest.storage.clear();
+        if (uri.empty() || uri[0] != '/' || HTTP::hasDisallowedUriToken(uri)) {
+          // send 400 (Bad Request)
+          return this->sendBadRequest(sock, 400, "Invalid URI " + uri);
+        }
+        if (uri.size() > settings->get<size_t>("http.max_uri_size")) {
+          // send 414 (URI Too Long)
+          return this->sendBadRequest(sock, 414, "URI too long " + uri);
+        }
+        pendingRequest.setPath(uri);
+        pendingRequest.next();
+        continue;
       }
-      if (uri.size() > settings->get<size_t>("max_uri_size")) {
-        // send 414 (URI Too Long)
-        return this->sendBadRequest(sock, 414, "URI too long " + uri);
-      }
-      pendingRequest.setPath(uri);
-      pendingRequest.next();
       break;
     }
     case ReqStates::Protocol:
     {
-      std::string protocol = "";
-      std::getline(packet, protocol, '/');
-      if (protocol != "HTTP") {
-        // send 400 (Bad Request)
-        return this->sendBadRequest(sock, 400, "Invalid protocol " + protocol);
+      if (packet.peek() == '/') {
+        packet.ignore();
+        std::string protocol = pendingRequest.storage;
+        pendingRequest.storage.clear();
+        if (protocol != "HTTP") {
+          // send 400 (Bad Request)
+          return this->sendBadRequest(sock, 400, "Invalid protocol " + protocol);
+        }
+        pendingRequest.setProtocol(protocol + "/");
+        pendingRequest.next();
+        continue;
       }
-      pendingRequest.setProtocol(protocol + "/");
-      pendingRequest.next();
       break;
     }
     case ReqStates::VersionMajor:
     {
-      std::string version = "";
-      std::getline(packet, version, '.');
-      if (version != "1") {
-        // send 505 (HTTP Version Not Supported)
-        return this->sendBadRequest(sock, 505, "Invalid version " + version);
+      if (packet.peek() == '.') {
+        packet.ignore();
+        std::string version = pendingRequest.storage;
+        pendingRequest.storage.clear();
+        if (version != "1") {
+          // send 505 (HTTP Version Not Supported)
+          return this->sendBadRequest(sock, 505, "Invalid version " + version);
+        }
+        pendingRequest.setProtocol(pendingRequest.protocol + version + ".");
+        pendingRequest.next();
+        continue;
       }
-      pendingRequest.setProtocol(pendingRequest.protocol + version + ".");
-      pendingRequest.next();
       break;
     }
     case ReqStates::VersionMinor:
     {
-      char version;
-      packet >> version;
-      int minor = version - '0';
-      if (minor < 0 || minor > 1) {
-        // send 505 (HTTP Version Not Supported)
-        return this->sendBadRequest(sock, 505, "Invalid version " + Utils::toString(version));
+      if (packet.peek() == '\r') {
+        char version = pendingRequest.storage[0];
+        pendingRequest.storage.clear();
+        int minor = version - '0';
+        if (minor < 0 || minor > 1) {
+          // send 505 (HTTP Version Not Supported)
+          return this->sendBadRequest(sock, 505, "Invalid version " + Utils::toString(version));
+        }
+        pendingRequest.setProtocol(pendingRequest.protocol + version);
+        pendingRequest.nextWithCRLF();
+        continue;
       }
-      pendingRequest.setProtocol(pendingRequest.protocol + version);
-      pendingRequest.nextWithCRLF();
       break;
     }
     case ReqStates::Header:
     {
       if (packet.peek() == '\r') {
-        pendingRequest.state = ReqStates::HeaderEnd;
+        pendingRequest.state = ReqStates::HeaderValue;
         pendingRequest.nextWithCRLF();
-        break;
+        continue;
       }
       pendingRequest.next();
-      break;
+      continue;
     }
     case ReqStates::HeaderKey:
     {
-      if (packet.peek() == '\r') {
+      if (std::crlf.find(packet.peek()) != std::string::npos) {
         pendingRequest.state = ReqStates::HeaderValue;
         pendingRequest.nextWithCRLF();
-        break;
+        continue;
       }
-      std::string key = "";
-      std::getline(packet, key, ':');
-      if (key.empty() || HTTP::hasFieldToken(key)) {
-        // send 400 (Bad Request)
-        return this->sendBadRequest(sock, 400, "Invalid header key " + key);
+      if (packet.peek() == ':') {
+        packet.ignore();
+        std::string key = pendingRequest.storage;
+        pendingRequest.storage.clear();
+        if (key.empty() || HTTP::hasFieldToken(key)) {
+          // send 400 (Bad Request)
+          return this->sendBadRequest(sock, 400, "Invalid header key " + key);
+        }
+        Logger::debug
+          << "Got field key " << Logger::param(key)
+          << std::endl;
+        pendingRequest.buildingHeaderKey = key;
+        pendingRequest.next();
+        continue;
       }
-      Logger::debug
-        << "Got field key " << Logger::param(key)
-        << std::endl;
-      pendingRequest.buildingHeaderKey = key;
-      pendingRequest.next();
       break;
     }
     case ReqStates::HeaderValue:
     {
-      std::string value = "";
-      while (packet.peek() != '\r' && packet.peek() != EOF)
-        value += packet.get();
-      if (packet.peek() == EOF)
-        return this->sendBadRequest(sock, 400, "Invalid header value " + value);
-      const std::string key = pendingRequest.buildingHeaderKey;
-      pendingRequest.buildingHeaderKey = "";
-      Logger::debug
-        << "Got field value " << Logger::param(value)
-        << " for key " << Logger::param(key)
-        << std::endl;
-      pendingRequest.getHeaders().set(key, value);
-      pendingRequest.state = ReqStates::Header;
-      pendingRequest.nextWithCRLF();
+      if (packet.peek() == '\r') {
+        std::string value = pendingRequest.storage;
+        pendingRequest.storage.clear();
+        const std::string key = pendingRequest.buildingHeaderKey;
+        pendingRequest.buildingHeaderKey.clear();
+        Logger::debug
+          << "Got field value " << Logger::param(value)
+          << " for key " << Logger::param(key)
+          << std::endl;
+        pendingRequest.getHeaders().append(key, value);
+        pendingRequest.state = ReqStates::Header;
+        pendingRequest.nextWithCRLF();
+        continue;
+      }
       break;
     }
     case ReqStates::HeaderEnd:
     {
       const Headers& headers = pendingRequest.getHeaders();
-      if (!headers.has("Content-Length") || headers.get<int>("Content-Length") == 0) {
-        pendingRequest.state = ReqStates::Done;
-        break;
-      }
-      if (headers.has("Transfer-Encoding") && headers.get<std::string>("Transfer-Encoding") == "chunked") {
+      if (headers.has("Transfer-Encoding") && headers.get<std::string>("Transfer-Encoding") == "chunked")
         pendingRequest.state = ReqStates::BodyChunked;
+      else if (!headers.has("Content-Length") || headers.get<size_t>("Content-Length") == 0)
+        pendingRequest.state = ReqStates::Done;
+      else if (headers.get<size_t>("Content-Length") > settings->get<size_t>("http.max_body_size"))
+        return this->sendBadRequest(sock, 413, "Body too long: " + Utils::toString(headers.get<int>("Content-Length")));
+      else
+        pendingRequest.state = ReqStates::Body;
+      continue;
+    }
+    case ReqStates::Body:
+    {
+      const size_t contentLength = pendingRequest.getContentLength();
+      Logger::debug
+        << "Curr body size: " << Logger::param(pendingRequest.chunkData.size())
+        << " | Content-Length: " << Logger::param(contentLength)
+        << std::endl;
+      if (pendingRequest.chunkData.size() < contentLength)
+        pendingRequest.chunkData.push_back(packet.get());
+      if (pendingRequest.chunkData.size() == contentLength) {
+        pendingRequest.body.append(reinterpret_cast<char*>(pendingRequest.chunkData.data()), pendingRequest.chunkData.size());
+        pendingRequest.chunkData.clear();
+        pendingRequest.state = ReqStates::Done;
       }
+      continue;
+    }
+    case ReqStates::BodyChunked:
+    {
+      if (!std::isxdigit(packet.peek())) {
+        return this->sendBadRequest(sock, 400, "Invalid chunk size");
+      }
+      pendingRequest.next();
+      break;
+    }
+    case ReqStates::BodyChunkBytes:
+    {
+      if (packet.peek() == '\r') {
+        std::stringstream ss;
+        ss << pendingRequest.storage;
+        pendingRequest.storage.clear();
+        ss >> std::hex >> pendingRequest.chunkSize;
+        Logger::debug
+          << "Got chunk size " << Logger::param(pendingRequest.chunkSize)
+          << std::endl;
+        if (pendingRequest.chunkSize == 0)
+          pendingRequest.state = ReqStates::BodyChunkData;
+        pendingRequest.nextWithCRLF();
+      }
+      break;
+    }
+    case ReqStates::BodyChunkData:
+    {
+      if (pendingRequest.chunkData.size() < pendingRequest.chunkSize)
+        pendingRequest.chunkData.push_back(packet.get());
+      if (pendingRequest.chunkData.size() == pendingRequest.chunkSize) {
+        pendingRequest.body.append(reinterpret_cast<char*>(pendingRequest.chunkData.data()), pendingRequest.chunkData.size());
+        pendingRequest.chunkData.clear();
+        pendingRequest.state = ReqStates::BodyChunked;
+        pendingRequest.nextWithCRLF();
+      }
+      continue;
+    }
+    case ReqStates::BodyChunkEnd:
+    {
+      pendingRequest.state = ReqStates::Done;
       break;
     }
     default:
       break;
     }
+    pendingRequest.storage += packet.get();
   }
   Logger::debug
     << "Received packet from " << Logger::param(sock) << ": " << std::endl
     << Logger::param(pendingRequest) << std::endl;
-  this->sendBadRequest(sock, 500, "Invalid state " + ReqStates::ToString(pendingRequest.getState()));
+  if (pendingRequest.getState() == ReqStates::Done) {
+    this->sendBadRequest(sock, 500, "Invalid state " + ReqStates::ToString(pendingRequest.getState()));
+  }
 }
 
 void WebSocket::sendBadRequest(Socket::Connection& sock, int statusCode, const std::string& logMsg) {
@@ -205,7 +308,7 @@ void WebSocket::sendBadRequest(Socket::Connection& sock, int statusCode, const s
     << std::endl;
   std::stringstream writeBuffer;
   sock.markToClose();
-  writeBuffer << "HTTP/1.1 " << statusCode << " " << settings->statusCode(statusCode) << "\r\n"
+  writeBuffer << "HTTP/1.1 " << statusCode << " " << settings->httpStatusCode(statusCode) << "\r\n"
     << "Content-Length: 0\r\n"
     << "Connection: close\r\n"
     << "\r\n";

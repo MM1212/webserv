@@ -38,7 +38,7 @@ std::ostream& operator<<(std::ostream& os, const Node& node) {
   return os << node.toString();
 }
 
-const Node& Node::operator[](const std::string& key) const {
+const Node& Node::get(const std::string& key) const {
   if (!this->is<Types::Map>())
     throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
   if (this->map.count(key) == 0)
@@ -46,7 +46,7 @@ const Node& Node::operator[](const std::string& key) const {
   return this->map.at(key);
 }
 
-const Node& Node::operator[](const size_t idx) const {
+const Node& Node::get(const size_t idx) const {
   if (!this->is<Types::Sequence>())
     throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
   if (idx >= this->sequence.size())
@@ -54,7 +54,7 @@ const Node& Node::operator[](const size_t idx) const {
   return this->sequence[idx];
 }
 
-Node& Node::operator[](const std::string& key) {
+Node& Node::get(const std::string& key) {
   if (!this->is<Types::Map>())
     throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
   if (this->map.count(key) == 0)
@@ -62,12 +62,28 @@ Node& Node::operator[](const std::string& key) {
   return this->map[key];
 }
 
-Node& Node::operator[](const size_t idx) {
+Node& Node::get(const size_t idx) {
   if (!this->is<Types::Sequence>())
     throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
   if (idx > this->size())
     this->sequence[idx] = Node(Utils::toString(idx));
   return this->sequence[idx];
+}
+
+const Node& Node::operator[](const std::string& key) const {
+  return this->get(key);
+}
+
+const Node& Node::operator[](const size_t idx) const {
+  return this->get(idx);
+}
+
+Node& Node::operator[](const std::string& key) {
+  return this->get(key);
+}
+
+Node& Node::operator[](const size_t idx) {
+  return this->get(idx);
 }
 
 std::string Node::toString() const {

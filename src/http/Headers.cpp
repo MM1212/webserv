@@ -2,6 +2,19 @@
 
 using HTTP::Headers;
 
+std::string Headers::FormatKey(const std::string& key) {
+  std::string formatted = key;
+  Utils::toLowercase(formatted);
+  Utils::trim(formatted);
+  return formatted;
+}
+
+std::string Headers::FormatValue(const std::string& value) {
+  std::string formatted = value;
+  Utils::trim(formatted);
+  return formatted;
+}
+
 Headers::Headers() : headers() {}
 Headers::~Headers() {}
 Headers::Headers(const Headers& other) : headers(other.headers) {}
@@ -18,31 +31,29 @@ void Headers::clear() {
 bool Headers::append(const std::string& key, const std::string& value) {
   if (this->has(key))
     return false;
-  std::string formatted = key;
-  Utils::toLowercase(formatted);
-  this->headers.insert(std::make_pair(formatted, value));
+  std::string formatted = this->FormatKey(key);
+  std::string formattedValue = this->FormatValue(value);
+  this->headers.insert(std::make_pair(formatted, formattedValue));
   this->keys.push_back(formatted);
   return true;
 }
 
 void Headers::set(const std::string& key, const std::string& value) {
-  std::string formatted = key;
-  Utils::toLowercase(formatted);
+  std::string formatted = this->FormatKey(key);
+  std::string formattedValue = this->FormatValue(value);
   if (this->headers.count(formatted) == 0)
     this->keys.push_back(formatted);
-  this->headers[formatted] = value;
+  this->headers[formatted] = formattedValue;
 }
 
 void Headers::remove(const std::string& key) {
-  std::string formatted = key;
-  Utils::toLowercase(formatted);
+  std::string formatted = this->FormatKey(key);
   this->headers.erase(formatted);
   this->keys.erase(std::remove(this->keys.begin(), this->keys.end(), formatted), this->keys.end());
 }
 
 bool Headers::has(const std::string& key) const {
-  std::string formatted = key;
-  Utils::toLowercase(formatted);
+  std::string formatted = this->FormatKey(key);
   return this->headers.find(formatted) != this->headers.end();
 }
 

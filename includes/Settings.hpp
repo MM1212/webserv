@@ -7,26 +7,29 @@
 class Settings {
   static const std::string path;
 public:
-  int getMaxConnections() const;
-  int getKeepAliveTimeout() const;
-  int getMaxBodySize() const;
   bool isValid() const;
 
   template <typename T>
   T get(const std::string& path) const {
     std::vector<std::string> parts = Utils::split(path, ".");
-    YAML::Node node = this->config;
+    const YAML::Node* node = &this->config;
     for (
       size_t i = 0;
-      i < parts.size() && node.isValid();
+      i < parts.size() && node->isValid();
       ++i
       ) {
-      YAML::Node part = node[parts[i]];
-      node = part;
+      const std::string& key = parts[i];
+      if (
+        Utils::isInteger(key, true) &&
+        node->is<YAML::Types::Sequence>() &&
+        node->has(std::atoi(key.c_str())))
+        node = &node->get(std::atoi(key.c_str()));
+      else
+        node = &node->get(key);
     }
-    return node.as<T>();
+    return node->as<T>();
   }
-  const std::string statusCode(int code) const;
+  const std::string httpStatusCode(int code) const;
 private:
   Settings();
   const YAML::Node config;

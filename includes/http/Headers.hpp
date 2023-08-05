@@ -14,6 +14,9 @@
 namespace HTTP {
   class Headers {
   public:
+    static std::string FormatKey(const std::string& key);
+    static std::string FormatValue(const std::string& value);
+
     Headers();
     ~Headers();
     Headers(const Headers& other);
@@ -26,20 +29,21 @@ namespace HTTP {
 
     template <typename T>
     T get(const std::string& key) const {
+      std::string formatted = this->FormatKey(key);
       T value;
-      if (!this->has(key))
+      if (!this->has(formatted))
         throw std::runtime_error("Key " + key + " not found");
-      std::stringstream ss(this->headers.at(key));
+      std::stringstream ss(this->headers.at(formatted));
       ss >> value;
       return value;
     }
 
     template <>
     const std::string& get(const std::string& key) const {
-      static const std::string empty;
-      if (!this->has(key))
+      std::string formatted = this->FormatKey(key);
+      if (!this->has(formatted))
         throw std::runtime_error("Key " + key + " not found");
-      return this->headers.at(key);
+      return this->headers.at(formatted);
     }
 
     const std::map<std::string, std::string>& getAll() const;

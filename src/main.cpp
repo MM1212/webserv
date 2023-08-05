@@ -26,11 +26,13 @@ static std::pair<std::string, ListenAddress> extractAddress(const std::string& e
   return std::make_pair(entry, (ListenAddress) { parts[0], std::atoi(parts[1].c_str()), maxConnections });
 }
 
+static Settings* settings = Instance::Get<Settings>();
+
 int main(int ac, char** av) {
   ac--;
   av++;
   YAML::RunTests();
-  if (!Instance::Get<Settings>()->isValid())
+  if (!settings->isValid())
     return 1;
   try {
     const std::string path = ac == 1 ? av[0] : DEFAULT_CONFIG_PATH;
@@ -44,7 +46,7 @@ int main(int ac, char** av) {
       ) {
       const YAML::Node& server = *it;
       const YAML::Node& listen = server["listen"];
-      int maxConnections = Instance::Get<Settings>()->getMaxConnections();
+      int maxConnections = settings->get<int>("socket.max_connections");
       if (server.has("max_connections"))
         maxConnections = server["max_connections"].as<int>();
       if (listen.is<YAML::Types::Scalar>())

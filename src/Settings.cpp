@@ -22,13 +22,21 @@ bool Settings::isValid() const {
       throw std::runtime_error("config file isn't valid");
     if (!this->config.is<YAML::Types::Map>())
       throw std::runtime_error("config file isn't a map");
-    if (!this->config["max_connections"].is<int>())
+    if (!this->config["socket"].is<YAML::Types::Map>())
+      throw std::runtime_error("socket isn't a map");
+    if (!this->config["socket"]["max_connections"].is<int>())
       throw std::runtime_error("max_connections isn't an integer");
-    if (!this->config["keep_alive_timeout"].is<int>())
+    if (!this->config["socket"]["keep_alive_timeout"].is<int>())
       throw std::runtime_error("keep_alive_timeout isn't an integer");
-    if (!this->config["max_body_size"].is<int>())
+    if (!this->config["socket"]["read_buffer_size"].is<int>())
+      throw std::runtime_error("read_buffer_size isn't an integer");
+    if (!this->config["http"].is<YAML::Types::Map>())
+      throw std::runtime_error("http isn't a map");
+    if (!this->config["http"]["max_body_size"].is<int>())
       throw std::runtime_error("max_body_size isn't an integer");
-    if (!this->config["status_codes"].is<YAML::Types::Map>())
+    if (!this->config["http"]["max_uri_size"].is<int>())
+      throw std::runtime_error("max_uri_size isn't an integer");
+    if (!this->config["http"]["status_codes"].is<YAML::Types::Map>())
       throw std::runtime_error("status_codes isn't a map");
     return true;
   }
@@ -41,23 +49,8 @@ bool Settings::isValid() const {
   }
 }
 
-int Settings::getMaxConnections() const {
-  static int cache = this->config["max_connections"].as<int>();
-  return cache;
-}
-
-int Settings::getKeepAliveTimeout() const {
-  static int cache = this->config["keep_alive_timeout"].as<int>();
-  return cache;
-}
-
-int Settings::getMaxBodySize() const {
-  static int cache = this->config["max_body_size"].as<int>();
-  return cache;
-}
-
-const std::string Settings::statusCode(int code) const {
-  static const YAML::Node& codes = this->config["status_codes"];
+const std::string Settings::httpStatusCode(int code) const {
+  static const YAML::Node& codes = this->config["http"]["status_codes"];
   const std::string codeStr = Utils::toString(code);
   if (!codes.has(codeStr))
     return "";
