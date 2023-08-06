@@ -39,20 +39,26 @@ namespace Logger {
     std::string header;
     std::ostream& target;
     std::string color;
+    bool enabled;
   public:
     Stream(
       std::ostream& target,
       const std::string& header,
-      const std::string& color);
+      const std::string& color,
+      bool enabled = true
+    );
     Stream(
       const std::string& header,
-      const std::string& color);
+      const std::string& color,
+      bool enabled = true
+    );
     ~Stream();
     Stream(const Stream& other);
     Stream& operator=(const Stream& other);
 
     template <typename T>
     std::ostream& operator<<(const T& value) const {
+      if (!this->enabled) return this->target;
       return this->target << this->buildHeader() << " " << value;
     }
 

@@ -1,33 +1,40 @@
 #include "utils/Logger.hpp"
+#include <Settings.hpp>
 
 using namespace Logger;
 
-const Stream Logger::debug("DEBUG", CYAN);
-const Stream Logger::info("INFO", BLUE);
-const Stream Logger::success("SUCCESS", GREEN);
-const Stream Logger::warning("WARNING", ORANGE);
-const Stream Logger::error(std::cerr, "ERROR", RED);
+static const Settings* settings = Instance::Get<Settings>();
+static const int logLevel = settings->get<int>("misc.log_level");
+
+const Stream Logger::debug("DEBUG", CYAN, logLevel > -1 && logLevel <= 0);
+const Stream Logger::info("INFO", BLUE, logLevel > -1 && logLevel <= 1);
+const Stream Logger::success("SUCCESS", GREEN, logLevel > -1 && logLevel <= 2);
+const Stream Logger::warning("WARNING", ORANGE, logLevel > -1 && logLevel <= 3);
+const Stream Logger::error(std::cerr, "ERROR", RED, logLevel > -1 && logLevel <= 4);
 
 Stream::Stream(
   std::ostream& target,
   const std::string& header,
-  const std::string& color)
-  : header(header), target(target), color(color) {}
+  const std::string& color,
+  bool enabled
+) : header(header), target(target), color(color), enabled(enabled) {}
 Stream::Stream(
   const std::string& header,
-  const std::string& color)
-  : header(header), target(std::cout), color(color) {}
+  const std::string& color,
+  bool enabled
+) : header(header), target(std::cout), color(color), enabled(enabled) {}
 
 Stream::~Stream() {}
 
 Stream::Stream(const Stream& other)
   : header(other.header), target(other.target),
-  color(other.color) {}
+  color(other.color), enabled(other.enabled) {}
 
 Stream& Stream::operator=(const Stream& other) {
   if (this == &other) return *this;
   this->header = other.header;
   this->color = other.color;
+  this->enabled = other.enabled;
   return *this;
 }
 

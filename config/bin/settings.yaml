@@ -74,3 +74,11 @@ http:
     508: Loop Detected
     510: Not Extended
     511: Network Authentication Required
+misc:
+  # levels:
+  #  -1: off
+  #   0: debug
+  #   1: info
+  #   2: warning
+  #   3: error
+  log_level: 0

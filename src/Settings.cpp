@@ -38,6 +38,10 @@ bool Settings::isValid() const {
       throw std::runtime_error("max_uri_size isn't an integer");
     if (!this->config["http"]["status_codes"].is<YAML::Types::Map>())
       throw std::runtime_error("status_codes isn't a map");
+    if (!this->config["misc"].is<YAML::Types::Map>())
+      throw std::runtime_error("misc isn't a map");
+    if (!this->config["misc"]["log_level"].is<int>())
+      throw std::runtime_error("log_level isn't an integer");
     return true;
   }
   catch (const std::exception& e) {
