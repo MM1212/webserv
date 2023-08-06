@@ -146,6 +146,15 @@ namespace YAML {
       ss >> value;
       return !ss.fail();
     }
+    template <>
+    inline bool is<bool>() const {
+      if (!this->is<Types::Scalar>())
+        return false;
+      bool value;
+      std::stringstream ss(this->value);
+      ss >> std::boolalpha >> value;
+      return !ss.fail();
+    }
     inline bool isValid() const { return this->type != Types::Undefined; };
 
     inline void setKey(const std::string& key) { this->key = key; };

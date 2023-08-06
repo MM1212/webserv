@@ -26,3 +26,4 @@ servers:
                 - $file
                 - -- $args
   - listen: [3000, 3001, 8080]
+    server_names: 127.0.0.1

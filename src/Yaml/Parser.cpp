@@ -139,7 +139,7 @@ skip_sequence:
     if (!this->current->is<Types::Sequence>()) {
       const int cIndent = this->current->indent;
       Node node = Node::NewSequence(this->scalar);
-      node.indent = cIndent;
+      node.indent = cIndent + 2;
       Node& inserted = const_cast<Node&>(this->current->insert(node));
       this->stack.push(this->current);
       this->current = &inserted;
@@ -155,6 +155,10 @@ skip_sequence:
     }
     if (this->doc.peek() == ']')
       this->doc.ignore();
+    else
+      throw std::runtime_error("Expected a closing bracket, got: " + Utils::toString(this->doc.peek()));
+    this->current = this->stack.top();
+    this->stack.pop();
     return this->parse();
   }
   std::string key = this->retrieveScalar(skipTokens);

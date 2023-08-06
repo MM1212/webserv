@@ -52,7 +52,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
   while (skip || (packet.peek() != EOF && pendingRequest.getState() != ReqStates::Done)) {
     if (skip)
       skip = false;
-    if (std::isprint(packet.peek())) {
+    /* if (std::isprint(packet.peek())) {
       Logger::debug
         << "peek: " << Logger::param<char>(packet.peek())
         << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
@@ -63,7 +63,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         << "peek: " << std::hex << Logger::param(packet.peek()) << std::dec
         << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
         << std::endl;
-    }
+    } */
     switch (pendingRequest.state) {
     case ReqStates::CLRFCheck:
     {
