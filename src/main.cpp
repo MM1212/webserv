@@ -31,9 +31,9 @@ static Settings* settings = Instance::Get<Settings>();
 int main(int ac, char** av) {
   ac--;
   av++;
-  YAML::RunTests();
   if (!settings->isValid())
     return 1;
+  YAML::RunTests();
   try {
     const std::string path = ac == 1 ? av[0] : DEFAULT_CONFIG_PATH;
     const YAML::Node config = YAML::LoadFile(path);

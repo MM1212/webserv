@@ -1,3 +1,5 @@
+yaml:
+  run_tests: false
 socket:
   max_connections: 10
   # in milliseconds

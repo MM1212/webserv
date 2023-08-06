@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <utils/Logger.hpp>
+#include <Settings.hpp>
 
 static void maps(const YAML::Node& config) {
   if (!config.is<YAML::Types::Map>())
@@ -109,10 +110,14 @@ static void test(const std::string& path, void (*handler)(const YAML::Node& node
 }
 
 void YAML::RunTests() {
+  const Settings* settings = Instance::Get<Settings>();
+  if (!settings->get<bool>("yaml.run_tests"))
+    return;
   (void)maps;
   (void)sequences;
   (void)scalarQuotes;
   (void)sequencesAndMaps;
+  (void)flows;
   test("config/tests/yaml/maps.yaml", &maps);
   test("config/tests/yaml/sequences.yaml", &sequences);
   test("config/tests/yaml/scalar_quotes.yaml", &scalarQuotes);
