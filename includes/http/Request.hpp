@@ -3,6 +3,9 @@
 #include <string>
 #include <socket/Parallel.hpp>
 #include <cstdlib>
+#include <sstream>
+#include <iomanip>
+#include <exception>
 
 #include "Methods.hpp"
 #include "Headers.hpp"
@@ -30,6 +33,7 @@ namespace HTTP {
     const std::string& getPath() const;
     const std::string& getProtocol() const;
     const Socket::Connection& getClient() const;
+    Socket::Connection& getClient();
     template <typename T>
     const T getBody() const {
       return static_cast<T>(this->body);
@@ -41,23 +45,38 @@ namespace HTTP {
 
     template <typename T>
     T getParam(const std::string& key) const {
-      return static_cast<T>(this->params.at(key));
+      T value;
+      if (!std::istringstream(this->params.at(key)) >> value)
+        throw std::runtime_error("Could not convert key " + key);
+      return value;
     }
     template <>
     std::string getParam<std::string>(const std::string& key) const {
       return this->params.at(key);
     }
-    template <>
-    int getParam<int>(const std::string& key) const {
-      return std::atoi(this->params.at(key).c_str());
-    }
 
     template <>
     bool getParam<bool>(const std::string& key) const {
-      return this->params.at(key) == "true";
+      bool value;
+      std::istringstream ss(this->params.at(key));
+      ss >> std::boolalpha >> value;
+      if (ss.fail())
+        throw std::runtime_error("Could not convert key " + key);
+      return value;
     }
 
     const std::map<std::string, std::string>& getParams() const;
+
+    // headers helpers
+    inline const std::string getHost() const {
+      return this->getHeaders().get<std::string>("Host");
+    }
+    inline const std::string getContentType() const {
+      return this->getHeaders().get<std::string>("Content-Type");
+    }
+    inline int getContentLength() const {
+      return this->getHeaders().get<int>("Content-Length");
+    }
 
     friend std::ostream& operator<<(std::ostream& os, const Request& request);
   private:

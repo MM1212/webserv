@@ -50,6 +50,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
   bool skip = false;
 
   while (skip || (packet.peek() != EOF && pendingRequest.getState() != ReqStates::Done)) {
+    pendingRequest.storage += packet.get();
     if (skip)
       skip = false;
     /* if (std::isprint(packet.peek())) {
@@ -224,7 +225,9 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
       const Headers& headers = pendingRequest.getHeaders();
       if (headers.has("Transfer-Encoding") && headers.get<std::string>("Transfer-Encoding") == "chunked")
         pendingRequest.state = ReqStates::BodyChunked;
-      else if (!headers.has("Content-Length") || headers.get<size_t>("Content-Length") == 0)
+      else if (!headers.has("Content-Length") && !headers.has("Transfer-Encoding") && pendingRequest.getMethod() > Methods::GET)
+        return this->sendBadRequest(sock, 411, "Missing Content-Length");
+      else if (headers.get<size_t>("Content-Length") == 0)
         pendingRequest.state = ReqStates::Done;
       else if (headers.get<size_t>("Content-Length") > settings->get<size_t>("http.max_body_size"))
         return this->sendBadRequest(sock, 413, "Body too long: " + Utils::toString(headers.get<int>("Content-Length")));
@@ -292,7 +295,6 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     default:
       break;
     }
-    pendingRequest.storage += packet.get();
   }
   Logger::debug
     << "Received packet from " << Logger::param(sock) << ": " << std::endl
@@ -306,11 +308,8 @@ void WebSocket::sendBadRequest(Socket::Connection& sock, int statusCode, const s
   Logger::warning
     << "Sending " << statusCode << " to " << Logger::param(sock) << ": " << logMsg
     << std::endl;
-  std::stringstream writeBuffer;
-  sock.markToClose();
-  writeBuffer << "HTTP/1.1 " << statusCode << " " << settings->httpStatusCode(statusCode) << "\r\n"
-    << "Content-Length: 0\r\n"
-    << "Connection: close\r\n"
-    << "\r\n";
-  sock.getWriteBuffer().append(writeBuffer.str());
+  Request req(this->pendingRequests.at(sock));
+  Response resp(req, NULL);
+  resp.getHeaders().set("Connection", "close");
+  resp.status(statusCode).send();
 }

@@ -38,14 +38,6 @@ bool Headers::append(const std::string& key, const std::string& value) {
   return true;
 }
 
-void Headers::set(const std::string& key, const std::string& value) {
-  std::string formatted = this->FormatKey(key);
-  std::string formattedValue = this->FormatValue(value);
-  if (this->headers.count(formatted) == 0)
-    this->keys.push_back(formatted);
-  this->headers[formatted] = formattedValue;
-}
-
 void Headers::remove(const std::string& key) {
   std::string formatted = this->FormatKey(key);
   this->headers.erase(formatted);

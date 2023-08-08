@@ -30,6 +30,7 @@ public:
     return node->as<T>();
   }
   const std::string httpStatusCode(int code) const;
+  const std::string& httpMimeType(const std::string& ext) const;
 private:
   Settings();
   const YAML::Node config;

@@ -42,10 +42,16 @@ bool Settings::isValid() const {
       throw std::runtime_error("max_uri_size isn't an integer");
     if (!this->config["http"]["status_codes"].is<YAML::Types::Map>())
       throw std::runtime_error("status_codes isn't a map");
+    if (!this->config["http"]["mime_types"].is<YAML::Types::Map>())
+      throw std::runtime_error("mime_types isn't a map");
+    if (!this->config["http"]["mime_types"].has("__any__"))
+      throw std::runtime_error("mime_types must have __any__ scalar");
     if (!this->config["misc"].is<YAML::Types::Map>())
       throw std::runtime_error("misc isn't a map");
     if (!this->config["misc"]["log_level"].is<int>())
       throw std::runtime_error("log_level isn't an integer");
+    if (!this->config["misc"]["name"].is<std::string>())
+      throw std::runtime_error("name isn't a string");
     return true;
   }
   catch (const std::exception& e) {
@@ -62,5 +68,12 @@ const std::string Settings::httpStatusCode(int code) const {
   const std::string codeStr = Utils::toString(code);
   if (!codes.has(codeStr))
     return "";
-  return codes[codeStr].as<std::string>();
+  return codes[codeStr].getValue();
+}
+
+const std::string& Settings::httpMimeType(const std::string& ext) const {
+  static const YAML::Node& mimes = this->config["http"]["mime_types"];
+  if (!mimes.has(ext))
+    return mimes["__any__"].getValue();
+  return mimes[ext].getValue();
 }

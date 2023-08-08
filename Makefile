@@ -5,7 +5,11 @@ SRC_FILES = Settings.cpp utils/Logger.cpp utils/misc.cpp \
 						Yaml/Node.cpp Yaml/Parser.cpp Yaml/tests.cpp \
 						socket/Connection.cpp socket/Parallel.cpp \
 						http/Methods.cpp http/Request.cpp http/PendingRequest.cpp \
-						http/Headers.cpp http/utils.cpp http/WebSocket.cpp \
+						http/Response.cpp \
+						http/Headers.cpp http/utils.cpp \
+						http/WebSocket.cpp \
+						http/Route.cpp http/routes/Default.cpp http/routes/Redirect.cpp http/routes/Static.cpp \
+						http/RouteStorage.cpp http/ServerManager.cpp http/ServerConfiguration.cpp \
 						main.cpp
 
 SRC_DIR = src

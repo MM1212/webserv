@@ -37,7 +37,9 @@ PendingRequest::PendingRequest(
   server(server),
   client(client),
   storage(""),
-  buildingHeaderKey("") {}
+  buildingHeaderKey(""),
+  chunkSize(0),
+  chunkData() {}
 
 PendingRequest::PendingRequest() {}
 PendingRequest::~PendingRequest() {}
@@ -51,7 +53,7 @@ PendingRequest::PendingRequest(const PendingRequest& other) :
   body(other.body),
   protocol(other.protocol),
   server(other.server),
-  params(other.params),
+  client(other.client),
   storage(other.storage),
   buildingHeaderKey(other.buildingHeaderKey) {}
 
@@ -65,7 +67,7 @@ PendingRequest& PendingRequest::operator=(const PendingRequest& other) {
   this->body = other.body;
   this->protocol = other.protocol;
   this->server = other.server;
-  this->params = other.params;
+  this->client = other.client;
   this->storage = other.storage;
   this->buildingHeaderKey = other.buildingHeaderKey;
   return *this;
@@ -84,9 +86,9 @@ void PendingRequest::nextWithCRLF() {
   this->state = States::CLRFCheck;
   Logger::debug
     << "PendingRequest::crlfCheck(): "
-    << States::ToString(this->crlfNextState)
+    << Logger::param(States::ToString(this->crlfNextState))
     << " -> "
-    << States::ToString(static_cast<States::State>(this->crlfNextState + 1))
+    << Logger::param(States::ToString(static_cast<States::State>(this->crlfNextState + 1)))
     << std::endl;
 }
 
@@ -95,9 +97,9 @@ void PendingRequest::next() {
     this->state = this->crlfNextState;
   Logger::debug
     << "PendingRequest::next(): "
-    << States::ToString(this->state)
+    << Logger::param(States::ToString(this->state))
     << " -> "
-    << States::ToString(static_cast<States::State>(this->state + 1))
+    << Logger::param(States::ToString(static_cast<States::State>(this->state + 1)))
     << std::endl;
   this->state = static_cast<States::State>(this->state + 1);
 }
@@ -123,10 +125,6 @@ const std::string& PendingRequest::getProtocol() const {
 }
 const Socket::Connection& PendingRequest::getClient() const {
   return *this->client;
-}
-
-std::map<std::string, std::string>& PendingRequest::getParams() {
-  return this->params;
 }
 
 void PendingRequest::setMethod(const Methods::Method method) {
@@ -164,23 +162,6 @@ PendingRequest::operator Request() const {
     this->headers
   );
   return req;
-}
-
-
-
-void PendingRequest::parseParams() {
-  std::string query;
-  std::string::size_type pos = this->path.find('?');
-  if (pos != std::string::npos) {
-    query = this->path.substr(pos + 1);
-    this->path = this->path.substr(0, pos);
-  }
-  std::vector<std::string> pairs = Utils::split(query, "&");
-  for (std::vector<std::string>::iterator it = pairs.begin(); it != pairs.end(); it++) {
-    std::vector<std::string> pair = Utils::split(*it, "=");
-    if (pair.size() == 2)
-      this->params[pair[0]] = pair[1];
-  }
 }
 
 std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {

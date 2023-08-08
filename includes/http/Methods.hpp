@@ -7,11 +7,11 @@ namespace HTTP {
   namespace Methods {
     enum Method {
       UNK = -1,
+      HEAD,
       GET,
       POST,
       PUT,
       DELETE,
-      HEAD
     };
     Method FromString(const std::string& str);
     std::string ToString(Method method);

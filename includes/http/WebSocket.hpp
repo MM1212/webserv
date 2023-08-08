@@ -7,6 +7,7 @@
 #include "Headers.hpp"
 #include "Methods.hpp"
 #include "Request.hpp"
+#include "Response.hpp"
 #include "PendingRequest.hpp"
 
 namespace HTTP {
@@ -16,7 +17,7 @@ namespace HTTP {
   public:
     WebSocket();
     ~WebSocket();
-
+    virtual void onRequest(const Request& req, Response& res) = 0;
   private:
     virtual void onClientConnect(const Socket::Connection& sock);
     virtual void onClientDisconnect(const Socket::Connection& sock);

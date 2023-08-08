@@ -102,3 +102,17 @@ std::string& Utils::toUppercase(std::string& str) {
     str[i] = std::toupper(str[i]);
   return str;
 }
+
+std::string Utils::dirname(const std::string& path) {
+  size_t pos = path.find_last_of('/');
+  if (pos == std::string::npos)
+    return path;
+  return path.substr(0, pos);
+}
+
+std::string Utils::getExtension(const std::string& path) {
+  size_t pos = path.find_last_of('.');
+  if (pos == std::string::npos)
+    return "";
+  return path.substr(pos + 1);
+}

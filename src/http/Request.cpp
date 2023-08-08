@@ -33,6 +33,7 @@ Request::Request(const Request& other) :
   body(other.body),
   protocol(other.protocol),
   server(other.server),
+  client(other.client),
   params(other.params) {}
 
 Request& Request::operator=(const Request& other) {
@@ -43,6 +44,7 @@ Request& Request::operator=(const Request& other) {
   this->body = other.body;
   this->protocol = other.protocol;
   this->server = other.server;
+  this->client = other.client;
   this->params = other.params;
   return *this;
 }
@@ -64,6 +66,10 @@ const std::string& Request::getProtocol() const {
 }
 
 const Socket::Connection& Request::getClient() const {
+  return *this->client;
+}
+
+Socket::Connection& Request::getClient() {
   return *this->client;
 }
 

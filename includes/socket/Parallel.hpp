@@ -7,18 +7,14 @@
 #include <utils/misc.hpp>
 
 namespace Socket {
-  struct Server {
+  struct Server : public Host {
     int sock;
-    std::string address;
-    int port;
 
     inline operator int() const {
       return this->sock;
     }
-
-    inline operator std::string() const {
-      return this->address + ":" + Utils::toString(this->port);
-    }
+    Server(const int sock, const std::string& address, const int port)
+      : Host(port, address), sock(sock) {}
   };
   class Parallel {
   private:
@@ -39,7 +35,7 @@ namespace Socket {
     bool hasClient(const int sock) const;
 
     Server& getServer(const std::string& address, const int port);
-    Server& getServer(const int sock);
+    Server& getServer(int sock);
 
     Connection& getClient(const std::string& address, const int port);
     Connection& getClient(const int sock);

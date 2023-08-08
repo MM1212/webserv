@@ -8,6 +8,9 @@
 #include <vector>
 #include <algorithm>
 
+#include <sstream>
+#include <iomanip>
+
 #include <utils/misc.hpp>
 #include <http/utils.hpp>
 
@@ -23,7 +26,6 @@ namespace HTTP {
     Headers& operator=(const Headers& other);
     void clear();
     bool append(const std::string& key, const std::string& value);
-    void set(const std::string& key, const std::string& value);
     void remove(const std::string& key);
     bool has(const std::string& key) const;
 
@@ -47,6 +49,29 @@ namespace HTTP {
     }
 
     const std::map<std::string, std::string>& getAll() const;
+
+    template <typename T>
+    void set(const std::string& key, const T& value) {
+      std::stringstream ss;
+      ss << value;
+      this->set(key, ss.str());
+    }
+
+    template <>
+    void set<bool>(const std::string& key, const bool& value) {
+      std::stringstream ss;
+      ss << std::boolalpha << value;
+      this->set(key, ss.str());
+    }
+
+    template <>
+    void set<std::string>(const std::string& key, const std::string& value) {
+      std::string formatted = this->FormatKey(key);
+      std::string formattedValue = this->FormatValue(value);
+      if (this->headers.count(formatted) == 0)
+        this->keys.push_back(formatted);
+      this->headers[formatted] = formattedValue;
+    }
 
     operator std::string() const;
     std::string toString() const;

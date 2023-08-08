@@ -44,4 +44,26 @@ namespace Socket
       RAW = IPPROTO_RAW
     };
   };
+
+  struct Host {
+    int port;
+    std::string address;
+    Host(int port, const std::string& address) : port(port), address(address) {}
+    Host(int port) : port(port), address("*") {}
+    Host() : port(0), address("") {}
+    Host(const Host& other) : port(other.port), address(other.address) {}
+    Host& operator=(const Host& other) {
+      if (this == &other) return *this;
+      this->port = other.port;
+      this->address = other.address;
+      return *this;
+    }
+    bool operator==(const Host& other) const {
+      return this->port == other.port && this->address == other.address;
+    }
+    virtual ~Host() {}
+    inline operator std::string() const {
+      return this->address + ":" + Utils::toString(this->port);
+    }
+  };
 }

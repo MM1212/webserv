@@ -40,7 +40,7 @@ const Socket::Server& Parallel::bind(
     throw std::runtime_error("Failed to listen on socket");
   if (!this->fileManager.add(sock, EPOLLIN | EPOLLET | EPOLLERR))
     throw std::runtime_error("Failed to add socket to file manager");
-  Server server = { sock, address, port };
+  Server server(sock, address, port);
   ;
   this->addressesToSock.insert(std::make_pair(address + ":" + Utils::toString(port), sock));
   const Server& ref = this->servers.insert(std::make_pair(sock, server)).first->second;
@@ -87,7 +87,7 @@ Socket::Server& Parallel::getServer(const std::string& address, const int port) 
   return this->getServer(it->second);
 }
 
-Socket::Server& Parallel::getServer(const int sock) {
+Socket::Server& Parallel::getServer(int sock) {
   std::map<int, Server>::iterator it = this->servers.find(sock);
   if (it == this->servers.end())
     throw std::runtime_error("Server not found");

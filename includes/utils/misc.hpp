@@ -51,4 +51,7 @@ namespace Utils
   std::string& toLowercase(std::string& str);
   std::string& toUppercase(std::string& str);
   std::string& trim(std::string& str);
+
+  std::string dirname(const std::string& path);
+  std::string getExtension(const std::string& path);
 }

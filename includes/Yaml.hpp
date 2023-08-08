@@ -71,6 +71,9 @@ namespace YAML {
     inline const std::string& getValue() const {
       return this->value;
     }
+    inline std::string& getValue() {
+      return this->value;
+    }
     inline const Sequence& getSequence() const {
       return this->sequence;
     }

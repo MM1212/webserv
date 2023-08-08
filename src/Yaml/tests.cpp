@@ -60,8 +60,8 @@ static void sequencesAndMaps(const YAML::Node& config) {
     ++it
     ) {
     const YAML::Node& hobby = *it;
-    hobby["type"].as<std::string>();
-    hobby["name"].as<std::string>();
+    hobby["type"].getValue();
+    hobby["name"].getValue();
     hobby["is_sport"].as<bool>();
   }
 }
