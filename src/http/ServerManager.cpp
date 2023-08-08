@@ -20,6 +20,20 @@ bool ServerManager::loadConfig(const std::string& path) {
     for (size_t i = 0; i < this->root["servers"].size(); i++) {
       this->addServer(this->root["servers"][i]);
     };
+    bool hasDefault = false;
+    for (size_t i = 0; i < this->servers.size(); i++) {
+      if (this->servers[i]->isDefaultHost()) {
+        if (hasDefault)
+          throw std::runtime_error("Multiple default servers");
+        hasDefault = true;
+        this->defaultServer = this->servers[i];
+        break;
+      }
+    }
+    if (!hasDefault && this->servers.size() > 0)
+      this->defaultServer = this->servers[0];
+    else if (!hasDefault)
+      throw std::runtime_error("No default server");
   }
   catch (const std::exception& e) {
     Logger::error

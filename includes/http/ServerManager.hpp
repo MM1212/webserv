@@ -32,6 +32,7 @@ namespace HTTP {
     void addServer(const YAML::Node& node);
   private:
     std::vector<ServerConfiguration*> servers;
+    ServerConfiguration* defaultServer;
     const YAML::Node root;
 
   };

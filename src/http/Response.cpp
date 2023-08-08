@@ -129,9 +129,10 @@ void Response::sendHeader() {
 void Response::send() {
   if (this->sent) return;
   if (this->route && this->route->hasErrorPage(this->statusCode)) {
-    this->sendFile(this->route->getErrorPage(this->statusCode));
+    this->sendFile(this->route->getErrorPage(this->statusCode), false);
     return;
   }
+  this->_preSend();
   const std::string resp = this->toString();
   Logger::debug
     << "Sending response:" << std::endl
@@ -188,14 +189,21 @@ void Response::stream(std::istream& buff) {
   this->_sendChunk(buffer, buff, true);
 }
 
-void Response::sendFile(const std::string& filePath) {
+void Response::sendFile(const std::string& filePath, bool stream /* = true */) {
   try {
     std::ifstream file(filePath.c_str());
     if (!file.is_open() || !file.good())
       throw std::runtime_error("Could not open file " + filePath);
-    this->_preStream(filePath);
-    this->sendHeader();
-    this->stream(reinterpret_cast<std::istream&>(file));
+    if (stream) {
+      this->_preStream(filePath);
+      this->sendHeader();
+      this->stream(reinterpret_cast<std::istream&>(file));
+    }
+    else {
+      std::stringstream ss;
+      ss << file.rdbuf();
+      this->send(ss.str());
+    }
     file.close();
   }
   catch (const std::exception& e) {

@@ -227,7 +227,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         pendingRequest.state = ReqStates::BodyChunked;
       else if (!headers.has("Content-Length") && !headers.has("Transfer-Encoding") && pendingRequest.getMethod() > Methods::GET)
         return this->sendBadRequest(sock, 411, "Missing Content-Length");
-      else if (headers.get<size_t>("Content-Length") == 0)
+      else if (!headers.has("Content-Length") || headers.get<size_t>("Content-Length") == 0)
         pendingRequest.state = ReqStates::Done;
       else if (headers.get<size_t>("Content-Length") > settings->get<size_t>("http.max_body_size"))
         return this->sendBadRequest(sock, 413, "Body too long: " + Utils::toString(headers.get<int>("Content-Length")));
@@ -300,7 +300,9 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     << "Received packet from " << Logger::param(sock) << ": " << std::endl
     << Logger::param(pendingRequest) << std::endl;
   if (pendingRequest.getState() == ReqStates::Done) {
-    this->sendBadRequest(sock, 500, "Invalid state " + ReqStates::ToString(pendingRequest.getState()));
+    const Request req(pendingRequest);
+    Response res(req, NULL);
+    this->onRequest(req, res);
   }
 }
 

@@ -52,6 +52,8 @@ bool Settings::isValid() const {
       throw std::runtime_error("log_level isn't an integer");
     if (!this->config["misc"]["name"].is<std::string>())
       throw std::runtime_error("name isn't a string");
+    if (!this->config["misc"]["default_config_file"].is<std::string>())
+      throw std::runtime_error("default_config_file isn't a string");
     return true;
   }
   catch (const std::exception& e) {

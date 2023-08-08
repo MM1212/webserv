@@ -131,3 +131,4 @@ misc:
   #   3: error
   log_level: 0
   name: 'webserv/0.1'
+  default_config_file: config/tests/example.yaml

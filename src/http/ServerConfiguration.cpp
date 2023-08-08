@@ -3,6 +3,7 @@
 #include "http/ServerConfiguration.hpp"
 #include <utils/misc.hpp>
 #include <utils/Logger.hpp>
+#include <Settings.hpp>
 
 using namespace HTTP;
 
@@ -12,6 +13,8 @@ ServerConfiguration::ServerConfiguration(const YAML::Node& config)
 }
 
 ServerConfiguration::~ServerConfiguration() {
+  if (this->defaultRoute)
+    delete this->defaultRoute;
   for (std::map<std::string, const Route*>::iterator it = this->routes.begin(); it != this->routes.end(); ++it)
     delete it->second;
 }
@@ -74,6 +77,8 @@ void ServerConfiguration::setAsDefaultHost(bool state /* = true */) {
 }
 
 int ServerConfiguration::getMaxConnections() const {
+  if (!this->config.has("max_connections"))
+    return Instance::Get<Settings>()->get<int>("socket.max_connections");
   return this->config["max_connections"].as<int>();
 }
 
@@ -128,9 +133,13 @@ void ServerConfiguration::validate() {
 }
 
 void ServerConfiguration::init() {
+  Logger::debug
+    << "Initializing server configuration for "
+    << Logger::param(this->config.toString())
+    << std::endl;
   if (this->config.has("listen"))
     this->initHosts();
-  if (this->config.has("names"))
+  if (this->config.has("server_names"))
     this->initNames();
   if (this->config.has("default") && this->config["default"].as<bool>())
     this->defaultHost = true;
@@ -178,7 +187,7 @@ void ServerConfiguration::parseHostNode(const YAML::Node& node) {
 }
 
 void ServerConfiguration::initNames() {
-  const YAML::Node& names = this->config["names"];
+  const YAML::Node& names = this->config["server_names"];
   switch (names.getType()) {
   case YAML::Types::Scalar:
     if (this->hasName(names.getValue()))

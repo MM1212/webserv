@@ -1,5 +1,5 @@
 servers:
-  - listen: 0.0.0.0:8080
+  - listen: 8080
     server_names: localhost
     default: true
     static:
@@ -10,20 +10,13 @@ servers:
           - GET
         static:
           root: /var/api
-      - uri: /cgi-bin
+      - uri: /youtube
         methods:
           - GET
           - POST
-        cgi:
-          root: /var/www/cgi-bin
-          interpreters:
-            - name: python
-              path: /usr/bin/python
-              extensions:
-                - .py
-              args:
-                - -u
-                - $file
-                - -- $args
+        redirect:
+          uri: https://youtube.com
+          type: permanent
+          partial: true
   - listen: [3000, 3001, 8080]
     server_names: 127.0.0.1

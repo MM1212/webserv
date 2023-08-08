@@ -1,5 +1,4 @@
 #include <Yaml.hpp>
-#include <webserv.hpp>
 #include <shared.hpp>
 #include <utils/Logger.hpp>
 #include <utils/misc.hpp>
@@ -17,7 +16,11 @@ int main(int ac, char** av) {
     return 1;
   YAML::RunTests();
   try {
-    Instance::Get<HTTP::ServerManager>()->run();
+    HTTP::ServerManager* serverManager = Instance::Get<HTTP::ServerManager>();
+    if (serverManager->loadConfig(ac > 0 ? av[0] : settings->get<std::string>("misc.default_config_file"))) {
+      serverManager->bindServers();
+      serverManager->run();
+    }
   }
   catch (const std::exception& e) {
     Logger::error

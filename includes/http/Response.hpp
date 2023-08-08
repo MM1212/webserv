@@ -48,7 +48,7 @@ namespace HTTP {
   public:
     void stream(std::istream& buff);
 
-    void sendFile(const std::string& filePath);
+    void sendFile(const std::string& filePath, bool stream = true);
     void redirect(const std::string& path, bool permanent = true);
   private:
     Response();

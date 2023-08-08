@@ -48,8 +48,14 @@ namespace Socket
   struct Host {
     int port;
     std::string address;
-    Host(int port, const std::string& address) : port(port), address(address) {}
-    Host(int port) : port(port), address("*") {}
+    Host(int port, const std::string& address) : port(port), address(address) {
+      if (this->address == "*")
+        this->address = "0.0.0.0";
+    }
+    Host(int port) : port(port), address("*") {
+      if (this->address == "*")
+        this->address = "0.0.0.0";
+    }
     Host() : port(0), address("") {}
     Host(const Host& other) : port(other.port), address(other.address) {}
     Host& operator=(const Host& other) {

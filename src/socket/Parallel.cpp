@@ -28,14 +28,17 @@ const Socket::Server& Parallel::bind(
     throw std::runtime_error("Failed to create socket");
   sockaddr_in serverAddress;
   serverAddress.sin_family = domain;
-  serverAddress.sin_addr.s_addr = inet_addr(address.c_str());
+  if (address == "*")
+    serverAddress.sin_addr.s_addr = INADDR_ANY;
+  else
+    serverAddress.sin_addr.s_addr = inet_addr(address.c_str());
   serverAddress.sin_port = htons(port);
   // reuse socket
   int reuse = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
     throw std::runtime_error("Failed to set socket to reusable");
   if (::bind(sock, (sockaddr*)&serverAddress, sizeof(serverAddress)) < 0)
-    throw std::runtime_error("Failed to bind socket");
+    throw std::runtime_error("Failed to bind socket " + Utils::toString(sock) + " to address " + address + ":" + Utils::toString(port));
   if (listen(sock, backlog) < 0)
     throw std::runtime_error("Failed to listen on socket");
   if (!this->fileManager.add(sock, EPOLLIN | EPOLLET | EPOLLERR))
