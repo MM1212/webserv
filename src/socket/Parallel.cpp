@@ -2,6 +2,7 @@
 #include <utils/Logger.hpp>
 #include <algorithm>
 #include <Settings.hpp>
+#include <utils/misc.hpp>
 
 using Socket::Parallel;
 using Socket::Connection;
@@ -9,7 +10,14 @@ using Socket::Connection;
 static Settings* settings = Instance::Get<Settings>();
 
 Parallel::Parallel(int timeout)
-  : fileManager(this, &Parallel::onTick), timeout(timeout) {}
+  : fileManager(this, &Parallel::onTick), timeout(timeout) {
+  try {
+    this->fileManager.setTimeout(settings->get<int>("socket.poll_timeout"));
+  }
+  catch (const std::exception& e) {
+    this->fileManager.setTimeout(Utils::getOrderOfMagnitude(timeout) / 4);
+  }
+}
 
 Parallel::~Parallel() {}
 
@@ -146,10 +154,10 @@ void Parallel::disconnect(int client) {
   const Connection con = this->getClient(client);
   const std::string address(con);
   this->onClientDisconnect(con);
-  Logger::debug
+  Logger::warning
     << "Client disconnected " << Logger::param(address)
     << " with sock " << Logger::param(client)
-    << " on sock " << Logger::param(con.getServerSock())
+    << " on sock " << Logger::param(con.getServerSock()) << std::endl
     << " - timed out: " << Logger::param(con.hasTimedOut()) << std::endl
     << " - alive: " << Logger::param(con.isAlive()) << std::endl;
   this->fileManager.remove(client, true);
@@ -162,24 +170,53 @@ void Parallel::run() {
 }
 
 void Parallel::onTick(const std::vector<File>& changed) {
+  if (changed.size() > 0) {
+    // Logger::debug
+    //   << "New Parallel tick!" << std::endl;
+  }
   for (
     std::vector<File>::const_iterator it = changed.begin();
     it != changed.end();
     ++it
     ) {
     const File& file = *it;
+    // Logger::debug
+    //   << "sock: " << file << " | "
+    //   << "is client: " << this->hasClient(file) << " | "
+    //   << "is server: " << this->hasServer(file) << " | "
+    //   << "readable: " << std::boolalpha << file.isReadable() << " | "
+    //   << "writable: " << std::boolalpha << file.isWritable() << ";" << std::endl;
     if (this->hasServer(file))
       this->_onNewConnection(this->getServer(file));
     else if (this->hasClient(file)) {
       const Connection& client = this->getClient(file);
       if (!client.isAlive() || client.hasTimedOut()) {
-        this->onClientDisconnect(client);
+        // Logger::debug
+        //   << "client: " << client << " | "
+        //   << "isAlive: " << std::boolalpha << client.isAlive() << " | "
+        //   << "hasTimedOut: " << std::boolalpha << client.hasTimedOut() << std::endl;
+        this->_onClientDisconnect(client);
         continue;
       }
+
       if (client.isReadable())
         this->_onClientRead(const_cast<Connection&>(client));
       if (client.isWritable())
         this->_onClientWrite(const_cast<Connection&>(client));
+    }
+  }
+  for (
+    std::map<int, Connection>::iterator it = this->clients.begin();
+    it != this->clients.end();
+    it++
+    ) {
+    const Connection& client = it->second;
+    if (!client.isAlive() || client.hasTimedOut()) {
+      // Logger::debug
+      //   << "client: " << client << " | "
+      //   << "isAlive: " << std::boolalpha << client.isAlive() << " | "
+      //   << "hasTimedOut: " << std::boolalpha << client.hasTimedOut() << std::endl;
+      this->_onClientDisconnect(client);
     }
   }
 }
@@ -188,21 +225,21 @@ void Parallel::_onNewConnection(const Server& server) {
   struct sockaddr_in clientAddress;
   socklen_t clientAddressLength = sizeof(clientAddress);
   Logger::debug
-    << "Accepting new con from "
+    << "Accepting new con on host "
     << Logger::param(server.address) << ":" << Logger::param(server.port)
-    << " on sock " << Logger::param(server.sock) << "..."
+    << " with sock " << Logger::param(server.sock) << "..."
     << std::endl;
   int clientSock = accept(server.sock, (sockaddr*)&clientAddress, &clientAddressLength);
   if (clientSock < 0)
     throw std::runtime_error("Failed to accept connection");
-  if (!this->fileManager.add(clientSock, EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLERR))
+  if (!this->fileManager.add(clientSock, EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR))
     throw std::runtime_error("Failed to add socket to file manager");
   const File& fileHandle = this->fileManager.get(clientSock);
   Connection client(const_cast<File&>(fileHandle), server.sock, this->timeout);
   const std::string address(client);
   this->addressesToSock.insert(std::make_pair(address, clientSock));
   this->clients.insert(std::make_pair(fileHandle, client));
-  Logger::debug
+  Logger::info
     << "Accepted new con from "
     << Logger::param(address)
     << " with sock " << Logger::param(fileHandle)
@@ -211,27 +248,27 @@ void Parallel::_onNewConnection(const Server& server) {
   this->onClientConnect(this->getClient(clientSock));
 }
 
-void Parallel::onClientDisconnect(const Connection& client) {
+void Parallel::_onClientDisconnect(const Connection& client) {
   this->disconnect(client);
 }
 
 void Parallel::_onClientRead(Connection& client) {
-  const int bufferSize = settings->get<int>("socket.read_buffer_size");
+  static const int bufferSize = settings->get<int>("socket.read_buffer_size");
   std::unique_ptr<char[]> buffer(bufferSize + 1);
   int read = recv(client.getHandle(), buffer, bufferSize, 0);
   if (read <= 0) {
-    this->onClientDisconnect(client);
+    this->disconnect(client);
     return;
   }
   buffer[read] = '\0';
   client.getReadBuffer() << buffer;
-  client.ping();
-  // TESTING
   Logger::debug
     << "got " << Logger::param(read) << " bytes from "
     << Logger::param(static_cast<std::string>(client))
-    << std::endl
-    << "  - " << Logger::param(buffer) << std::endl;
+    << std::endl;
+    // << "  - " << Logger::param(buffer) << std::endl;
+  client.ping();
+  // TESTING
   this->onClientRead(client);
 }
 
@@ -240,6 +277,8 @@ void Parallel::_onClientWrite(Connection& client) {
   if (buffer.size() == 0) {
     if (client.shouldCloseOnEmptyWriteBuffer())
       this->disconnect(client);
+    else
+      this->setClientToRead(client);
     return;
   }
   int wrote = send(client.getHandle(), buffer.c_str(), buffer.size(), 0);
@@ -247,4 +286,19 @@ void Parallel::_onClientWrite(Connection& client) {
   this->onClientWrite(client, wrote);
   buffer = buffer.substr(wrote);
   client.ping();
+}
+
+void Parallel::setClientToRead(Connection& client) {
+  if (!this->fileManager.update(client.getHandle(), EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR))
+    Logger::error
+    << "Could not switch client " << Logger::param(client)
+    << " to read-only mode!" << std::endl;
+}
+
+
+void Parallel::setClientToWrite(Connection& client) {
+  if (!this->fileManager.update(client.getHandle(), EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLERR))
+    Logger::error
+    << "Could not switch client " << Logger::param(client)
+    << " to read-only mode!" << std::endl;
 }

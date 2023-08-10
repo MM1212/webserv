@@ -9,9 +9,9 @@ namespace HTTP {
       UNK = -1,
       HEAD,
       GET,
+      DELETE,
       POST,
       PUT,
-      DELETE,
     };
     Method FromString(const std::string& str);
     std::string ToString(Method method);

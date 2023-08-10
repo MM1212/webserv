@@ -90,7 +90,7 @@ const Route* ServerConfiguration::getRoute(const std::string& path) const {
 
 const Route* ServerConfiguration::getNearestRoute(const std::string& path) const {
   std::string currentPath = path;
-  while (currentPath != "/") {
+  while (currentPath != "/" && currentPath.length() > 0) {
     if (this->routes.count(currentPath) == 0)
       currentPath = Utils::dirname(currentPath);
     else
@@ -114,6 +114,8 @@ void ServerConfiguration::handleRequest(const Request& req, Response& res) const
   res.setRoute(route);
   if (!route->isMethodAllowed(req.getMethod()))
     return res.status(405).send();
+  if (req.isExpecting() && !route->supportsExpect())
+    return res.status(401).send();
   try {
     route->handle(req, res);
   }
@@ -207,6 +209,7 @@ void ServerConfiguration::initNames() {
 }
 
 void ServerConfiguration::initRootRoute() {
+  const_cast<YAML::Node&>(this->config).insert(YAML::Node::NewScalar("uri", "/"));
   this->defaultRoute = Instance::Get<RouteStorage>()->buildRoute<Routes::Default>(this->config, this);
 }
 
@@ -259,4 +262,11 @@ void ServerConfiguration::addRoute(const std::string& path, const Route* route) 
   this->routes.insert(
     std::make_pair(path, route)
   );
+}
+
+std::ostream& HTTP::operator<<(std::ostream& os, const ServerConfiguration& server) {
+  os << "ServerConfiguration("
+    << "hosts: " << static_cast<std::string>(server.getHosts()[0])
+    << ")";
+  return os;
 }

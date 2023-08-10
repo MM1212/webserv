@@ -3,6 +3,7 @@
 #include <Yaml.hpp>
 #include <utils/Instance.hpp>
 #include <utils/misc.hpp>
+#include <shared.hpp>
 
 class Settings {
   static const std::string path;

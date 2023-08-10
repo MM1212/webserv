@@ -1,12 +1,9 @@
 #pragma once
 
 #include "http/Route.hpp"
+#include "http/DirectoryBuilder.hpp"
 
 #include <string>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -24,7 +21,8 @@ namespace HTTP {
       Static(const Static& other);
 
       const std::string& getRoot() const;
-      const std::string& getIndex() const;
+      const std::string getIndex() const;
+      const std::string& getRedirection() const;
       bool isDirectoryListingAllowed() const;
       bool isPathValid(const std::string& path) const;
 
@@ -33,6 +31,8 @@ namespace HTTP {
       virtual inline Static* clone() const {
         return new Static(*this);
       }
+      bool supportsCascade() const { return true; }
+      bool supportsExpect() const { return true; }
       void init();
     private:
       inline const YAML::Node& getNode() const {
@@ -40,6 +40,10 @@ namespace HTTP {
       }
       std::string getResolvedPath(const Request& req) const;
       std::string buildDirectoryListing(const std::string& path) const;
+
+      void handleGet(const std::string& path, const Request& req, Response& res) const;
+      void handleUploads(const std::string& path, const Request& req, Response& res) const;
+      void handleDelete(const std::string& path, const Request& req, Response& res) const;
     };
   }
 }

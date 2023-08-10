@@ -8,6 +8,7 @@ SRC_FILES = Settings.cpp utils/Logger.cpp utils/misc.cpp \
 						http/Response.cpp \
 						http/Headers.cpp http/utils.cpp \
 						http/WebSocket.cpp \
+						http/DirectoryBuilder.cpp \
 						http/Route.cpp http/routes/Default.cpp http/routes/Redirect.cpp http/routes/Static.cpp \
 						http/RouteStorage.cpp http/ServerManager.cpp http/ServerConfiguration.cpp \
 						main.cpp

@@ -138,7 +138,7 @@ servers:
           - POST
         # types of the route
         # only one type can be present
-        # types: redirect, static, cgi
+        # types: redirect, static, cgi, uploader
         # presence: required
         # type: mapping
         cgi:

@@ -12,6 +12,7 @@
 
 #include <map>
 #include <vector>
+#include <iostream>
 
 namespace HTTP {
   class ServerConfiguration {
@@ -37,6 +38,8 @@ namespace HTTP {
     const Routes::Default* getDefaultRoute() const;
 
     void handleRequest(const Request& req, Response& res) const;
+
+    friend std::ostream& operator<<(std::ostream& os, const ServerConfiguration& server);
   private:
     void init();
     void initHosts();

@@ -55,6 +55,9 @@ namespace Socket {
 
     void run();
 
+    void setClientToRead(Connection& client);
+    void setClientToWrite(Connection& client);
+
   private:
 
     void onTick(const std::vector<File>& changed);

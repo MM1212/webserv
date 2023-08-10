@@ -6,11 +6,11 @@ using namespace Logger;
 static const Settings* settings = Instance::Get<Settings>();
 static const int logLevel = settings->get<int>("misc.log_level");
 
-const Stream Logger::debug("DEBUG", CYAN, logLevel > -1 && logLevel <= 0);
-const Stream Logger::info("INFO", BLUE, logLevel > -1 && logLevel <= 1);
-const Stream Logger::success("SUCCESS", GREEN, logLevel > -1 && logLevel <= 2);
-const Stream Logger::warning("WARNING", ORANGE, logLevel > -1 && logLevel <= 3);
-const Stream Logger::error(std::cerr, "ERROR", RED, logLevel > -1 && logLevel <= 4);
+Stream Logger::debug("DEBUG", CYAN, logLevel > -1 && logLevel <= 0);
+Stream Logger::info("INFO", BLUE, logLevel > -1 && logLevel <= 1);
+Stream Logger::success("SUCCESS", GREEN, logLevel > -1 && logLevel <= 2);
+Stream Logger::warning("WARNING", ORANGE, logLevel > -1 && logLevel <= 3);
+Stream Logger::error(std::cerr, "ERROR", RED, logLevel > -1 && logLevel <= 4);
 
 Stream::Stream(
   std::ostream& target,

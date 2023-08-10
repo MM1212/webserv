@@ -1,16 +1,21 @@
 servers:
   - listen: 8080
-    server_names: localhost
+    server_names: [localhost, 127.0.0.1]
     default: true
     static:
       root: /var/www
     routes:
       - uri: /api
-        methods:
-          - GET
+        methods: [GET]
         static:
-          root: /var/api
-      - uri: /youtube
+          root: /home/mm
+          directory_listing: true
+      - uri: /upload
+        methods: [POST, PUT, DELETE]
+        static:
+          root: /home/mm/
+          send_to: /api/
+      - uri: /youtube/
         methods:
           - GET
           - POST
@@ -18,5 +23,3 @@ servers:
           uri: https://youtube.com
           type: permanent
           partial: true
-  - listen: [3000, 3001, 8080]
-    server_names: 127.0.0.1

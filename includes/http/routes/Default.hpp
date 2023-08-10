@@ -4,6 +4,7 @@
 #include "http/Request.hpp"
 #include "http/Response.hpp"
 #include "http/Route.hpp"
+#include <Settings.hpp>
 
 namespace HTTP {
   class ServerConfiguration;
@@ -33,8 +34,13 @@ namespace HTTP {
       inline const std::string& getRoot() const {
         return this->node["static"]["root"].getValue();
       }
-      inline const std::string& getIndex() const {
-        return this->node["static"]["index"].getValue();
+      inline const std::string getIndex() const {
+        try {
+          return this->node["static"]["index"].getValue();
+        }
+        catch (const std::exception& e) {
+          return Instance::Get<Settings>()->get<std::string>("http.static.default_index");
+        }
       }
       inline bool hasDirectoryListing() const {
         return this->node["static"]["directory_listing"].as<bool>();

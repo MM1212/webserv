@@ -62,25 +62,26 @@ namespace Socket {
     epoll_event_t* events;
     int maxEvents;
     bool running;
+    int timeout;
 
     T* instance;
     void (T::* onTick)(const std::vector<File>&);
   public:
     FileManager() :
       fds(), epollFd(-1),
-      events(new epoll_event_t[0]), maxEvents(0), running(false),
+      events(new epoll_event_t[0]), maxEvents(0), running(false), timeout(-1),
       instance(NULL), onTick(NULL) {
       this->init();
     }
     FileManager(T* instance, void (T::* onTick)(const std::vector<File>&)) :
       fds(), epollFd(-1),
-      events(new epoll_event_t[0]), maxEvents(0), running(false),
+      events(new epoll_event_t[0]), maxEvents(0), running(false), timeout(-1),
       instance(instance), onTick(onTick) {
       this->init();
     }
     FileManager(const FileManager& other) :
       fds(other.fds), epollFd(other.epollFd),
-      events(new epoll_event_t[other.maxEvents]), maxEvents(other.maxEvents), running(false),
+      events(new epoll_event_t[other.maxEvents]), maxEvents(other.maxEvents), running(false), timeout(other.timeout),
       instance(other.instance), onTick(other.onTick) {
       for (int i = 0; i < this->maxEvents; i++)
         this->events[i] = other.events[i];
@@ -94,6 +95,7 @@ namespace Socket {
       for (int i = 0; i < this->maxEvents; i++)
         this->events[i] = other.events[i];
       this->maxEvents = other.maxEvents;
+      this->timeout = other.timeout;
       this->instance = other.instance;
       this->onTick = other.onTick;
       this->running = false;
@@ -183,11 +185,15 @@ namespace Socket {
       return this->update(file.getFd(), flags);
     }
 
+    inline void setTimeout(int timeout) {
+      this->timeout = timeout;
+    }
+
     void start() {
       if (this->running) return;
       this->running = true;
       while (this->running) {
-        int n = ::epoll_wait(this->epollFd, this->events, this->maxEvents, -1);
+        int n = ::epoll_wait(this->epollFd, this->events, this->maxEvents, this->timeout);
         if (n == -1) {
           if (errno == EINTR) continue;
           throw std::runtime_error("epoll_wait failed");

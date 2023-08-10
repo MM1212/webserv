@@ -10,7 +10,9 @@ Request::Request(
   const std::string& path,
   const std::string& body,
   const std::string& protocol,
-  const Headers& headers
+  const Headers& headers,
+  const std::map<std::string, std::string>& params,
+  const std::vector<File>& files
 ) :
   headers(headers),
   method(method),
@@ -19,7 +21,8 @@ Request::Request(
   protocol(protocol),
   server(server),
   client(client),
-  params() {
+  params(params),
+  files(files) {
   this->parseParams();
 }
 
@@ -34,7 +37,8 @@ Request::Request(const Request& other) :
   protocol(other.protocol),
   server(other.server),
   client(other.client),
-  params(other.params) {}
+  params(other.params),
+  files(other.files) {}
 
 Request& Request::operator=(const Request& other) {
   if (this == &other) return *this;
@@ -46,6 +50,7 @@ Request& Request::operator=(const Request& other) {
   this->server = other.server;
   this->client = other.client;
   this->params = other.params;
+  this->files = other.files;
   return *this;
 }
 

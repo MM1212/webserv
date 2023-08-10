@@ -21,6 +21,10 @@ namespace HTTP {
 
       void init();
 
+      inline bool supportsCascade() const {
+        return true;
+      }
+
       inline const std::string& getRedirectUri() const {
         return this->node["redirect"]["uri"].getValue();
       }

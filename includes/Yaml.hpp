@@ -121,6 +121,11 @@ namespace YAML {
     }
 
     template <>
+    Node as<Node>() const {
+      return *this;
+    }
+
+    template <>
     bool as<bool>() const {
       if (this->value == "true")
         return true;

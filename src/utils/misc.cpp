@@ -24,14 +24,17 @@ std::string& Utils::capitalize(std::string& str)
 }
 
 // formats time in this format Fri, 21 Jul 2023 19:27:34 GMT
-std::string Utils::getJSONDate()
+std::string Utils::getJSONDate(time_t basetime /* = -1 */)
 {
   std::string result;
   time_t rawtime;
   struct tm* timeinfo;
   char buffer[80];
 
-  time(&rawtime);
+  if (basetime != -1)
+    rawtime = basetime;
+  else  
+    time(&rawtime);
   timeinfo = gmtime(&rawtime);
 
   strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
@@ -110,9 +113,36 @@ std::string Utils::dirname(const std::string& path) {
   return path.substr(0, pos);
 }
 
+std::string Utils::basename(const std::string& path) {
+  size_t pos = path.find_last_of('/');
+  if (pos == std::string::npos)
+    return path;
+  return path.substr(pos + 1);
+}
+
 std::string Utils::getExtension(const std::string& path) {
   size_t pos = path.find_last_of('.');
   if (pos == std::string::npos)
     return "";
   return path.substr(pos + 1);
+}
+
+// joins all the paths correctly missing/more than /
+std::string Utils::resolvePath(size_t count, ...) {
+  va_list args;
+  va_start(args, count);
+  std::string result;
+  for (size_t i = 0; i < count; i++) {
+    std::string part(va_arg(args, char*));
+    if (result.empty())
+      result = part;
+    else {
+      if (result[result.size() - 1] != '/' && part[0] != '/')
+        result += '/';
+      else if (result[result.size() - 1] == '/' && part[0] == '/')
+        part.erase(0, 1);
+      result += part;
+    }
+  }
+  return result;
 }

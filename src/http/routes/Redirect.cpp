@@ -20,7 +20,9 @@ const YAML::Node& Redirect::getNode() const {
   return this->node["redirect"];
 }
 
-void Redirect::init() {}
+void Redirect::init() {
+  this->Route::init();
+}
 
 bool Redirect::isRedirectPartial() const {
   const YAML::Node& redir = this->getNode();
@@ -30,9 +32,18 @@ bool Redirect::isRedirectPartial() const {
 }
 
 std::string Redirect::buildRedirectPath(const Request& req) const {
+  (void)req;
   if (!this->isRedirectPartial())
     return this->getRedirectUri();
-  return this->getRedirectUri() + req.getPath().substr(0, this->getPath().size());
+  size_t pos = req.getPath().find(this->getPath());
+  if (pos == std::string::npos)
+    return this->getRedirectUri();
+  std::string uriHost = req.getPath();
+  uriHost.erase(pos, this->getPath().size());
+  if (uriHost.empty())
+    uriHost = "/";
+  uriHost = Utils::resolvePath(2, this->getRedirectUri().c_str(), uriHost.c_str());
+  return uriHost;
 }
 
 bool Redirect::isRedirectPermanent() const {

@@ -40,6 +40,7 @@ namespace Logger {
     std::ostream& target;
     std::string color;
     bool enabled;
+    std::stringstream vstream;
   public:
     Stream(
       std::ostream& target,
@@ -57,8 +58,9 @@ namespace Logger {
     Stream& operator=(const Stream& other);
 
     template <typename T>
-    std::ostream& operator<<(const T& value) const {
-      if (!this->enabled) return this->target;
+    std::ostream& operator<<(const T& value) {
+      this->vstream.str("");
+      if (!this->enabled) return this->vstream;
       return this->target << this->buildHeader() << " " << value;
     }
 
@@ -74,9 +76,9 @@ namespace Logger {
 
 
 
-  extern const Stream debug;
-  extern const Stream info;
-  extern const Stream success;
-  extern const Stream warning;
-  extern const Stream error;
+  extern Stream debug;
+  extern Stream info;
+  extern Stream success;
+  extern Stream warning;
+  extern Stream error;
 };

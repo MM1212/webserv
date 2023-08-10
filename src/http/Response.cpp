@@ -43,7 +43,7 @@ void Response::init() {
   this->headers.append("Date", Utils::getJSONDate());
   if (this->req.getHeaders().has("Connection"))
     this->headers.append("Connection", this->req.getHeaders().get<std::string>("Connection"));
-  else
+  else if (!this->req.isExpecting() || this->req.getProtocol() == "HTTP/1.0")
     this->headers.append("Connection", "close");
 }
 
@@ -112,32 +112,32 @@ std::string Response::toString() const {
   ss << this->getHeader()
     << "\r\n";
   if (this->body.length() > 0 && this->req.getMethod() != Methods::HEAD)
-    ss << this->body << "\r\n";
+    ss << this->body;
   return ss.str();
 }
 
 void Response::sendHeader() {
   const std::string header = this->getHeader() + "\r\n";
-  Logger::debug
-    << "Sending header:" << std::endl
-    << Logger::param(header) << std::endl;
   Socket::Connection& client = const_cast<Request&>(this->req).getClient();
+  Logger::info
+    << "Sending headers to: " << Logger::param(client) << std::endl
+    << Logger::param(header) << std::endl;
   client.getWriteBuffer().append(header);
   this->afterSend();
 }
 
 void Response::send() {
   if (this->sent) return;
-  if (this->route && this->route->hasErrorPage(this->statusCode)) {
+  if (this->route && this->route->hasErrorPage(this->statusCode) && this->body.empty()) {
     this->sendFile(this->route->getErrorPage(this->statusCode), false);
     return;
   }
   this->_preSend();
   const std::string resp = this->toString();
-  Logger::debug
-    << "Sending response:" << std::endl
-    << Logger::param(resp) << std::endl;
   Socket::Connection& client = const_cast<Request&>(this->req).getClient();
+  Logger::info
+    << "Sending response to: " << Logger::param(client) << std::endl
+    << Logger::param(*this) << std::endl;
   client.getWriteBuffer().append(resp);
   this->afterSend();
 }
@@ -207,15 +207,20 @@ void Response::sendFile(const std::string& filePath, bool stream /* = true */) {
     file.close();
   }
   catch (const std::exception& e) {
-    this->status(500);
-    this->send();
     Logger::error
-      << "Could not send file " << filePath << ": " << e.what() << std::endl;
+      << "Could not send file " << Logger::param(filePath) << ": " << e.what() << std::endl;
+    this->status(500).send();
   }
 }
 
 void Response::afterSend() {
   this->sent = true;
-  if (this->headers.get<std::string>("Connection") == "close")
+  if (this->headers.has("Connection") && this->headers.get<std::string>("Connection") == "close")
     const_cast<Request&>(this->req).getClient().markToClose();
+}
+
+std::ostream& HTTP::operator<<(std::ostream& os, const Response& res) {
+  os << "Response(" << res.getStatus() << ", " << res.getStatusMessage() << "):" << std::endl
+    << "Headers: " << std::endl << res.getHeaders() << std::endl;
+  return os;
 }

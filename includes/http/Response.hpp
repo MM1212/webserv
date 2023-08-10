@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <iostream>
 
 
 #include "Methods.hpp"
@@ -41,6 +42,7 @@ namespace HTTP {
     }
     void sendHeader();
 
+    friend std::ostream& operator<<(std::ostream& stream, const Response& response);
   private:
     void _sendChunk(const char* buffer, std::istream& buff, bool last = false);
     void _preSend();

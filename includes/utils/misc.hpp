@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <sys/time.h>
 #include <cstdlib>
+#include <stdarg.h>
+#include <cmath>
 
 namespace Utils
 {
@@ -24,7 +26,7 @@ namespace Utils
     return oss.str();
   }
 
-  std::string getJSONDate();
+  std::string getJSONDate(time_t basetime = -1);
   void showStackTrace();
 
   template <typename T>
@@ -53,5 +55,18 @@ namespace Utils
   std::string& trim(std::string& str);
 
   std::string dirname(const std::string& path);
+  std::string basename(const std::string& path);
   std::string getExtension(const std::string& path);
+
+  std::string resolvePath(size_t count, ...);
+
+  template <typename T>
+  size_t getOrderOfMagnitude(T nbr, size_t base = 10) {
+    if (nbr < 0)
+      nbr *= -1;
+    size_t mag;
+    for (mag = 0; nbr > 0; ++mag)
+      nbr /= base;
+    return std::pow(base, mag - 1);
+  }
 }

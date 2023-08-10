@@ -50,21 +50,28 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
   bool skip = false;
 
   while (skip || (packet.peek() != EOF && pendingRequest.getState() != ReqStates::Done)) {
-    pendingRequest.storage += packet.get();
+    /*     if (std::isprint(packet.peek())) {
+          Logger::debug
+            << "peek: " << Logger::param<char>(packet.peek())
+            << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
+            << std::endl;
+        }
+        else {
+          Logger::debug
+            << "peek: " << std::hex << Logger::param(packet.peek()) << std::dec
+            << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
+            << std::endl;
+        } */
+    if (
+      pendingRequest.getState() != ReqStates::BodyChunkData &&
+      pendingRequest.getState() != ReqStates::Body &&
+      pendingRequest.getState() != ReqStates::BodyChunkEnd &&
+      pendingRequest.getState() != ReqStates::BodyEnd &&
+      pendingRequest.getState() != ReqStates::HeaderEnd
+      )
+      pendingRequest.storage += packet.get();
     if (skip)
       skip = false;
-    /* if (std::isprint(packet.peek())) {
-      Logger::debug
-        << "peek: " << Logger::param<char>(packet.peek())
-        << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
-        << std::endl;
-    }
-    else {
-      Logger::debug
-        << "peek: " << std::hex << Logger::param(packet.peek()) << std::dec
-        << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
-        << std::endl;
-    } */
     switch (pendingRequest.state) {
     case ReqStates::CLRFCheck:
     {
@@ -222,10 +229,10 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     }
     case ReqStates::HeaderEnd:
     {
-      const Headers& headers = pendingRequest.getHeaders();
+      Headers& headers = pendingRequest.getHeaders();
       if (headers.has("Transfer-Encoding") && headers.get<std::string>("Transfer-Encoding") == "chunked")
         pendingRequest.state = ReqStates::BodyChunked;
-      else if (!headers.has("Content-Length") && !headers.has("Transfer-Encoding") && pendingRequest.getMethod() > Methods::GET)
+      else if (!headers.has("Content-Length") && !headers.has("Transfer-Encoding") && pendingRequest.getMethod() > Methods::DELETE)
         return this->sendBadRequest(sock, 411, "Missing Content-Length");
       else if (!headers.has("Content-Length") || headers.get<size_t>("Content-Length") == 0)
         pendingRequest.state = ReqStates::Done;
@@ -233,23 +240,39 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         return this->sendBadRequest(sock, 413, "Body too long: " + Utils::toString(headers.get<int>("Content-Length")));
       else
         pendingRequest.state = ReqStates::Body;
+      if (pendingRequest.isExpecting()) {
+        const Request req(pendingRequest);
+        Response res(req, NULL);
+        Logger::info
+          << "New request expecting from " << Logger::param(sock) << ": " << std::endl
+          << Logger::param(req);
+        this->setClientToWrite(sock);
+        this->onRequest(req, res);
+        if (res.getStatus() != 100) {
+          this->pendingRequests.erase(sock);
+          this->pendingRequests.insert(std::make_pair(sock, PendingRequest(this, &sock)));
+          return;
+        }
+        else
+          headers.remove("Expect");
+      }
       continue;
     }
     case ReqStates::Body:
     {
       const size_t contentLength = pendingRequest.getContentLength();
-      Logger::debug
-        << "Curr body size: " << Logger::param(pendingRequest.chunkData.size())
-        << " | Content-Length: " << Logger::param(contentLength)
-        << std::endl;
       if (pendingRequest.chunkData.size() < contentLength)
         pendingRequest.chunkData.push_back(packet.get());
+      // Logger::debug
+      //   << "Content-Length: " << Logger::param(contentLength) << std::endl
+      //   << "chunk size: " << Logger::param(pendingRequest.chunkData.size()) << std::endl
+      //   << "storage size: " << Logger::param(pendingRequest.storage.size()) << std::endl;
       if (pendingRequest.chunkData.size() == contentLength) {
         pendingRequest.body.append(reinterpret_cast<char*>(pendingRequest.chunkData.data()), pendingRequest.chunkData.size());
         pendingRequest.chunkData.clear();
         pendingRequest.state = ReqStates::Done;
       }
-      continue;
+      break;
     }
     case ReqStates::BodyChunked:
     {
@@ -266,9 +289,6 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         ss << pendingRequest.storage;
         pendingRequest.storage.clear();
         ss >> std::hex >> pendingRequest.chunkSize;
-        Logger::debug
-          << "Got chunk size " << Logger::param(pendingRequest.chunkSize)
-          << std::endl;
         if (pendingRequest.chunkSize == 0)
           pendingRequest.state = ReqStates::BodyChunkData;
         pendingRequest.nextWithCRLF();
@@ -297,18 +317,27 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     }
   }
   Logger::debug
-    << "Received packet from " << Logger::param(sock) << ": " << std::endl
+    << "Got packet from " << Logger::param(sock) << " at state "
+    << Logger::param(ReqStates::ToString(pendingRequest.getState())) << ": " << std::endl
     << Logger::param(pendingRequest) << std::endl;
   if (pendingRequest.getState() == ReqStates::Done) {
+    // handle multiform-data
+    // pendingRequest.handleMultiformData();
     const Request req(pendingRequest);
     Response res(req, NULL);
+    Logger::info
+      << "New request from " << Logger::param(sock) << ": " << std::endl
+      << Logger::param(req);
+    this->setClientToWrite(sock);
     this->onRequest(req, res);
+    this->pendingRequests.erase(sock);
+    this->pendingRequests.insert(std::make_pair(sock, PendingRequest(this, &sock)));
   }
 }
 
 void WebSocket::sendBadRequest(Socket::Connection& sock, int statusCode, const std::string& logMsg) {
   Logger::warning
-    << "Sending " << statusCode << " to " << Logger::param(sock) << ": " << logMsg
+    << "Sending " << Logger::param(statusCode) << " to " << Logger::param(sock) << ": " << logMsg
     << std::endl;
   Request req(this->pendingRequests.at(sock));
   Response resp(req, NULL);

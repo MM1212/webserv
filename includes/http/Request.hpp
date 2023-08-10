@@ -15,6 +15,14 @@ namespace HTTP {
   class Response;
   class Request {
   public:
+    struct File {
+      std::string name;
+      std::string path;
+      std::string data;
+      File(const std::string& name, const std::string& path, const std::string& data) :
+        name(name), path(path), data(data) {}
+    };
+  public:
     Request(
       Socket::Parallel* server,
       Socket::Connection* client,
@@ -22,7 +30,9 @@ namespace HTTP {
       const std::string& path,
       const std::string& body,
       const std::string& protocol,
-      const Headers& headers
+      const Headers& headers,
+      const std::map<std::string, std::string>& params,
+      const std::vector<File>& files
     );
     ~Request();
     Request(const Request& other);
@@ -38,8 +48,7 @@ namespace HTTP {
     const T getBody() const {
       return static_cast<T>(this->body);
     }
-    template <>
-    const std::string getBody<std::string>() const {
+    inline const std::string& getRawBody() const {
       return this->body;
     }
 
@@ -66,7 +75,9 @@ namespace HTTP {
     }
 
     const std::map<std::string, std::string>& getParams() const;
-
+    inline const std::vector<File>& getFiles() const {
+      return this->files;
+    }
     // headers helpers
     inline const std::string getHost() const {
       return this->getHeaders().get<std::string>("Host");
@@ -78,8 +89,12 @@ namespace HTTP {
       return this->getHeaders().get<int>("Content-Length");
     }
 
+    inline bool isExpecting() const {
+      return this->getHeaders().has("Expect") && this->getContentLength() > 0;
+    }
+
     friend std::ostream& operator<<(std::ostream& os, const Request& request);
-  private:
+  protected:
     Headers headers;
     Methods::Method method;
     std::string path;
@@ -88,6 +103,7 @@ namespace HTTP {
     Socket::Parallel* server;
     Socket::Connection* client;
     std::map<std::string, std::string> params;
+    std::vector<File> files;
 
     Request();
     void parseParams();

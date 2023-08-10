@@ -46,6 +46,12 @@ bool Settings::isValid() const {
       throw std::runtime_error("mime_types isn't a map");
     if (!this->config["http"]["mime_types"].has("__any__"))
       throw std::runtime_error("mime_types must have __any__ scalar");
+    if (!this->config["http"]["mime_types"].has("__default__"))
+      throw std::runtime_error("mime_types must have __default__ scalar");
+    if (!this->config["http"]["static"].is<YAML::Types::Map>())
+      throw std::runtime_error("static isn't a map");
+    if (!this->config["http"]["static"]["directory_builder_template"].is<std::string>())
+      throw std::runtime_error("directory_builder_template isn't a string");
     if (!this->config["misc"].is<YAML::Types::Map>())
       throw std::runtime_error("misc isn't a map");
     if (!this->config["misc"]["log_level"].is<int>())
@@ -76,6 +82,6 @@ const std::string Settings::httpStatusCode(int code) const {
 const std::string& Settings::httpMimeType(const std::string& ext) const {
   static const YAML::Node& mimes = this->config["http"]["mime_types"];
   if (!mimes.has(ext))
-    return mimes["__any__"].getValue();
+    return mimes[ext.empty() ? "__default__" : "__any__"].getValue();
   return mimes[ext].getValue();
 }
