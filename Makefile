@@ -1,3 +1,5 @@
+MAKEFLAGS := --jobs=$(shell nproc) --output-sync=target
+
 PROJECT_NAME = Webserv
 NAME = webserv
 
