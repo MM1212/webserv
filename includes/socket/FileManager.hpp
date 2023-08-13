@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <errno.h>
+#include <iostream>
 
 #include <utils/Logger.hpp>
 
@@ -105,10 +106,10 @@ namespace Socket {
     ~FileManager() {
       this->running = false;
       if (this->events) delete[] this->events;
-      if (this->epollFd != -1) SYS_CLOSE(this->epollFd);
       for (std::set<File>::iterator it = this->fds.begin(); it != this->fds.end(); it++) {
         SYS_CLOSE(*it);
       }
+      if (this->epollFd != -1) SYS_CLOSE(this->epollFd);
     }
   private:
     void init() {
@@ -192,6 +193,7 @@ namespace Socket {
     void start() {
       if (this->running) return;
       this->running = true;
+      this->add(STDIN_FILENO, EPOLLIN | EPOLLET);
       while (this->running) {
         int n = ::epoll_wait(this->epollFd, this->events, this->maxEvents, this->timeout);
         if (n == -1) {
@@ -206,6 +208,10 @@ namespace Socket {
           File& file = const_cast<File&>(*it);
           file.setEvents(event.events);
           changed[i] = file;
+          if (file == STDIN_FILENO && std::cin.get() == EOF) {
+            this->running = false;
+            break;
+          }
         }
         if (this->instance && this->onTick) {
           (this->instance->*this->onTick)(changed);

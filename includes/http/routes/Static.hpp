@@ -44,6 +44,8 @@ namespace HTTP {
       void handleGet(const std::string& path, const Request& req, Response& res) const;
       void handleUploads(const std::string& path, const Request& req, Response& res) const;
       void handleDelete(const std::string& path, const Request& req, Response& res) const;
+      void handleFile(const std::string& path, const Request& req, Response& res) const;
+      bool clientHasFile(const Request& req, const std::string& filePath, struct stat* st) const;
     };
   }
 }

@@ -320,6 +320,8 @@ namespace YAML {
       this->sequence.erase(it);
     }
 
+    std::string expand(uint32_t indent = 0) const;
+
     uint32_t size() const;
     static Node NewNull(const std::string& key);
     template <typename T>
@@ -328,6 +330,7 @@ namespace YAML {
     }
     static Node NewMap(const std::string& key);
     static Node NewSequence(const std::string& key);
+    static std::string Expand(const Node& node, uint32_t indent = 0);
   };
 
   class Parser {

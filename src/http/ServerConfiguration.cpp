@@ -1,6 +1,7 @@
 #include "http/ServerManager.hpp"
 #include "http/RouteStorage.hpp"
 #include "http/ServerConfiguration.hpp"
+#include <Yaml.hpp>
 #include <utils/misc.hpp>
 #include <utils/Logger.hpp>
 #include <Settings.hpp>
@@ -90,12 +91,26 @@ const Route* ServerConfiguration::getRoute(const std::string& path) const {
 
 const Route* ServerConfiguration::getNearestRoute(const std::string& path) const {
   std::string currentPath = path;
+  // Logger::debug
+  //   << "is " << Logger::param(path)
+  //   << " an exact match? " << std::boolalpha << (this->getRoute(path) != NULL)
+  //   << std::dec << std::endl;
   while (currentPath != "/" && currentPath.length() > 0) {
-    if (this->routes.count(currentPath) == 0)
-      currentPath = Utils::dirname(currentPath);
+    if (this->routes.count(currentPath) == 0) {
+      std::string dir = Utils::dirname(currentPath);
+      // Logger::debug
+      //   << "got dir " << Logger::param(dir)
+      //   << " from " << Logger::param(currentPath)
+      //   << std::endl;
+      if (dir == currentPath)
+        break;
+      currentPath = dir;
+    }
     else
       return this->routes.at(currentPath);
   }
+  if (this->getRoute(currentPath))
+    return this->getRoute(currentPath);
   return NULL;
 }
 
@@ -106,6 +121,10 @@ const Routes::Default* ServerConfiguration::getDefaultRoute() const {
 void ServerConfiguration::handleRequest(const Request& req, Response& res) const {
   res.setRoute(this->getDefaultRoute());
   const Route* route = this->getNearestRoute(req.getPath());
+  Logger::debug
+    << "Handling request for " << Logger::param(req.getPath())
+    << " with route " << Logger::param(route)
+    << std::endl;
   if (!route)
     return res.status(404).send();
   bool isExact = route == this->getRoute(req.getPath());
@@ -116,6 +135,8 @@ void ServerConfiguration::handleRequest(const Request& req, Response& res) const
     return res.status(405).send();
   if (req.isExpecting() && !route->supportsExpect())
     return res.status(401).send();
+  if (route->getMaxBodySize() > 0 && req.getContentLength() > route->getMaxBodySize())
+    return res.status(413).send();
   try {
     route->handle(req, res);
   }
@@ -137,7 +158,8 @@ void ServerConfiguration::validate() {
 void ServerConfiguration::init() {
   Logger::debug
     << "Initializing server configuration for "
-    << Logger::param(this->config.toString())
+    << Logger::param(this->config.toString()) << std::endl
+    << Logger::param(this->config.expand())
     << std::endl;
   if (this->config.has("listen"))
     this->initHosts();
@@ -145,8 +167,7 @@ void ServerConfiguration::init() {
     this->initNames();
   if (this->config.has("default") && this->config["default"].as<bool>())
     this->defaultHost = true;
-  if (this->config.has("static") || this->config.has("cgi") || this->config.has("redirect"))
-    this->initRootRoute();
+  this->initRootRoute();
   if (this->config.has("routes"))
     this->initRoutes();
   this->validate();
@@ -218,6 +239,11 @@ void ServerConfiguration::initRoutes() {
   if (!routes.is<YAML::Types::Sequence>())
     throw std::runtime_error("Routes must be a sequence");
   const RouteStorage* routeStorage = Instance::Get<RouteStorage>();
+  Logger::debug
+    << "Initializing routes "
+    << Logger::param(routes.toString()) << std::endl
+    << Logger::param(routes.expand())
+    << std::endl;
   for (
     YAML::Node::const_iterator it = routes.begin<YAML::Node::Sequence>();
     it != routes.end<YAML::Node::Sequence>();
@@ -262,6 +288,12 @@ void ServerConfiguration::addRoute(const std::string& path, const Route* route) 
   this->routes.insert(
     std::make_pair(path, route)
   );
+  Logger::info
+    << "Added route "
+    << Logger::param(path)
+    << " to server "
+    << Logger::param(this->config.toString())
+    << std::endl;
 }
 
 std::ostream& HTTP::operator<<(std::ostream& os, const ServerConfiguration& server) {

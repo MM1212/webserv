@@ -102,7 +102,8 @@ static void test(const std::string& path, void (*handler)(const YAML::Node& node
     const YAML::Node root = YAML::LoadFile(path);
     if (handler)
       handler(root);
-    Logger::success << "Test " << Logger::param(path) << " passed!" << std::endl;
+    Logger::success << "Test " << Logger::param(path) << " passed:" << std::endl
+      << Logger::param(root.expand()) << std::endl;
   }
   catch (const std::exception& e) {
     Logger::error << "Test " << Logger::param(path) << " failed: " << Logger::param(e.what()) << std::endl;
@@ -125,4 +126,5 @@ void YAML::RunTests() {
   test("config/tests/yaml/flows.yaml", &flows);
   test("config/tests/example.yaml", NULL);
   test("config/tests/wip.yaml", NULL);
+  test("config/bin/tests/default.yaml", NULL);
 }

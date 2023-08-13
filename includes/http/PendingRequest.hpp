@@ -36,6 +36,15 @@ namespace HTTP {
       };
       static std::string ToString(State state);
     };
+    struct Protocol {
+      std::string type;
+      int versionMajor;
+      int versionMinor;
+
+      inline operator std::string() const {
+        return this->type + "/" + Utils::to<std::string>(this->versionMajor) + "." + Utils::to<std::string>(this->versionMinor);
+      }
+    };
   public:
     PendingRequest(
       Socket::Parallel* server,
@@ -47,14 +56,20 @@ namespace HTTP {
 
     States::State getState() const;
     void setState(const States::State state);
-    void nextWithCRLF();
+    void nextWithCRLF(int nextState = -1);
     void next();
     Headers& getHeaders();
     using Request::getHeaders;
 
     void setMethod(const Methods::Method method);
     void setPath(const std::string& path);
+    using Request::getProtocol;
+    Protocol getProtocol() const;
     void setProtocol(const std::string& protocol);
+    
+    void setProtocolType(const std::string& protocolType);
+    void setVersionMajor(const int versionMajor);
+    void setVersionMinor(const int versionMinor);
     void setBody(const std::string& body);
     void addToBody(const std::string& body);
     void setHeaders(const Headers& headers);
@@ -67,6 +82,47 @@ namespace HTTP {
     }
 
     void handleMultiformData();
+
+    inline void handlePacket(std::stringstream& packet) {
+      this->cPacket = &packet;
+    }
+    inline bool isParsingBody() const {
+      return this->state == States::Body || this->state == States::BodyChunkData;
+    }
+    inline bool extract() {
+      if (this->cPacket->peek() == EOF) return false;
+      if (this->isParsingBody())
+        this->chunkData.push_back(this->cPacket->get());
+      else
+        this->storage += static_cast<char>(this->cPacket->get());
+      return true;
+    }
+    inline bool skip(uint32_t bytes = 1) {
+      if (this->cPacket->peek() == EOF) return false;
+      this->cPacket->ignore(bytes);
+      return true;
+    }
+    inline void reset(bool clearChunkData = false) {
+      this->storage.clear();
+      if (clearChunkData) this->chunkData.clear();
+    }
+    inline char peek() const {
+      return this->cPacket->peek();
+    }
+    template <typename T>
+    inline T takeFromStorage() {
+      std::stringstream ss(this->storage);
+      T tmp;
+      ss >> tmp;
+      this->storage.clear();
+      return tmp;
+    }
+    template <>
+    inline std::string takeFromStorage<std::string>() {
+      std::string tmp = this->storage;
+      this->storage.clear();
+      return tmp;
+    }
   private:
     States::State crlfNextState;
     States::State state;
@@ -74,6 +130,7 @@ namespace HTTP {
     std::string buildingHeaderKey;
     size_t chunkSize;
     std::vector<uint8_t> chunkData;
+    std::stringstream* cPacket;
 
     PendingRequest();
     friend class WebSocket;

@@ -11,6 +11,7 @@ std::string Route::Types::ToString(Type type) {
   case Static: return "Static";
   case Redirect: return "Redirect";
   case CGI: return "CGI";
+  case Default: return "Default";
   default: return "Unknown";
   }
 }
@@ -18,43 +19,33 @@ std::string Route::Types::ToString(Type type) {
 Route::Route(const ServerConfiguration* server, Types::Type type, const YAML::Node& node) :
   server(server),
   node(node),
-  type(type) {
-  this->init();
-}
+  type(type) {}
 
 Route::~Route() {}
 
 Route::Route(const Route& other) :
   server(other.server),
   node(other.node),
-  type(other.type) {
-  this->init();
-}
+  type(other.type) {}
 
 void Route::init() {
+  Logger::debug
+    << "Initializing route: " << Logger::param(this->node)
+    << " with type: " << Logger::param(Types::ToString(this->type)) << std::endl
+    << Logger::param(this->node.expand()) << std::endl;
   if (!this->node.has("uri") || this->node["uri"].getValue().empty())
     throw std::runtime_error("Uri is required for a route!");
-  if (*this->node["uri"].getValue().rbegin() == '/')
+  if (*this->node["uri"].getValue().rbegin() == '/' && this->node["uri"].getValue().size() > 1)
     const_cast<std::string&>(this->node["uri"].getValue()).erase(this->node["uri"].getValue().size() - 1, 1);
   if (!this->node.has("methods")) {
     YAML::Node& root = const_cast<YAML::Node&>(this->node);
     root["methods"] = YAML::Node::NewSequence("methods");
-    root["methods"].insert(YAML::Node::NewScalar("0", "GET"));
+    if (this->type != Types::Default)
+      root["methods"].insert(YAML::Node::NewScalar("0", "GET"));
   }
-  YAML::Node& methods = const_cast<YAML::Node&>(this->node["methods"]);
-  bool hasGet = false;
-  for (
-    YAML::Node::const_iterator it = methods.begin<YAML::Node::Sequence>();
-    it != methods.end<YAML::Node::Sequence>();
-    ++it
-    ) {
-    if (it->getValue() == "GET") {
-      hasGet = true;
-      break;
-    }
-  }
-  if (hasGet)
-    methods.insert(YAML::Node::NewScalar("", "HEAD"));
+  // YAML::Node& methods = const_cast<YAML::Node&>(this->node["methods"]);
+  // if (this->isMethodAllowed(Methods::GET))
+  //   methods.insert(YAML::Node::NewScalar("", "HEAD"));
 }
 
 Route::Types::Type Route::getType() const {
@@ -104,7 +95,10 @@ bool Route::isMethodAllowed(Methods::Method method) const {
     if (methods[i].getValue() == methodStr)
       return true;
   }
-  return false;
+  const Route* defaultRoute = this->server->getDefaultRoute();
+  if (defaultRoute == this || !defaultRoute)
+    return false;
+  return defaultRoute->isMethodAllowed(method);
 }
 
 std::ostream& HTTP::operator<<(std::ostream& os, const Route& route) {
@@ -113,6 +107,8 @@ std::ostream& HTTP::operator<<(std::ostream& os, const Route& route) {
 }
 
 std::ostream& HTTP::operator<<(std::ostream& os, const Route* route) {
+  if (!route)
+    return os << "Route(NULL)";
   os << "Route(" << Route::Types::ToString(route->getType()) << ", " << route->getPath() << ")";
   return os;
 }

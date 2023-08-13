@@ -28,6 +28,11 @@ void Default::handle(const Request& req, Response& res) const {
 }
 
 void Default::init() {
-  if (!this->node.has("error_pages"))
-    const_cast<YAML::Node&>(this->node).insert(settings->get<YAML::Node>("http.error_pages"));
+  YAML::Node& root = const_cast<YAML::Node&>(this->node);
+  if (root.has("error_pages"))
+    root.insert(settings->get<YAML::Node>("http.error_pages"));
+  if (root.has("methods"))
+    root.insert(YAML::Node::NewSequence("methods"));
+  root.insert(YAML::Node::NewScalar("uri", "__default"));
+  this->Route::init();
 }

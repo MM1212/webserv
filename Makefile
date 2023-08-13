@@ -1,4 +1,4 @@
-MAKEFLAGS := --jobs=$(shell nproc) --output-sync=target
+MAKE_MT = --jobs=$(shell nproc) --output-sync=target 
 
 PROJECT_NAME = Webserv
 NAME = webserv
@@ -19,13 +19,23 @@ SRC_DIR = src
 
 SRCS = $(addprefix $(SRC_DIR)/, $(SRC_FILES))
 
-INCLUDES = -Iincludes
-
-CXX = c++
-CXXFLAGS = $(INCLUDES) -I. -Wall -Wextra -Werror -std=c++98 -g -gdwarf-4 -fsanitize=address,undefined
-
 OBJ_DIR = objs
 OBJ_FILES = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
+
+DEP_DIR = deps
+DEP_FILES = $(addprefix $(DEP_DIR)/, $(SRCS:.cpp=.d))
+
+INCLUDES = includes
+
+# -include $(DEP_FILES)
+
+CXX = c++
+CXXFLAGS = \
+					-I$(INCLUDES) -I. \
+					-MT $@ -MMD -MP -MF $(DEP_DIR)/$*.d \
+					-Wall -Wextra -Werror -std=c++98 \
+					-g -gdwarf-4 #-fsanitize=address,undefined
+
 
 ### COLORS ###
 
@@ -48,10 +58,20 @@ $(NAME): $(OBJ_FILES)
 	@$(CXX) $(CXXFLAGS) -o $@ $^
 	@echo "$(CYAN)Done!$(RESET)"
 
-$(OBJ_DIR)/%.o: %.cpp
+$(OBJ_DIR)/%.o: %.cpp | $(OBJ_DIR) $(DEP_DIR)
 	@echo "$(TAG) compiling $(YELLOW)$<$(RESET).."
 	@mkdir -p $(dir $@)
+	@mkdir -p $(dir $(DEP_DIR)/$*.d)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR):
+	@mkdir -p $@
+$(DEP_DIR):
+	@mkdir -p $@
+
+$(DEP_FILES):
+
+include $(wildcard $(DEP_FILES))
 
 clean:
 	@rm -rf $(OBJ_DIR)
@@ -63,5 +83,14 @@ fclean: clean
 
 
 re: fclean all
+
+watch:
+	@while true; do \
+		make $(MAKE_MT) all --no-print-directory --no-print; \
+		inotifywait -qre close_write --exclude ".*\.d" $(SRCS) $(INCLUDES); \
+		echo "$(TAG) $(YELLOW)recompiling$(RESET).."; \
+	done
+
+
 
 .PHONY: all clean fclean re

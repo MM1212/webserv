@@ -26,6 +26,15 @@ namespace Utils
     return oss.str();
   }
 
+  template <typename T, typename K>
+  T to(const K& value) {
+    T result;
+    std::stringstream ss;
+    ss << value;
+    ss >> result;
+    return result;
+  }
+
   std::string getJSONDate(time_t basetime = -1);
   void showStackTrace();
 
@@ -69,4 +78,27 @@ namespace Utils
       nbr /= base;
     return std::pow(base, mag - 1);
   }
+
+  std::string getCurrentWorkingDirectory();
+
+  template <typename T>
+  uint64_t hash(const T& value) {
+    std::string str = to<std::string>(value);
+    const char* ptr = str.c_str();
+    // joaat hash
+    uint64_t hash = 0;
+    while (*ptr)
+    {
+      hash += *ptr;
+      hash += (hash << 10);
+      hash ^= (hash >> 6);
+      ++ptr;
+    }
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+    return hash;
+  }
+
+  std::string httpETag(const std::string& path, const size_t lastModified, const size_t size);
 }

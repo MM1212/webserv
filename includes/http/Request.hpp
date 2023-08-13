@@ -86,7 +86,7 @@ namespace HTTP {
       return this->getHeaders().get<std::string>("Content-Type");
     }
     inline int getContentLength() const {
-      return this->getHeaders().get<int>("Content-Length");
+      return this->getHeaders().has("Content-Length") ? this->getHeaders().get<int>("Content-Length") : 0;
     }
 
     inline bool isExpecting() const {

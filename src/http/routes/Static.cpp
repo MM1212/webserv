@@ -68,8 +68,9 @@ void Static::init() {
   const YAML::Node& sttc = this->getNode();
   if (!sttc.has("root") || !sttc["root"].is<YAML::Types::Scalar>())
     throw std::runtime_error("Static route must have a root");
-  if (*sttc["root"].getValue().rbegin() != '/')
-    const_cast<std::string&>(sttc["root"].getValue()).append("/");
+  std::string& root = const_cast<std::string&>(sttc["root"].getValue());
+  if (*root.rbegin() != '/')
+    root.append("/");
 }
 
 std::string Static::getResolvedPath(const Request& req) const {
@@ -87,6 +88,11 @@ std::string Static::buildDirectoryListing(const std::string& path) const {
 
 void Static::handle(const Request& req, Response& res) const {
   const std::string path = this->getResolvedPath(req);
+  Logger::debug
+    << "generated path " << Logger::param(path)
+    << " based on root " << Logger::param(this->getRoot())
+    << " and req path " << Logger::param(req.getPath())
+    << std::endl;
   if (!this->isPathValid(path))
     return res.status(403).send();
   switch (req.getMethod()) {
@@ -106,27 +112,24 @@ void Static::handle(const Request& req, Response& res) const {
 }
 
 void Static::handleGet(const std::string& path, const Request& req, Response& res) const {
-  Logger::debug
-    << "generated path " << Logger::param(path)
-    << " based on root " << Logger::param(this->getRoot())
-    << " and req path " << Logger::param(req.getPath())
-    << std::endl;
   struct stat st;
   if (stat(path.c_str(), &st) == -1)
     return res.status(404).send();
   if (S_ISDIR(st.st_mode)) {
-    if (*req.getPath().rbegin() != '/')
-      return res.redirect(req.getPath() + "/", true);
     std::string indexPath = Utils::resolvePath(2, path.c_str(), this->getIndex().c_str());
     if (access(indexPath.c_str(), F_OK) == 0)
-      return res.sendFile(indexPath);
+      return this->handleFile(indexPath, req, res);
     if (!this->isDirectoryListingAllowed())
-      return res.status(403).send();
+      return res.status(404).send();
+    if (*req.getPath().rbegin() != '/')
+      return res.redirect(req.getPath() + "/", true);
     std::string listing = this->buildDirectoryListing(path);
     return res.status(200).send(listing);
   }
   else if (S_ISREG(st.st_mode))
-    return res.status(200).sendFile(path);
+    return this->handleFile(path, req, res);
+  else
+    return res.status(403).send();
 }
 
 void Static::handleDelete(const std::string& path, const Request& req, Response& res) const {
@@ -163,4 +166,27 @@ void Static::handleUploads(const std::string& path, const Request& req, Response
     res.getHeaders().append("Location", location);
   }
   res.status(!exists ? 201 : 204).send();
+}
+
+void Static::handleFile(const std::string& path, const Request& req, Response& res) const {
+  struct stat st;
+  if (stat(path.c_str(), &st) == -1)
+    return res.status(404).send();
+  if (!this->clientHasFile(req, path, &st))
+    return res.status(200).sendFile(path);
+  res.setupStaticFileHeaders(path, &st);
+  return res.status(304).send();
+}
+
+bool Static::clientHasFile(const Request& req, const std::string& path, struct stat* st) const {
+  if (!st)
+    return false;
+  std::string etag = Utils::httpETag(path, st->st_mtime, st->st_size);
+  std::string lastModified = Utils::getJSONDate(st->st_mtime);
+  const Headers& headers = req.getHeaders();
+  if (headers.has("If-None-Match") && headers.get<std::string>("If-None-Match") == etag)
+    return true;
+  if (headers.has("If-Modified-Since") && headers.get<std::string>("If-Modified-Since") == lastModified)
+    return true;
+  return false;
 }

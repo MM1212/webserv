@@ -1,5 +1,6 @@
 #include "utils/misc.hpp"
 #include <execinfo.h>
+#include <unistd.h>
 
 std::vector<std::string> Utils::split(const std::string& str, std::string delim)
 {
@@ -33,7 +34,7 @@ std::string Utils::getJSONDate(time_t basetime /* = -1 */)
 
   if (basetime != -1)
     rawtime = basetime;
-  else  
+  else
     time(&rawtime);
   timeinfo = gmtime(&rawtime);
 
@@ -110,7 +111,10 @@ std::string Utils::dirname(const std::string& path) {
   size_t pos = path.find_last_of('/');
   if (pos == std::string::npos)
     return path;
-  return path.substr(0, pos);
+  std::string dir = path.substr(0, pos);
+  if (dir.empty())
+    return "/";
+  return dir;
 }
 
 std::string Utils::basename(const std::string& path) {
@@ -145,4 +149,20 @@ std::string Utils::resolvePath(size_t count, ...) {
     }
   }
   return result;
+}
+
+std::string Utils::getCurrentWorkingDirectory() {
+  char* cwd = getcwd(NULL, 0);
+  std::string path(cwd);
+  delete cwd;
+  return path;
+}
+std::string Utils::httpETag(const std::string& path, const size_t lastModified, const size_t size)
+{
+  std::stringstream ss;
+  ss << path << "-" << lastModified << "-" << size;
+  uint64_t hash = Utils::hash(ss.str());
+  std::stringstream ss2;
+  ss2 << std::hex << hash;
+  return ss2.str();
 }

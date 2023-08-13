@@ -66,27 +66,30 @@ void PendingRequest::setState(const States::State state) {
   this->state = state;
 }
 
-void PendingRequest::nextWithCRLF() {
-  this->crlfNextState = this->state;
-  this->state = States::CLRFCheck;
+void PendingRequest::nextWithCRLF(int nextState /* = -1 */) {
+  this->crlfNextState = static_cast<States::State>(this->state + 1);
+  if (nextState != -1)
+    this->crlfNextState = static_cast<States::State>(nextState);
   Logger::debug
     << "PendingRequest::crlfCheck(): "
-    << Logger::param(States::ToString(this->crlfNextState))
+    << Logger::param(States::ToString(this->state))
     << " -> "
-    << Logger::param(States::ToString(static_cast<States::State>(this->crlfNextState + 1)))
+    << Logger::param(States::ToString(this->crlfNextState))
     << std::endl;
+  this->state = States::CLRFCheck;
 }
 
 void PendingRequest::next() {
+  States::State nextState = static_cast<States::State>(this->state + 1);
   if (this->state == States::CLRFCheck)
-    this->state = this->crlfNextState;
+    nextState = this->crlfNextState;
   Logger::debug
     << "PendingRequest::next(): "
     << Logger::param(States::ToString(this->state))
     << " -> "
-    << Logger::param(States::ToString(static_cast<States::State>(this->state + 1)))
+    << Logger::param(States::ToString(nextState))
     << std::endl;
-  this->state = static_cast<States::State>(this->state + 1);
+  this->state = nextState;
 }
 
 Headers& PendingRequest::getHeaders() {
@@ -101,7 +104,47 @@ void PendingRequest::setPath(const std::string& path) {
   this->path = path;
 }
 
+PendingRequest::Protocol PendingRequest::getProtocol() const {
+  // extract protocol, versionMajor  and versionMinor
+  std::string protocol = this->protocol;
+  std::string versionMajor = "1";
+  std::string versionMinor = "1";
+  std::string::size_type pos = protocol.find("/");
+  if (pos != std::string::npos) {
+    versionMajor = protocol.substr(pos + 1);
+    protocol = protocol.substr(0, pos);
+  }
+  pos = versionMajor.find(".");
+  if (pos != std::string::npos) {
+    versionMinor = versionMajor.substr(pos + 1);
+    versionMajor = versionMajor.substr(0, pos);
+  }
+  return (Protocol) {
+    protocol,
+      Utils::to<int>(versionMajor),
+      Utils::to<int>(versionMinor)
+  };
+}
+
 void PendingRequest::setProtocol(const std::string& protocol) {
+  this->protocol = protocol;
+}
+
+void PendingRequest::setProtocolType(const std::string& protocolType) {
+  Protocol protocol = this->getProtocol();
+  protocol.type = protocolType;
+  this->protocol = protocol;
+}
+
+void PendingRequest::setVersionMajor(const int versionMajor) {
+  Protocol protocol = this->getProtocol();
+  protocol.versionMajor = versionMajor;
+  this->protocol = protocol;
+}
+
+void PendingRequest::setVersionMinor(const int versionMinor) {
+  Protocol protocol = this->getProtocol();
+  protocol.versionMinor = versionMinor;
   this->protocol = protocol;
 }
 
@@ -124,11 +167,11 @@ std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {
     << ", "
     << req.getPath()
     << ", "
-    << req.getProtocol()
+    << req.Request::getProtocol()
     << ") -> headers:\n"
     << req.getHeaders()
-    << " -> body:\n"
-    << req.getBody<std::string>()
+    // << " -> body:\n"
+    // << req.getBody<std::string>()
     << std::endl;
   return os;
 }

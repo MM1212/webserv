@@ -48,9 +48,11 @@ namespace HTTP {
     void _preSend();
     void _preStream(const std::string& filePath);
   public:
+    void setupStaticFileHeaders(const std::string& filePath, struct stat* fileStat = nullptr);
+    
     void stream(std::istream& buff);
 
-    void sendFile(const std::string& filePath, bool stream = true);
+    void sendFile(const std::string& filePath, bool stream = true, struct stat* fileStat = nullptr);
     void redirect(const std::string& path, bool permanent = true);
   private:
     Response();

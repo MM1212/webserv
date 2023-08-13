@@ -19,8 +19,7 @@ namespace HTTP {
         Default,
         Static,
         Redirect,
-        CGI,
-        Uploader
+        CGI
       };
       static std::string ToString(Type type);
     };

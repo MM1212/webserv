@@ -152,14 +152,15 @@ void Response::_sendChunk(const char* buffer, std::istream& stream, bool last) {
   Socket::Connection& client = const_cast<Request&>(this->req).getClient();
 
   std::stringstream chunk;
-  chunk << std::hex << stream.gcount() << "\r\n";
-  chunk.write(buffer, stream.gcount());
+  const size_t chunkSize = stream.gcount();
+  chunk << std::hex << chunkSize << "\r\n";
+  chunk.write(buffer, chunkSize);
   chunk << "\r\n";
   if (last)
     chunk << "0\r\n\r\n";
   Logger::debug
-    << "Sending chunk:" << std::endl
-    << Logger::param(chunk.str()) << std::endl;
+    << "Sending chunk of size: " << Logger::param(chunkSize) << std::endl;
+  // << Logger::param(chunk.str()) << std::endl;
   client.getWriteBuffer().append(chunk.str());
   if (last)
     this->afterSend();
@@ -189,11 +190,12 @@ void Response::stream(std::istream& buff) {
   this->_sendChunk(buffer, buff, true);
 }
 
-void Response::sendFile(const std::string& filePath, bool stream /* = true */) {
+void Response::sendFile(const std::string& filePath, bool stream /* = true */, struct stat* fileStat /* = NULL */) {
   try {
     std::ifstream file(filePath.c_str());
     if (!file.is_open() || !file.good())
       throw std::runtime_error("Could not open file " + filePath);
+    this->setupStaticFileHeaders(filePath, fileStat);
     if (stream) {
       this->_preStream(filePath);
       this->sendHeader();
@@ -217,6 +219,19 @@ void Response::afterSend() {
   this->sent = true;
   if (this->headers.has("Connection") && this->headers.get<std::string>("Connection") == "close")
     const_cast<Request&>(this->req).getClient().markToClose();
+}
+
+void Response::setupStaticFileHeaders(const std::string& filePath, struct stat* fileStat /* = NULL */) {
+  bool noFileStat = fileStat == nullptr;
+  if (fileStat == nullptr) {
+    fileStat = new struct stat;
+    if (stat(filePath.c_str(), fileStat) == -1)
+      throw std::runtime_error("Could not stat file " + filePath);
+  }
+  this->headers.set("Last-Modified", Utils::getJSONDate(fileStat->st_mtime));
+  this->headers.set("ETag", Utils::httpETag(filePath, fileStat->st_mtime, fileStat->st_size));
+  if (noFileStat)
+    delete fileStat;
 }
 
 std::ostream& HTTP::operator<<(std::ostream& os, const Response& res) {

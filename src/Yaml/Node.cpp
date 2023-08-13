@@ -1,9 +1,11 @@
 #include "Yaml.hpp"
 #include <utils/misc.hpp>
+#include <iomanip>
 
 using namespace YAML;
 using YAML::Node;
 using YAML::Types;
+
 
 std::string Types::GetLabel(Type type) {
   switch (type) {
@@ -148,6 +150,10 @@ void Node::remove(size_t idx) {
   this->remove<Sequence>(this->begin<Sequence>() + idx);
 }
 
+std::string Node::expand(uint32_t indent /* = 0 */) const {
+  return Node::Expand(*this, indent);
+}
+
 Node Node::NewNull(const std::string& key) {
   return Node(key);
 }
@@ -158,4 +164,36 @@ Node Node::NewSequence(const std::string& key) {
 
 Node Node::NewMap(const std::string& key) {
   return Node(key, Map());
+}
+
+std::string Node::Expand(const Node& node, uint32_t indent /* = 0 */) {
+  std::stringstream ss;
+  ss << std::setw(indent * 2) << std::setfill(' ') << "";
+  switch (node.getType()) {
+  case Types::Scalar:
+    ss << node.getKey() << ": " << node.getValue();
+    break;
+  case Types::Sequence:
+    ss << node.getKey() << ": [" << std::endl;
+    for (uint32_t i = 0; i < node.size(); ++i) {
+      ss << Node::Expand(node[i], indent + 1) << std::endl;
+    }
+    ss << std::setw(indent * 2) << std::setfill(' ') << "" << "]";
+    break;
+  case Types::Map:
+    ss << node.getKey() << ": {" << std::endl;
+    for (
+      Map::const_iterator it = node.begin<Map>();
+      it != node.end<Map>();
+      ++it
+      ) {
+      ss << Node::Expand(it->second, indent + 1) << std::endl;
+    }
+    ss << std::setw(indent * 2) << std::setfill(' ') << "" << "}";
+    break;
+  default:
+    ss << node.getKey() << ": " << Types::GetLabel(node.getType());
+    break;
+  }
+  return ss.str();
 }

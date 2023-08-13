@@ -43,7 +43,12 @@ namespace HTTP {
         }
       }
       inline bool hasDirectoryListing() const {
-        return this->node["static"]["directory_listing"].as<bool>();
+        try {
+          return this->node["static"]["directory_listing"].as<bool>();
+        }
+        catch (const std::exception& e) {
+          return false;
+        }
       }
       // TODO: cgi checks
       // redirect checks
