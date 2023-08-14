@@ -3,6 +3,7 @@
 #include <string>
 #include <Yaml.hpp>
 #include "Methods.hpp"
+#include "routing/routing.hpp"
 #include <utils/misc.hpp>
 
 #include <iostream>
@@ -13,45 +14,32 @@ namespace HTTP {
   class Response;
   class Route {
   public:
-    struct Types {
-      enum Type {
-        None = -1,
-        Default,
-        Static,
-        Redirect,
-        CGI
-      };
-      static std::string ToString(Type type);
-    };
+    typedef Routing::Types Types;
   public:
-    Route(const ServerConfiguration* server, Types::Type type, const YAML::Node& node);
-    virtual ~Route() = 0;
+    Route(const ServerConfiguration* server, const YAML::Node& node);
+    virtual ~Route();
     Route(const Route& other);
-    Types::Type getType() const;
-    const std::string& getPath() const;
+    inline const std::string& getUri() const { return this->node["uri"].getValue(); }
+
+    inline const YAML::Node& getSettings() const { return this->node["settings"]; }
+    // settings quick getters
     bool hasErrorPage(int code) const;
     const std::string& getErrorPage(int code) const;
     int getMaxBodySize() const;
-
     bool isMethodAllowed(Methods::Method method) const;
-    virtual inline bool supportsCascade() const {
-      return false;
-    }
 
-    virtual inline bool supportsExpect() const {
-      return false;
-    }
-
-    virtual void handle(const Request& req, Response& res) const = 0;
-    virtual Route* clone() const = 0;
+    void handle(const Request& req, Response& res) const;
 
     friend std::ostream& operator<<(std::ostream& os, const Route& route);
-    friend std::ostream& operator<<(std::ostream& os, const Route* route);
+    virtual void init(bool injectMethods = true);
   protected:
     const ServerConfiguration* server;
     const YAML::Node& node;
-    Types::Type type;
+    std::vector<Routing::Module*> modules;
 
-    virtual void init();
+    void addModule(Routing::Module* module);
+    void initModule(const YAML::Node& node);
+
+    friend class Routing::Module;
   };
 }

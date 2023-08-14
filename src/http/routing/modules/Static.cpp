@@ -1,74 +1,61 @@
-#include "http/routes/Static.hpp"
+#include "http/routing/modules/Static.hpp"
 #include "http/ServerConfiguration.hpp"
 #include <utils/misc.hpp>
 #include <Settings.hpp>
 
-
 using namespace HTTP;
-using namespace HTTP::Routes;
+using namespace HTTP::Routing;
 
-static const Settings* settings = Instance::Get<Settings>();
-
-Static::Static(const YAML::Node& node, const ServerConfiguration* server)
-  : Route(server, Types::Static, node) {
+Static::Static(const Route& route, const YAML::Node& node)
+  : Module(Types::Static, route, node) {
   this->init();
 }
 
 Static::~Static() {}
 
-Static::Static(const Static& other)
-  : Route(other) {
+Static::Static(const Static& other) : Module(other) {
   this->init();
 }
 
 const std::string& Static::getRoot() const {
-  const YAML::Node& sttc = this->getNode();
-  return sttc["root"].getValue();
+  const YAML::Node& settings = this->getSettings();
+  return settings["root"].getValue();
 }
 
 const std::string Static::getIndex() const {
-  const YAML::Node& sttc = this->getNode();
-  if (!sttc.has("index"))
-    return this->server->getDefaultRoute()->getIndex();
-  return sttc["index"].getValue();
+  const YAML::Node& settings = this->getSettings();
+  if (!settings.has("index"))
+    return this->getServer()->getDefaultRoute()->getIndex();
+  return settings["index"].getValue();
 }
 
 const std::string& Static::getRedirection() const {
-  const YAML::Node& sttc = this->getNode();
-  if (!sttc.has("send_to"))
+  const YAML::Node& settings = this->getSettings();
+  if (!settings.has("send_to"))
     return this->getRoot();
-  return sttc["send_to"].getValue();
+  return settings["send_to"].getValue();
 }
 
 bool Static::isDirectoryListingAllowed() const {
-  const YAML::Node& sttc = this->getNode();
-  if (!sttc.has("directory_listing"))
-    return this->server->getDefaultRoute()->hasDirectoryListing();
-  return sttc["directory_listing"].as<bool>();
+  const YAML::Node& settings = this->getSettings();
+  if (!settings.has("directory_listing"))
+    return this->getServer()->getDefaultRoute()->hasDirectoryListing();
+  return settings["directory_listing"].as<bool>();
 }
 
-bool Static::isPathValid(const std::string& path) const {
-  std::vector<std::string> parts = Utils::split(path, "/");
-  int rootCount = 0;
-  for (
-    std::vector<std::string>::iterator it = parts.begin();
-    it != parts.end();
-    ++it
-    ) {
-    if (*it == "..")
-      rootCount--;
-    else if (*it != ".")
-      rootCount++;
-  }
-  return rootCount >= 0;
+bool Static::ignoreHiddenFiles() const {
+  const YAML::Node& settings = this->getSettings();
+  if (!settings.has("ignore_hidden"))
+    return this->getServer()->getDefaultRoute()->ignoreHiddenFiles();
+  return settings["ignore_hidden"].as<bool>();
 }
 
 void Static::init() {
-  this->Route::init();
-  const YAML::Node& sttc = this->getNode();
-  if (!sttc.has("root") || !sttc["root"].is<YAML::Types::Scalar>())
+  this->Module::init();
+  const YAML::Node& settings = this->getSettings();
+  if (!settings.has("root") || !settings["root"].is<YAML::Types::Scalar>())
     throw std::runtime_error("Static route must have a root");
-  std::string& root = const_cast<std::string&>(sttc["root"].getValue());
+  std::string& root = const_cast<std::string&>(settings["root"].getValue());
   if (*root.rbegin() != '/')
     root.append("/");
 }
@@ -76,7 +63,7 @@ void Static::init() {
 std::string Static::getResolvedPath(const Request& req) const {
   const std::string& root = this->getRoot();
   std::string path = req.getPath();
-  path.erase(0, this->getPath().size());
+  path.erase(0, this->route.getUri().size());
   path = Utils::resolvePath(2, root.c_str(), path.c_str());
   return path;
 }
@@ -86,20 +73,20 @@ std::string Static::buildDirectoryListing(const std::string& path) const {
   return builder->build(path, *this);
 }
 
-void Static::handle(const Request& req, Response& res) const {
+bool Static::handle(const Request& req, Response& res) const {
   const std::string path = this->getResolvedPath(req);
   Logger::debug
     << "generated path " << Logger::param(path)
     << " based on root " << Logger::param(this->getRoot())
     << " and req path " << Logger::param(req.getPath())
     << std::endl;
-  if (!this->isPathValid(path))
-    return res.status(403).send();
+  if (!Utils::isPathValid(path))
+    return this->next(res, 403);
   switch (req.getMethod()) {
   case Methods::GET:
   case Methods::HEAD:
     if (req.isExpecting())
-      return res.status(401).send();
+      return this->next(res, 401);
     return this->handleGet(path, req, res);
   case Methods::POST:
   case Methods::PUT:
@@ -107,56 +94,57 @@ void Static::handle(const Request& req, Response& res) const {
   case Methods::DELETE:
     return this->handleDelete(path, req, res);
   default:
-    return res.status(405).send();
+    return this->next(res);
   }
 }
 
-void Static::handleGet(const std::string& path, const Request& req, Response& res) const {
+bool Static::handleGet(const std::string& path, const Request& req, Response& res) const {
   struct stat st;
   if (stat(path.c_str(), &st) == -1)
-    return res.status(404).send();
+    return this->next(res);
+  if (Utils::basename(path).find_first_of('.') == 0 && this->ignoreHiddenFiles())
+    return this->next(res);
   if (S_ISDIR(st.st_mode)) {
     std::string indexPath = Utils::resolvePath(2, path.c_str(), this->getIndex().c_str());
     if (access(indexPath.c_str(), F_OK) == 0)
       return this->handleFile(indexPath, req, res);
     if (!this->isDirectoryListingAllowed())
-      return res.status(404).send();
+      return this->next(res);
     if (*req.getPath().rbegin() != '/')
-      return res.redirect(req.getPath() + "/", true);
+      return (res.redirect(req.getPath() + "/", true), true);
     std::string listing = this->buildDirectoryListing(path);
-    return res.status(200).send(listing);
+    return (res.status(200).send(listing), true);
   }
   else if (S_ISREG(st.st_mode))
     return this->handleFile(path, req, res);
   else
-    return res.status(403).send();
+    return this->next(res, 403);
 }
 
-void Static::handleDelete(const std::string& path, const Request& req, Response& res) const {
+bool Static::handleDelete(const std::string& path, const Request& req, Response& res) const {
   struct stat st;
   if (stat(path.c_str(), &st) == -1)
-    return res.status(req.isExpecting() ? 417 : 404).send();
+    return this->next(res);
   if (S_ISDIR(st.st_mode))
-    return res.status(req.isExpecting() ? 401 : 403).send();
-  if (req.isExpecting())
-    return res.status(100).send();
+    return this->next(res, 403);
   if (std::remove(path.c_str()) != 0) {
     Logger::warning
       << "Got request " << Logger::param(req)
       << " to delete file " << Logger::param(path)
       << "but couldn't: " << Logger::param(strerror(errno));
-    return res.status(500).send();
+    return this->next(res, 500);
   }
   res.status(204).send();
+  return true;
 }
 
-void Static::handleUploads(const std::string& path, const Request& req, Response& res) const {
+bool Static::handleUploads(const std::string& path, const Request& req, Response& res) const {
   struct stat st;
   bool exists = stat(path.c_str(), &st) == 0;
   if (exists && req.getMethod() == Methods::POST)
-    return res.status(req.isExpecting() ? 417 : 204).send();
+    return this->next(res, req.isExpecting() ? 417 : 204);
   if (req.isExpecting())
-    return res.status(100).send();
+    return this->next(res, 100);
   std::ofstream file(path.c_str(), std::ios::binary | std::ios::trunc);
   file.write(req.getRawBody().c_str(), req.getRawBody().length());
   if (this->getRedirection() != this->getRoot()) {
@@ -166,16 +154,17 @@ void Static::handleUploads(const std::string& path, const Request& req, Response
     res.getHeaders().append("Location", location);
   }
   res.status(!exists ? 201 : 204).send();
+  return true;
 }
 
-void Static::handleFile(const std::string& path, const Request& req, Response& res) const {
+bool Static::handleFile(const std::string& path, const Request& req, Response& res) const {
   struct stat st;
   if (stat(path.c_str(), &st) == -1)
-    return res.status(404).send();
+    return this->next(res);
   if (!this->clientHasFile(req, path, &st))
-    return res.status(200).sendFile(path);
+    return (res.status(200).sendFile(path), true);
   res.setupStaticFileHeaders(path, &st);
-  return res.status(304).send();
+  return this->next(res, 304);
 }
 
 bool Static::clientHasFile(const Request& req, const std::string& path, struct stat* st) const {

@@ -166,3 +166,19 @@ std::string Utils::httpETag(const std::string& path, const size_t lastModified, 
   ss2 << std::hex << hash;
   return ss2.str();
 }
+
+bool Utils::isPathValid(const std::string& path) {
+  std::vector<std::string> parts = Utils::split(path, "/");
+  int rootCount = 0;
+  for (
+    std::vector<std::string>::iterator it = parts.begin();
+    it != parts.end();
+    ++it
+    ) {
+    if (*it == "..")
+      rootCount--;
+    else if (*it != ".")
+      rootCount++;
+  }
+  return rootCount >= 0;
+}

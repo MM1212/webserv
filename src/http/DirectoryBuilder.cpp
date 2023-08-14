@@ -1,5 +1,5 @@
 #include "http/DirectoryBuilder.hpp"
-#include "http/routes/Static.hpp"
+#include "http/routing/modules/Static.hpp"
 
 using HTTP::DirectoryBuilder;
 
@@ -128,7 +128,7 @@ void DirectoryBuilder::loadTemplate(const std::string& path) {
 
 
 
-std::string DirectoryBuilder::build(const std::string& path, const Routes::Static& route) const {
+std::string DirectoryBuilder::build(const std::string& path, const Routing::Static& route) const {
   std::string file(this->templateFile);
   DIR* dir = opendir(path.c_str());
   if (!dir)
@@ -137,7 +137,11 @@ std::string DirectoryBuilder::build(const std::string& path, const Routes::Stati
   std::string listing;
   listing += Entry("..", "", "..", Flags::Directory, 0, 0);
   while ((ent = readdir(dir))) {
-    if (std::string(ent->d_name) == "." || std::string(ent->d_name) == "..")
+    std::string fileName(ent->d_name);
+    if (
+      fileName == "." ||
+      fileName == ".." ||
+      (fileName.find(".") == 0 && route.ignoreHiddenFiles()))
       continue;
     const std::string filePath(Utils::resolvePath(2, path.c_str(), ent->d_name));
     const std::string urlPath(Utils::resolvePath(2, ".", ent->d_name));

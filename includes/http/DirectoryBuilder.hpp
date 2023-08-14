@@ -15,7 +15,7 @@
 
 
 namespace HTTP {
-  namespace Routes {
+  namespace Routing {
     class Static;
   }
   class DirectoryBuilder {
@@ -58,7 +58,7 @@ namespace HTTP {
       std::string getIcon(const std::string& icon) const;
     };
   public:
-    std::string build(const std::string& path, const Routes::Static& route) const;
+    std::string build(const std::string& path, const Routing::Static& route) const;
   private:
     DirectoryBuilder();
     void loadTemplate(const std::string& path);

@@ -8,31 +8,23 @@ using namespace HTTP::Routes;
 static const Settings* settings = Instance::Get<Settings>();
 
 Default::Default(const YAML::Node& node, const ServerConfiguration* server)
-  : Route(server, Types::Default, node) {
-  this->init();
+  : Route(server, node) {
+  this->init(false);
 }
 
 Default::~Default() {}
 
 Default::Default(const Default& other)
   : Route(other) {
-  this->init();
+  this->init(false);
 }
 
-void Default::handle(const Request& req, Response& res) const {
-  (void)req;
-  Logger::warning
-    << "Default route handler called! This should not happen at all.."
-    << std::endl;
-  res.status(404).send();
-}
-
-void Default::init() {
-  YAML::Node& root = const_cast<YAML::Node&>(this->node);
+void Default::init(bool injectMethods /* = true */) {
+  YAML::Node& root = const_cast<YAML::Node&>(this->getSettings());
   if (root.has("error_pages"))
     root.insert(settings->get<YAML::Node>("http.error_pages"));
   if (root.has("methods"))
     root.insert(YAML::Node::NewSequence("methods"));
   root.insert(YAML::Node::NewScalar("uri", "__default"));
-  this->Route::init();
+  this->Route::init(injectMethods);
 }

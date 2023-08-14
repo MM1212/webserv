@@ -3,31 +3,28 @@ servers:
     server_names: [localhost, 127.0.0.1]
     default: true
     settings:
-      static:
-        root: /var/www
+      max_body_size: 1024
     routes:
       - uri: /api
         settings:
           methods: [GET]
+          max_body_size: 100
         modules:
+          - type: cgi
+            settings:
+              root: /home/mm
+              interpreters:
+                - name: python
+                  path: /usr/bin/python3
+                  extensions: [.py]
+            no_match: next 
           - type: static
             settings:
               root: /home/mm
               directory_listing: true
-      - uri: /upload
-        settings:
-          methods: [POST, PUT, DELETE]
-        modules:
-          - type: static
-            settings:
-              root: /home/mm/
-              send_to: /api/
-      - uri: /youtube
-        settings:
-          methods: [GET]
-        modules:
+            no_match: next
           - type: redirect
             settings:
               uri: https://youtube.com
               type: permanent
-              partial: true
+              partial: false

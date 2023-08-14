@@ -138,6 +138,6 @@ misc:
   #   1: info
   #   2: warning
   #   3: error
-  log_level: 1
+  log_level: 0
   name: 'webserv/0.2'
   default_config_file: config/tests/example.yaml

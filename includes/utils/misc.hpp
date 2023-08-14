@@ -101,4 +101,6 @@ namespace Utils
   }
 
   std::string httpETag(const std::string& path, const size_t lastModified, const size_t size);
+
+  bool isPathValid(const std::string& path);
 }

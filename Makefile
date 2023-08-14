@@ -11,8 +11,10 @@ SRC_FILES = Settings.cpp utils/Logger.cpp utils/misc.cpp \
 						http/Headers.cpp http/utils.cpp \
 						http/WebSocket.cpp \
 						http/DirectoryBuilder.cpp \
-						http/Route.cpp http/routes/Default.cpp http/routes/Redirect.cpp http/routes/Static.cpp \
-						http/RouteStorage.cpp http/ServerManager.cpp http/ServerConfiguration.cpp \
+						http/routing/modules/Static.cpp http/routing/modules/Redirect.cpp \
+						http/routing/types.cpp http/routing/mount.cpp http/routing/Module.cpp \
+						http/Route.cpp http/routes/Default.cpp \
+						http/ServerManager.cpp http/ServerConfiguration.cpp \
 						main.cpp
 
 SRC_DIR = src
@@ -27,14 +29,12 @@ DEP_FILES = $(addprefix $(DEP_DIR)/, $(SRCS:.cpp=.d))
 
 INCLUDES = includes
 
-# -include $(DEP_FILES)
-
 CXX = c++
 CXXFLAGS = \
 					-I$(INCLUDES) -I. \
 					-MT $@ -MMD -MP -MF $(DEP_DIR)/$*.d \
 					-Wall -Wextra -Werror -std=c++98 \
-					-g -gdwarf-4 #-fsanitize=address,undefined
+					-g -gdwarf-4 -fsanitize=address,undefined
 
 
 ### COLORS ###

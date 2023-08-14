@@ -20,7 +20,6 @@ namespace HTTP {
     ServerConfiguration(const YAML::Node& config);
     ~ServerConfiguration();
     ServerConfiguration(const ServerConfiguration& other);
-    ServerConfiguration& operator=(const ServerConfiguration& other);
 
     bool match(const Request& req) const;
     const std::vector<Socket::Host>& getHosts() const;
@@ -29,6 +28,9 @@ namespace HTTP {
     bool hasHost(const Socket::Host& host) const;
     bool isDefaultHost() const;
     void setAsDefaultHost(bool state = true);
+    inline const YAML::Node& getSettings() const {
+      return this->config["settings"];
+    }
     int getMaxConnections() const;
 
     const Route* getRoute(const std::string& path) const;
@@ -45,7 +47,6 @@ namespace HTTP {
     void initHosts();
     void parseHostNode(const YAML::Node& node);
     void initNames();
-    void initRootRoute();
     void initRoutes();
     void addRoute(const std::string& path, const Route* route);
     void validate();
@@ -53,7 +54,7 @@ namespace HTTP {
     std::vector<Socket::Host> hosts;
     std::vector<std::string> names;
     bool defaultHost;
-    Routes::Default* defaultRoute;
+    Routes::Default defaultRoute;
     std::map<std::string, const Route*> routes;
   };
 }

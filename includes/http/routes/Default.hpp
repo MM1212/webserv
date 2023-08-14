@@ -15,28 +15,23 @@ namespace HTTP {
       ~Default();
       Default(const Default& other);
 
-      void handle(const Request& req, Response& res) const;
-      inline Default* clone() const {
-        return new Default(*this);
-      }
-
       inline bool hasStatic() const {
-        return this->node.has("static");
+        return this->getSettings().has("static");
       }
       inline bool hasCGI() const {
-        return this->node.has("cgi");
+        return this->getSettings().has("cgi");
       }
       inline bool hasRedirect() const {
-        return this->node.has("redirect");
+        return this->getSettings().has("redirect");
       }
       // static checks
       // will throw if not found
       inline const std::string& getRoot() const {
-        return this->node["static"]["root"].getValue();
+        return this->getSettings()["static"]["root"].getValue();
       }
       inline const std::string getIndex() const {
         try {
-          return this->node["static"]["index"].getValue();
+          return this->getSettings()["static"]["index"].getValue();
         }
         catch (const std::exception& e) {
           return Instance::Get<Settings>()->get<std::string>("http.static.default_index");
@@ -44,38 +39,45 @@ namespace HTTP {
       }
       inline bool hasDirectoryListing() const {
         try {
-          return this->node["static"]["directory_listing"].as<bool>();
+          return this->getSettings()["static"]["directory_listing"].as<bool>();
         }
         catch (const std::exception& e) {
           return false;
         }
       }
+      inline bool ignoreHiddenFiles() const {
+        try {
+          return this->getSettings()["static"]["ignore_hidden"].as<bool>();
+        }
+        catch (const std::exception& e) {
+          return true;
+        }
+      }
       // TODO: cgi checks
       // redirect checks
       inline const std::string& getRedirectUri() const {
-        return this->node["redirect"]["uri"].getValue();
+        return this->getSettings()["redirect"]["uri"].getValue();
       }
       inline bool isRedirectPartial() const {
-        if (!this->node.has("redirect"))
+        if (!this->hasRedirect())
           return false;
-        if (!this->node["redirect"].has("partial"))
+        if (!this->getSettings()["redirect"].has("partial"))
           return false;
-        return this->node["redirect"]["partial"].as<bool>();
+        return this->getSettings()["redirect"]["partial"].as<bool>();
       }
       inline std::string buildRedirectPath(const Request& req) const {
         if (!this->isRedirectPartial())
           return this->getRedirectUri();
-        return this->getRedirectUri() + req.getPath().substr(0, this->getPath().size());
+        return this->getRedirectUri() + req.getPath().substr(0, this->getUri().size());
       }
       inline bool isRedirectPermanent() const {
-        if (!this->node.has("redirect"))
+        if (!this->hasRedirect())
           return false;
-        if (!this->node["redirect"].has("type"))
+        if (!this->getSettings()["redirect"].has("type"))
           return true;
-        return this->node["redirect"]["type"].getValue() == "permanent";
+        return this->getSettings()["redirect"]["type"].getValue() == "permanent";
       }
-    private:
-      virtual void init();
+      virtual void init(bool injectMethods = true);
     };
   }
 }

@@ -1,5 +1,4 @@
 #include "http/ServerManager.hpp"
-#include "http/RouteStorage.hpp"
 #include "http/ServerConfiguration.hpp"
 #include <Yaml.hpp>
 #include <utils/misc.hpp>
@@ -9,39 +8,32 @@
 using namespace HTTP;
 
 ServerConfiguration::ServerConfiguration(const YAML::Node& config)
-  : config(config), hosts(), names(), defaultHost(false), defaultRoute(NULL), routes() {
+  : config(config), hosts(), names(), defaultHost(false), defaultRoute(config, this), routes() {
   this->init();
 }
 
 ServerConfiguration::~ServerConfiguration() {
-  if (this->defaultRoute)
-    delete this->defaultRoute;
   for (std::map<std::string, const Route*>::iterator it = this->routes.begin(); it != this->routes.end(); ++it)
     delete it->second;
 }
 
 ServerConfiguration::ServerConfiguration(const ServerConfiguration& other)
-  : config(other.config) {
-  *this = other;
-}
-
-ServerConfiguration& ServerConfiguration::operator=(const ServerConfiguration& other) {
-  if (this == &other) return *this;
-
-  this->hosts = other.hosts;
-  this->names = other.names;
-  this->defaultHost = other.defaultHost;
-  if (this->defaultRoute)
-    delete this->defaultRoute;
-  this->defaultRoute = other.defaultRoute->clone();
+  : config(other.config),
+  hosts(other.hosts),
+  names(other.names),
+  defaultHost(other.defaultHost),
+  defaultRoute(other.defaultRoute) {
   for (std::map<std::string, const Route*>::iterator it = this->routes.begin(); it != this->routes.end(); ++it)
     delete it->second;
-  this->routes = other.routes;
-  for (std::map<std::string, const Route*>::iterator it = this->routes.begin(); it != this->routes.end(); ++it)
-    it->second = it->second->clone();
+  this->routes.clear();
+  for (std::map<std::string, const Route*>::const_iterator it = other.routes.begin(); it != other.routes.end(); ++it) {
+    this->routes[it->first] = new Route(*it->second);
+    if (this->routes[it->first])
+      const_cast<Route*>(this->routes[it->first])->init();
+  }
   this->init();
-  return *this;
 }
+
 
 bool ServerConfiguration::match(const Request& req) const {
   ServerManager* serverManager = Instance::Get<ServerManager>();
@@ -78,9 +70,10 @@ void ServerConfiguration::setAsDefaultHost(bool state /* = true */) {
 }
 
 int ServerConfiguration::getMaxConnections() const {
-  if (!this->config.has("max_connections"))
+  const YAML::Node& settings = this->getSettings();
+  if (!settings.has("max_connections"))
     return Instance::Get<Settings>()->get<int>("socket.max_connections");
-  return this->config["max_connections"].as<int>();
+  return settings["max_connections"].as<int>();
 }
 
 const Route* ServerConfiguration::getRoute(const std::string& path) const {
@@ -115,35 +108,30 @@ const Route* ServerConfiguration::getNearestRoute(const std::string& path) const
 }
 
 const Routes::Default* ServerConfiguration::getDefaultRoute() const {
-  return this->defaultRoute;
+  return &this->defaultRoute;
 }
 
 void ServerConfiguration::handleRequest(const Request& req, Response& res) const {
   res.setRoute(this->getDefaultRoute());
   const Route* route = this->getNearestRoute(req.getPath());
-  Logger::debug
-    << "Handling request for " << Logger::param(req.getPath())
-    << " with route " << Logger::param(route)
-    << std::endl;
   if (!route)
     return res.status(404).send();
-  bool isExact = route == this->getRoute(req.getPath());
-  if (!isExact && !route->supportsCascade())
-    return res.status(404).send();
+  Logger::debug
+    << "Handling request for " << Logger::param(req.getPath())
+    << " with route " << Logger::param(*route)
+    << std::endl;
   res.setRoute(route);
   if (!route->isMethodAllowed(req.getMethod()))
     return res.status(405).send();
-  if (req.isExpecting() && !route->supportsExpect())
-    return res.status(401).send();
   if (route->getMaxBodySize() > 0 && req.getContentLength() > route->getMaxBodySize())
     return res.status(413).send();
   try {
     route->handle(req, res);
   }
   catch (const std::exception& e) {
-    res.status(500).send();
     Logger::error
       << "Could not handle request: " << e.what() << std::endl;
+    res.status(500).send();
   }
 }
 
@@ -167,7 +155,8 @@ void ServerConfiguration::init() {
     this->initNames();
   if (this->config.has("default") && this->config["default"].as<bool>())
     this->defaultHost = true;
-  this->initRootRoute();
+  if (!this->config.has("settings") || !this->config["settings"].is<YAML::Types::Map>())
+    const_cast<YAML::Node&>(this->config)["settings"] = YAML::Node::NewMap("settings");
   if (this->config.has("routes"))
     this->initRoutes();
   this->validate();
@@ -229,16 +218,10 @@ void ServerConfiguration::initNames() {
   }
 }
 
-void ServerConfiguration::initRootRoute() {
-  const_cast<YAML::Node&>(this->config).insert(YAML::Node::NewScalar("uri", "/"));
-  this->defaultRoute = Instance::Get<RouteStorage>()->buildRoute<Routes::Default>(this->config, this);
-}
-
 void ServerConfiguration::initRoutes() {
   const YAML::Node& routes = this->config["routes"];
   if (!routes.is<YAML::Types::Sequence>())
     throw std::runtime_error("Routes must be a sequence");
-  const RouteStorage* routeStorage = Instance::Get<RouteStorage>();
   Logger::debug
     << "Initializing routes "
     << Logger::param(routes.toString()) << std::endl
@@ -252,26 +235,20 @@ void ServerConfiguration::initRoutes() {
     const YAML::Node& route = *it;
     if (!route.is<YAML::Types::Map>())
       throw std::runtime_error("Route must be a map");
-    if (!route.has("uri") || !route["uri"].is<std::string>())
-      throw std::runtime_error("Route must have a uri");
-    size_t presence = 0;
-    if (route.has("static"))
-      presence++;
-    if (route.has("cgi"))
-      presence++;
-    if (route.has("redirect"))
-      presence++;
-    if (presence != 1)
-      throw std::runtime_error("Route must have exactly one of static, cgi or redirect");
-    const Route* routeRef = NULL;
-    if (route.has("static"))
-      routeRef = routeStorage->buildRoute<Routes::Static>(route, this);
-    else if (route.has("redirect"))
-      routeRef = routeStorage->buildRoute<Routes::Redirect>(route, this);
-    else if (route.has("cgi"))
-      routeRef = routeStorage->buildRoute<Routes::CGI>(route, this);
-    if (!routeRef)
-      throw std::runtime_error("Could not build route obj");
+    if (!route.has("uri") || route["uri"].getValue().empty())
+      throw std::runtime_error("Route must have a valid uri");
+    if (
+      !route.has("modules") ||
+      route["modules"].size() == 0 ||
+      !route["modules"].is<YAML::Types::Sequence>()
+      )
+      throw std::runtime_error("Route must have modules");
+    std::string& uri = const_cast<std::string&>(route["uri"].getValue());
+    if (*uri.rbegin() == '/' && uri.size() > 1)
+      uri.erase(uri.size() - 1, 1);
+    Route* routeRef = new Route(this, route);
+    if (routeRef)
+      routeRef->init();
     try {
       this->addRoute(route["uri"].getValue(), routeRef);
     }
