@@ -5,13 +5,14 @@ NAME = webserv
 
 SRC_FILES = Settings.cpp utils/Logger.cpp utils/misc.cpp \
 						Yaml/Node.cpp Yaml/Parser.cpp Yaml/tests.cpp \
-						socket/Connection.cpp socket/Parallel.cpp \
+						socket/Connection.cpp socket/Parallel.cpp socket/Process.cpp \
 						http/Methods.cpp http/Request.cpp http/PendingRequest.cpp \
 						http/Response.cpp \
 						http/Headers.cpp http/utils.cpp \
 						http/WebSocket.cpp \
 						http/DirectoryBuilder.cpp \
 						http/routing/modules/Static.cpp http/routing/modules/Redirect.cpp \
+						http/routing/modules/CGI/CGI.cpp http/routing/modules/CGI/Interpreter.cpp \
 						http/routing/types.cpp http/routing/mount.cpp http/routing/Module.cpp \
 						http/Route.cpp http/routes/Default.cpp \
 						http/ServerManager.cpp http/ServerConfiguration.cpp \

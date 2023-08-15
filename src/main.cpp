@@ -9,7 +9,7 @@
 
 static Settings* settings = Instance::Get<Settings>();
 
-int main(int ac, char** av) {
+int main(int ac, char** av, char** env) {
   ac--;
   av++;
   if (!settings->isValid())
@@ -18,6 +18,7 @@ int main(int ac, char** av) {
   try {
     HTTP::ServerManager* serverManager = Instance::Get<HTTP::ServerManager>();
     if (serverManager->loadConfig(ac > 0 ? av[0] : settings->get<std::string>("misc.default_config_file"))) {
+      serverManager->setEnv(env);
       serverManager->bindServers();
       serverManager->run();
     }

@@ -29,7 +29,6 @@ namespace Socket {
     );
     Connection(const Connection& other);
     ~Connection();
-    Connection& operator=(const Connection& other);
 
     const std::string& getAddress() const;
     const File& getHandle() const;

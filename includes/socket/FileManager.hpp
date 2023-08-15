@@ -157,6 +157,14 @@ namespace Socket {
       return *it;
     }
 
+    File& get(int fd) {
+      std::set<File>::iterator it = this->fds.find(fd);
+      if (it == this->fds.end()) {
+        throw std::runtime_error("File not found");
+      }
+      return const_cast<File&>(*it);
+    }
+
     bool remove(int fd, bool close) {
       if (!this->has(fd)) return false;
       if (::epoll_ctl(this->epollFd, EPOLL_CTL_DEL, fd, NULL) == -1) {

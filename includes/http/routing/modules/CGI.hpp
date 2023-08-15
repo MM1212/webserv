@@ -1,6 +1,7 @@
 #pragma once
 
 #include "http/routing/Module.hpp"
+#include <utils/misc.hpp>
 #include <vector>
 #include <algorithm>
 
@@ -14,6 +15,16 @@
 namespace HTTP {
   namespace Routing {
     class CGI : public Module {
+    public:
+      struct EnvVar {
+        std::string name;
+        std::string value;
+        template <typename T>
+        EnvVar(const std::string& name, const T& value) : name(name), value(Utils::to<std::string>(value)) {}
+        EnvVar(const EnvVar& other) : name(other.name), value(other.value) {}
+        inline std::string toString() const { return this->name + "=" + this->value; }
+        inline operator std::string() const { return this->toString(); }
+      };
     public:
       class Interpreter {
       public:
@@ -39,7 +50,7 @@ namespace HTTP {
       inline bool supportsExpect() const { return true; }
       inline CGI* clone() const { return new CGI(*this); }
 
-      inline const std::string& getRoot() const { return this->getSettings()["root"]; }
+      inline const std::string& getRoot() const { return this->getSettings()["root"].getValue(); }
       inline const std::vector<Interpreter>& getInterpreters() const { return this->interpreters; }
       inline bool isExtMapped(const std::string& ext) const { return this->interpreterExtMap.count(ext) > 0; }
       bool doesFileMatch(const std::string& path) const;
@@ -50,10 +61,11 @@ namespace HTTP {
 
 
       bool handle(const Request& req, Response& res) const;
+      void handleResponse(Response& res) const;
       void init();
     private:
       std::string getResolvedPath(const Request& req) const;
-      char** generateEnvironment(const std::string& path, const Interpreter* interpreter, const Request& req) const;
+      std::vector<std::string> generateEnvironment(const std::string& path, const Interpreter* interpreter, const Request& req) const;
     private:
       std::vector<Interpreter> interpreters;
       std::map<std::string, const Interpreter*> interpreterExtMap;

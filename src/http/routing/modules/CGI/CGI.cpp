@@ -2,9 +2,75 @@
 #include "http/Request.hpp"
 #include "http/Response.hpp"
 #include "http/Route.hpp"
+#include "http/ServerManager.hpp"
+#include <Settings.hpp>
 #include <utils/misc.hpp>
 
 using namespace HTTP::Routing;
+
+static const Settings* settings = Instance::Get<Settings>();
+
+/*
+  6.3.4.  Protocol-Specific Header Fields
+
+  The script MAY return any other header fields that relate to the
+  response message defined by the specification for the SERVER_PROTOCOL
+  (HTTP/1.0 [1] or HTTP/1.1 [4]).  The server MUST translate the header
+  data from the CGI header syntax to the HTTP header syntax if these
+  differ.  For example, the character sequence for newline (such as
+  UNIX's US-ASCII LF) used by CGI scripts may not be the same as that
+  used by HTTP (US-ASCII CR followed by LF).
+
+  The script MUST NOT return any header fields that relate to
+  client-side communication issues and could affect the server's
+  ability to send the response to the client.  The server MAY remove
+  any such header fields returned by the client.  It SHOULD resolve any
+  conflicts between header fields returned by the script and header
+  fields that it would otherwise send itself.
+*/
+static const char* forbiddenHeaderFields[] = {
+  "Content-Length",
+  "Transfer-Encoding",
+  "Connection",
+  "Upgrade",
+  "Host",
+  "Expect",
+  "TE",
+  "Trailer",
+  "Proxy-Authorization",
+  "Proxy-Authenticate",
+  "Proxy-Connection",
+  "Keep-Alive",
+  "If-Modified-Since",
+  "If-Match",
+  "If-None-Match",
+  "If-Range",
+  "If-Unmodified-Since",
+  "Range",
+  "Referer",
+  "User-Agent",
+  "Cookie",
+  "Set-Cookie",
+  "Authorization",
+  "Accept-Encoding",
+  "Accept-Language",
+  "Content-Encoding",
+  "Content-Language",
+  "Content-Location",
+  "Content-MD5",
+  "Content-Range",
+  "Date",
+  "ETag",
+  "Expires",
+  "Last-Modified",
+  "Location",
+  "MIME-Version",
+  "Retry-After",
+  "Server",
+  "Vary",
+  "Warning",
+  "WWW-Authenticate"
+};
 
 CGI::CGI(const Route& route, const YAML::Node& node)
   : Module(Types::CGI, route, node) {
@@ -76,4 +142,83 @@ bool CGI::handle(const Request& req, Response& res) const {
     return this->next(res);
   const Interpreter& interpreter = this->getInterpreterByFile(path);
   return interpreter.run(path, req, res, this);
+}
+
+std::vector<std::string> CGI::generateEnvironment(
+  const std::string& filePath,
+  const CGI::Interpreter* intr,
+  const Request& req
+) const {
+  (void)intr;
+  static const ServerManager* serverManager = Instance::Get<ServerManager>();
+  const char*const* defaultEnv = serverManager->getEnv();
+  std::vector<std::string> env;
+
+  for (size_t i = 0; defaultEnv[i]; i++)
+    env.push_back(defaultEnv[i]);
+
+  Headers headers = req.getHeaders();
+  const Socket::Server& server = serverManager->getServer(req.getClient().getServerSock());
+  const std::map<std::string, std::string>& headersMap = headers.getAll();
+
+  if (headers.has("Content-Type"))
+    env.push_back(EnvVar("CONTENT_TYPE", headers.get<std::string>("Content-Type")));
+  if (headers.has("Content-Length"))
+    env.push_back(EnvVar("CONTENT_LENGTH", req.getRawBody().size()));
+  headers.remove("Content-Type");
+  headers.remove("Content-Length");
+
+  env.push_back(EnvVar("GATEWAY_INTERFACE", "CGI/1.1"));
+  env.push_back(EnvVar("PATH_INFO", req.getPath()));
+  env.push_back(EnvVar("PATH_TRANSLATED", filePath));
+  env.push_back(EnvVar("QUERY_STRING", req.getQuery()));
+  env.push_back(EnvVar("REMOTE_ADDR", req.getClient().getAddress()));
+  env.push_back(EnvVar("REMOTE_PORT", Utils::to<std::string>(req.getClient().getPort())));
+  env.push_back(EnvVar("REQUEST_METHOD", Methods::ToString(req.getMethod())));
+  env.push_back(EnvVar("SCRIPT_NAME", Utils::resolvePath(2, this->getRoot().c_str(), Utils::basename(filePath).c_str())));
+  env.push_back(EnvVar("SERVER_NAME", server.address));
+  env.push_back(EnvVar("SERVER_PORT", Utils::to<std::string>(server.port)));
+  env.push_back(EnvVar("SERVER_PROTOCOL", req.getProtocol()));
+  env.push_back(EnvVar("SERVER_SOFTWARE", settings->get<std::string>("misc.name")));
+  for (
+    std::map<std::string, std::string>::const_iterator it = headersMap.begin();
+    it != headersMap.end();
+    it++
+    ) {
+    std::string key = it->first;
+    const std::string& value = it->second;
+    env.push_back(EnvVar("HTTP_" + Utils::toUppercase(key), value));
+  }
+  return env;
+}
+
+void CGI::handleResponse(Response& res) const {
+  std::stringstream packet(res.getBody());
+  std::string line;
+  Headers& headers = res.getHeaders();
+  while (std::getline(packet, line)) {
+    if (line.empty())
+      break;
+    size_t pos = line.find(": ");
+    if (pos == std::string::npos)
+      throw std::runtime_error("Invalid CGI response header: " + line);
+    std::string key = line.substr(0, pos);
+    if (key.empty() || HTTP::hasFieldToken(key))
+      throw std::runtime_error("Invalid CGI response header: " + line);
+    std::string value = line.substr(pos + 2);
+    // some overriders
+    if (key == "Status") {
+      int statusCode = Utils::to<int>(value);
+      if (!Utils::isInteger(value, true) || value.size() != 3 || settings->httpStatusCode(statusCode).empty())
+        throw std::runtime_error("Invalid CGI response status: " + value);
+      res.status(statusCode);
+      continue;
+    }
+    for (size_t i = 0; forbiddenHeaderFields[i]; i++)
+      if (std::strncmp(key.c_str(), forbiddenHeaderFields[i], std::strlen(forbiddenHeaderFields[i]) + 1) == 0)
+        throw std::runtime_error("Invalid CGI response header: " + line);
+    headers.set(key, value);
+  }
+  res.setBody(packet.str());
+  res.send();
 }

@@ -20,6 +20,8 @@ namespace HTTP {
   public:
     ~ServerManager();
 
+    inline const char*const* getEnv() const { return this->env; }
+    inline void setEnv(char** env) { this->env = env; }
     bool loadConfig(const std::string& path);
     void bindServers();
   private:
@@ -34,6 +36,7 @@ namespace HTTP {
     std::vector<ServerConfiguration*> servers;
     ServerConfiguration* defaultServer;
     const YAML::Node root;
+    char** env;
 
   };
 };

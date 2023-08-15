@@ -102,6 +102,14 @@ void Route::handle(const Request& req, Response& res) const {
   res.status(404).send();
 }
 
+HTTP::Routing::Module* Route::getModule(const Routing::Types::Type type) const {
+  for (size_t i = 0; i < this->modules.size(); ++i) {
+    if (this->modules[i]->getType() == type)
+      return this->modules[i];
+  }
+  return NULL;
+}
+
 void Route::addModule(Routing::Module* module) {
   this->modules.push_back(module);
   Logger::debug

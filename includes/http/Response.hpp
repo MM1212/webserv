@@ -31,6 +31,8 @@ namespace HTTP {
     const std::string& getBody() const;
     uint32_t getStatus() const;
     const std::string& getStatusMessage() const;
+    inline const Route* getRoute() const { return this->route; }
+    inline const Request& getRequest() const { return this->req; }
 
     operator std::string();
     std::string toString() const;

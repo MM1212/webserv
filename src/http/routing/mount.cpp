@@ -11,7 +11,7 @@ Module* Module::Create(const Types::Type type, const Route& route, const YAML::N
   switch (type) {
   case Types::Static: return new Static(route, node);
   case Types::Redirect: return new Redirect(route, node);
-    // case Types::CGI: return new CGIModule(route, node);
+    case Types::CGI: return new CGI(route, node);
   default: return nullptr;
   }
 }

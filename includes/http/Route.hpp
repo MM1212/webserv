@@ -29,6 +29,7 @@ namespace HTTP {
     bool isMethodAllowed(Methods::Method method) const;
 
     void handle(const Request& req, Response& res) const;
+    Routing::Module* getModule(const Routing::Types::Type type) const;
 
     friend std::ostream& operator<<(std::ostream& os, const Route& route);
     virtual void init(bool injectMethods = true);

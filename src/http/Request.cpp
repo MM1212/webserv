@@ -109,3 +109,20 @@ std::ostream& HTTP::operator<<(std::ostream& os, const Request& req) {
     << req.getHeaders();
   return os;
 }
+
+const std::string Request::getUri() const {
+  const std::string query = this->getQuery();
+  if (query.empty())
+    return this->path;
+  return this->path + "?" + query;
+}
+
+const std::string Request::getQuery() const {
+  std::string query;
+  for (std::map<std::string, std::string>::const_iterator it = this->params.begin(); it != this->params.end(); it++) {
+    if (!query.empty())
+      query += "&";
+    query += it->first + "=" + it->second;
+  }
+  return query;
+}

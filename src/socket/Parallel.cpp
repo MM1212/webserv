@@ -6,6 +6,7 @@
 
 using Socket::Parallel;
 using Socket::Connection;
+using Socket::Process;
 
 static Settings* settings = Instance::Get<Settings>();
 
@@ -105,6 +106,13 @@ Socket::Server& Parallel::getServer(int sock) {
   return it->second;
 }
 
+const Socket::Server& Parallel::getServer(int sock) const {
+  std::map<int, Server>::const_iterator it = this->servers.find(sock);
+  if (it == this->servers.end())
+    throw std::runtime_error("Server not found");
+  return it->second;
+}
+
 Connection& Parallel::getClient(const std::string& address, const int port) {
   const std::string pair(address + ":" + Utils::toString(port));
   const std::map<std::string, int>::const_iterator it = this->addressesToSock.find(pair);
@@ -199,10 +207,22 @@ void Parallel::onTick(const std::vector<File>& changed) {
         continue;
       }
 
+      const int clientSock = client.getHandle();
       if (client.isReadable())
         this->_onClientRead(const_cast<Connection&>(client));
-      if (client.isWritable())
+      if (this->hasClient(clientSock) && client.isWritable())
         this->_onClientWrite(const_cast<Connection&>(client));
+    }
+    else if (this->hasProcessBoundTo(file)) {
+      Process& process = this->getProcessBoundTo(file);
+      if (file == process.getIn() && (file.isClosed() || file.isErrored())) {
+        this->_onProcessExit(process);
+        continue;
+      }
+      if (file.isReadable())
+        this->_onProcessRead(process);
+      else if (file.isWritable())
+        this->_onProcessWrite(process);
     }
   }
   for (
@@ -217,6 +237,16 @@ void Parallel::onTick(const std::vector<File>& changed) {
       //   << "isAlive: " << std::boolalpha << client.isAlive() << " | "
       //   << "hasTimedOut: " << std::boolalpha << client.hasTimedOut() << std::endl;
       this->_onClientDisconnect(client);
+    }
+  }
+  for (
+    std::map<pid_t, Process>::iterator it = this->processes.begin();
+    it != this->processes.end();
+    it++
+    ) {
+    Process& process = it->second;
+    if (!process.isAlive() && !process.isReadable()) {
+      this->_onProcessExit(process);
     }
   }
 }
@@ -266,9 +296,9 @@ void Parallel::_onClientRead(Connection& client) {
     << "got " << Logger::param(read) << " bytes from "
     << Logger::param(static_cast<std::string>(client))
     << std::endl;
-    // << "---" << std::endl
-    // << Logger::param(buffer) << std::endl
-    // << "---" << std::endl;
+  // << "---" << std::endl
+  // << Logger::param(buffer) << std::endl
+  // << "---" << std::endl;
   client.ping();
   // TESTING
   this->onClientRead(client);
@@ -303,4 +333,98 @@ void Parallel::setClientToWrite(Connection& client) {
     Logger::error
     << "Could not switch client " << Logger::param(client)
     << " to read-only mode!" << std::endl;
+}
+
+bool Parallel::hasProcess(const pid_t pid) const {
+  return this->processes.find(pid) != this->processes.end();
+}
+
+bool Parallel::hasProcess(const Process& process) const {
+  return this->hasProcess(static_cast<pid_t>(process));
+}
+
+bool Parallel::hasProcessBoundTo(const int pipeFd) const {
+  return this->pipesToProcesses.find(pipeFd) != this->pipesToProcesses.end();
+}
+
+const Process& Parallel::getProcess(const pid_t pid) const {
+  return this->processes.at(pid);
+}
+
+Process& Parallel::getProcess(const pid_t pid) {
+  return this->processes.at(pid);
+}
+
+const Process& Parallel::getProcessBoundTo(const int pipeFd) const {
+  return this->getProcess(this->pipesToProcesses.at(pipeFd));
+}
+
+Process& Parallel::getProcessBoundTo(const int pipeFd) {
+  return this->getProcess(this->pipesToProcesses.at(pipeFd));
+}
+
+
+
+bool Parallel::trackProcess(const pid_t pid, int std[2]) {
+  if (this->hasProcess(pid))
+    return false;
+  if (!this->fileManager.add(std[0], EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR))
+    return false;
+  if (!this->fileManager.add(std[1], EPOLLOUT | EPOLLET | EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
+    this->fileManager.remove(std[0], false);
+    return false;
+  }
+  File& in = this->fileManager.get(std[0]);
+  File& out = this->fileManager.get(std[1]);
+  this->pipesToProcesses.insert(std::make_pair(in, pid));
+  this->pipesToProcesses.insert(std::make_pair(out, pid));
+  this->processes.insert(std::make_pair(pid, Process(in, out, pid)));
+  return true;
+}
+
+void Parallel::_onProcessRead(Process& process) {
+  static const int bufferSize = settings->get<int>("socket.read_buffer_size");
+  std::unique_ptr<char[]> buffer(bufferSize + 1);
+  int bytes = read(process.getIn(), buffer, bufferSize);
+  if (bytes <= 0) {
+    this->kill(process, true);
+    return;
+  }
+  buffer[bytes] = '\0';
+  process.getReadBuffer() << buffer;
+  Logger::debug
+    << "got " << Logger::param(bytes) << " bytes from "
+    << Logger::param(static_cast<pid_t>(process))
+    << std::endl;
+  // << "---" << std::endl
+  // << Logger::param(buffer) << std::endl
+  // << "---" << std::endl;
+  // TESTING
+  this->onProcessRead(process);
+}
+
+void Parallel::_onProcessWrite(Process& process) {
+  std::string& buffer = process.getWriteBuffer();
+  if (buffer.size() == 0) {
+    this->pipesToProcesses.erase(process.getOut());
+    this->fileManager.remove(process.getOut(), true);
+    return;
+  }
+  int wrote = write(process.getOut(), buffer.c_str(), buffer.size());
+  if (wrote < 0) return;
+  this->onProcessWrite(process, wrote);
+  buffer = buffer.substr(wrote);
+}
+
+void Parallel::_onProcessExit(Process& process) {
+  this->kill(process);
+}
+
+void Parallel::kill(const Process& process, bool force /* = false */) {
+  this->pipesToProcesses.erase(process.getIn());
+  this->pipesToProcesses.erase(process.getOut());
+  this->onProcessExit(process, force);
+  this->fileManager.remove(process.getIn(), true);
+  this->fileManager.remove(process.getOut(), true);
+  this->processes.erase(static_cast<pid_t>(process));
 }

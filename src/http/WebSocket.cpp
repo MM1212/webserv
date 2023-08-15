@@ -28,6 +28,10 @@ void WebSocket::onClientConnect(const Socket::Connection& sock) {
 }
 
 void WebSocket::onClientDisconnect(const Socket::Connection& sock) {
+  if (this->pendingCGIProcesses.count(sock.getHandle()) > 0) {
+    const pid_t pId = this->pendingCGIProcesses.at(sock.getHandle());
+    this->kill(this->getProcess(pId), true);
+  }
   this->pendingRequests.erase(sock);
 }
 
@@ -330,4 +334,46 @@ void WebSocket::sendBadRequest(Socket::Connection& sock, int statusCode, const s
   Response resp(req, NULL);
   resp.getHeaders().set("Connection", "close");
   resp.status(statusCode).send();
+}
+
+void WebSocket::trackCGIResponse(pid_t pid, int std[2], Response& res) {
+  if (this->pendingCGIResponses.count(pid) > 0)
+    return;
+  if (!this->trackProcess(pid, std))
+    return;
+  Socket::Process& process = this->getProcess(pid);
+  process.write(res.getRequest().getRawBody());
+  this->pendingCGIResponses.insert(std::make_pair(pid, res));
+  this->pendingCGIProcesses.insert(std::make_pair(res.getRequest().getClient().getHandle(), pid));
+}
+
+void WebSocket::onProcessRead(Socket::Process& process) {
+  if (this->pendingCGIResponses.count(process.getId()) == 0)
+    return;
+  Response& res = this->pendingCGIResponses.at(process.getId());
+  const std::string& body = res.getBody();
+  res.setBody(body + process.getReadBuffer().str());
+  process.getReadBuffer().str("");
+}
+
+void WebSocket::onProcessExit(const Socket::Process& process, bool force /* = false */) {
+  Response& res = this->pendingCGIResponses.at(process.getId());
+  this->pendingCGIProcesses.erase(res.getRequest().getClient().getHandle());
+  if (!force) {
+    const HTTP::Routing::Module* mod = res.getRoute()->getModule(Routing::Types::CGI);
+    if (mod) {
+      const HTTP::Routing::CGI* cgi = reinterpret_cast<const HTTP::Routing::CGI*>(mod);
+      try {
+        if (cgi)
+          cgi->handleResponse(res);
+      }
+      catch (const std::exception& e) {
+        Logger::error
+          << "Error while handling CGI response: " << e.what()
+          << std::endl;
+        res.status(500).send();
+      }
+    }
+  }
+  this->pendingCGIResponses.erase(process.getId());
 }

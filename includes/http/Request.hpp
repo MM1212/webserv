@@ -41,6 +41,7 @@ namespace HTTP {
     const Headers& getHeaders() const;
     Methods::Method getMethod() const;
     const std::string& getPath() const;
+    const std::string getUri() const;
     const std::string& getProtocol() const;
     const Socket::Connection& getClient() const;
     Socket::Connection& getClient();
@@ -75,6 +76,7 @@ namespace HTTP {
     }
 
     const std::map<std::string, std::string>& getParams() const;
+    const std::string getQuery() const;
     inline const std::vector<File>& getFiles() const {
       return this->files;
     }

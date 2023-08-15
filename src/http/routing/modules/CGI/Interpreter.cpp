@@ -2,8 +2,11 @@
 #include "http/Request.hpp"
 #include <utils/misc.hpp>
 #include <utils/Logger.hpp>
+#include <http/ServerManager.hpp>
 
 using namespace HTTP::Routing;
+
+static HTTP::ServerManager* serverManager = Instance::Get<HTTP::ServerManager>();
 
 CGI::Interpreter::Interpreter(const YAML::Node& node) : node(node) {
   this->init();
@@ -59,31 +62,31 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
     Logger::error
       << "Failed to open a pipe for cgi req "
       << Logger::param(req) << std::endl;
-    return cgi->next(res);
+    return cgi->next(res, 500);
   }
-  // char** env = cgi->generateEnvironment(req);
   pid_t pid = fork();
   if (pid == -1) {
     Logger::error
       << "Failed to fork for cgi req "
       << Logger::param(req) << std::endl;
-    return cgi->next(res);
+    return cgi->next(res, 500);
   }
-  write(std[1], req.getRawBody().c_str(), req.getRawBody().size());
   if (pid == 0) {
     dup2(std[0], STDIN_FILENO);
     close(std[0]);
     dup2(std[1], STDOUT_FILENO);
     close(std[1]);
 
-    char** env = cgi->generateEnvironment(filePath, this, req);
-    char** args = new char* [2];
+    std::vector<std::string> env = cgi->generateEnvironment(filePath, this, req);
+    std::vector<char*> envp(env.size() + 1);
+    for (size_t i = 0; i < env.size(); i++)
+      envp[i] = const_cast<char*>(env[i].c_str());
+    std::vector<char*> args(2);
     args[0] = const_cast<char*>(execPath.c_str());
     args[1] = nullptr;
-    execve(execPath.c_str(), args, env);
-    delete[] args;
-    delete[] env;
+    execve(execPath.c_str(), args.data(), const_cast<char**>(envp.data()));
+    exit(1);
   }
-  close(std[0]);
-  close(std[1]);
+  serverManager->trackCGIResponse(pid, std, res);
+  return true;
 }

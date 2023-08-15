@@ -21,16 +21,6 @@ Connection::Connection(const Connection& other)
   this->init();
 }
 
-Connection& Connection::operator=(const Connection& other) {
-  if (this == &other) return *this;
-  this->handle = other.handle;
-  this->serverSock = other.serverSock;
-  this->timeout = other.timeout;
-  this->heartbeat = other.heartbeat;
-  this->init();
-  return *this;
-}
-
 Connection::~Connection() {}
 
 void Connection::init() {
