@@ -171,7 +171,9 @@ std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {
     << ") -> headers:\n"
     << req.getHeaders()
     // << " -> body:\n"
-    // << req.getBody<std::string>()
+    // << "---" << std::endl
+    // << req.getRawBody()
+    // << "---" << std::endl
     << std::endl;
   return os;
 }
@@ -221,4 +223,22 @@ void PendingRequest::handleMultiformData() {
     }
   }
 
+}
+
+bool PendingRequest::lastCheck() {
+  switch (this->getState()) {
+  case States::Done:
+    return true;
+  case States::Body:
+    if (this->chunkData.size() == this->getContentLength()) {
+      this->body.append(reinterpret_cast<const char*>(this->chunkData.data()), this->chunkData.size());
+      this->reset(true);
+      return true;
+    }
+    return false;
+  case States::BodyChunkBytes:
+    return this->chunkSize == 0;
+  default:
+    return false;
+  }
 }

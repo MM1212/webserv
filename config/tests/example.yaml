@@ -8,11 +8,11 @@ servers:
     routes:
       - uri: /api
         settings:
-          methods: [GET]
+          methods: [GET, POST]
         modules:
           - type: static
             settings:
-              root: /home/mm
+              root: "~"
               directory_listing: true
       - uri: /upload
         settings:
@@ -20,7 +20,7 @@ servers:
         modules:
           - type: static
             settings:
-              root: /home/mm/
+              root: "~"
               send_to: /api/
       - uri: /youtube
         settings:

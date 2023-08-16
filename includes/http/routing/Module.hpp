@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "types.hpp"
+#include "http/Methods.hpp"
 
 
 namespace HTTP {
@@ -28,6 +29,9 @@ namespace HTTP {
       inline YAML::Node& getSettings() { return const_cast<YAML::Node&>(this->node["settings"]); }
       const ServerConfiguration* getServer() const;
       virtual inline bool supportsExpect() const { return false; }
+      // not related to 405.
+      // if returns false, it will skip to the next module
+      bool isMethodAllowed(Methods::Method method) const;
 
       virtual Module* clone() const = 0;
 

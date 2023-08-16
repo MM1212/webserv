@@ -4,8 +4,9 @@ socket:
   max_connections: 10
   # in milliseconds
   keep_alive_timeout: 60000
+  #! DEPRECATED, AT -1 BREAKS CGI TIMEOUT  
   # in milliseconds
-  # poll_timeout: -1
+  poll_timeout: 1000
   # in bytes
   read_buffer_size: 1024
 http:
@@ -131,6 +132,9 @@ http:
   static:
     default_index: index.html
     directory_builder_template: config/bin/directory_listing_template.html
+  cgi:
+    # in milliseconds
+    timeout: 10000
 misc:
   # levels:
   #  -1: off
@@ -140,4 +144,4 @@ misc:
   #   3: error
   log_level: 0
   name: 'webserv/0.2'
-  default_config_file: config/tests/example.yaml
+  default_config_file: config/tests/v2/example.yaml

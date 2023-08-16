@@ -58,6 +58,7 @@ void Static::init() {
   std::string& root = const_cast<std::string&>(settings["root"].getValue());
   if (*root.rbegin() != '/')
     root.append("/");
+  root = Utils::expandPath(root);
 }
 
 std::string Static::getResolvedPath(const Request& req) const {

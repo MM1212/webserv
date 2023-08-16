@@ -35,6 +35,7 @@ namespace HTTP {
         inline const std::string& getName() const { return this->node["name"].getValue(); }
         inline const std::string& getPath() const { return this->node["path"].getValue(); }
         inline const YAML::Node& getExtensions() const { return this->node["extensions"]; }
+        inline const YAML::Node& getArgs() const { return this->node["args"]; }
         bool hasExtension(const std::string& ext) const;
 
         bool run(const std::string& filePath, const Request& req, Response& res, const CGI* cgi) const;
@@ -66,6 +67,7 @@ namespace HTTP {
     private:
       std::string getResolvedPath(const Request& req) const;
       std::vector<std::string> generateEnvironment(const std::string& path, const Interpreter* interpreter, const Request& req) const;
+      std::vector<std::string> generateArgs(const std::string& path, const Interpreter* interpreter, const Request& req) const;
     private:
       std::vector<Interpreter> interpreters;
       std::map<std::string, const Interpreter*> interpreterExtMap;

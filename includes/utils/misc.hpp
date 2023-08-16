@@ -103,4 +103,18 @@ namespace Utils
   std::string httpETag(const std::string& path, const size_t lastModified, const size_t size);
 
   bool isPathValid(const std::string& path);
+
+  std::string expandPath(const std::string& path);
+
+  template <typename T>
+  std::string strJoin(const std::vector<T>& vec, const std::string& delim = ", ") {
+    std::stringstream ss;
+    for (size_t i = 0; i < vec.size(); ++i)
+    {
+      ss << vec[i];
+      if (i < vec.size() - 1)
+        ss << delim;
+    }
+    return ss.str();
+  }
 }

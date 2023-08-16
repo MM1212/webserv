@@ -11,7 +11,10 @@ Route::Route(const ServerConfiguration* server, const YAML::Node& node) :
   server(server),
   node(node) {}
 
-Route::~Route() {}
+Route::~Route() {
+  for (uint32_t i = 0; i < this->modules.size(); ++i)
+    delete this->modules[i];
+}
 
 Route::Route(const Route& other) :
   server(other.server),
@@ -19,8 +22,7 @@ Route::Route(const Route& other) :
 
 void Route::init(bool injectMethods /* = true */) {
   Logger::debug
-    << "Initializing route: " << Logger::param(this->node)
-    << Logger::param(this->node.expand()) << std::endl;
+    << "Initializing route: " << Logger::param(this->node) << std::endl;
   YAML::Node& root = const_cast<YAML::Node&>(this->node);
   if (!root.has("settings"))
     root.insert(YAML::Node::NewMap("settings"));
@@ -33,9 +35,6 @@ void Route::init(bool injectMethods /* = true */) {
   if (this->node.has("modules"))
     for (size_t i = 0; i < this->node["modules"].size(); i++)
       this->initModule(this->node["modules"][i]);
-  // YAML::Node& methods = const_cast<YAML::Node&>(this->node["methods"]);
-  // if (this->isMethodAllowed(Methods::GET))
-  //   methods.insert(YAML::Node::NewScalar("", "HEAD"));
 }
 
 bool Route::hasErrorPage(int code) const {
@@ -96,10 +95,16 @@ void Route::handle(const Request& req, Response& res) const {
     const Routing::Module* rModule = this->modules[i];
     if (req.isExpecting() && !rModule->supportsExpect())
       continue;
+    Logger::debug
+      << "is method " << Methods::ToString(req.getMethod())
+      << " allowed for route " << Logger::param(Routing::Types::ToString(rModule->getType()))
+      << "?" << std::boolalpha << rModule->isMethodAllowed(req.getMethod()) << std::endl;
+    if (!rModule->isMethodAllowed(req.getMethod()))
+      continue;
     if (rModule->handle(req, res))
       return;
   }
-  res.status(404).send();
+  res.status(501).send();
 }
 
 HTTP::Routing::Module* Route::getModule(const Routing::Types::Type type) const {

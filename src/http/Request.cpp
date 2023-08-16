@@ -38,7 +38,9 @@ Request::Request(const Request& other) :
   server(other.server),
   client(other.client),
   params(other.params),
-  files(other.files) {}
+  files(other.files) {
+  this->parseParams();
+}
 
 Request& Request::operator=(const Request& other) {
   if (this == &other) return *this;
@@ -51,6 +53,7 @@ Request& Request::operator=(const Request& other) {
   this->client = other.client;
   this->params = other.params;
   this->files = other.files;
+  this->parseParams();
   return *this;
 }
 
@@ -83,30 +86,51 @@ const std::map<std::string, std::string>& Request::getParams() const {
 }
 
 void Request::parseParams() {
-  std::string query;
-  std::string::size_type pos = this->path.find('?');
-  if (pos != std::string::npos) {
-    query = this->path.substr(pos + 1);
-    this->path = this->path.substr(0, pos);
+  {
+    std::string query;
+    std::string::size_type pos = this->path.find('?');
+    if (pos != std::string::npos) {
+      query = this->path.substr(pos + 1);
+      this->path = this->path.substr(0, pos);
+    }
+    std::vector<std::string> pairs = Utils::split(query, "&");
+    for (std::vector<std::string>::iterator it = pairs.begin(); it != pairs.end(); it++) {
+      std::vector<std::string> pair = Utils::split(*it, "=");
+      if (pair.size() == 2)
+        this->params[pair[0]] = pair[1];
+    }
   }
-  std::vector<std::string> pairs = Utils::split(query, "&");
-  for (std::vector<std::string>::iterator it = pairs.begin(); it != pairs.end(); it++) {
-    std::vector<std::string> pair = Utils::split(*it, "=");
-    if (pair.size() == 2)
-      this->params[pair[0]] = pair[1];
+  {
+    const Headers& headers = this->getHeaders();
+    if (!headers.has("Content-Type") || headers.get<std::string>("Content-Type") != "application/x-www-form-urlencoded")
+      return;
+    std::vector<std::string> pairs = Utils::split(this->getRawBody(), "&");
+    for (std::vector<std::string>::iterator it = pairs.begin(); it != pairs.end(); it++) {
+      std::vector<std::string> pair = Utils::split(*it, "=");
+      if (pair.size() == 2)
+        this->params[pair[0]] = pair[1];
+    }
+    this->body.clear();
   }
 }
 
 std::ostream& HTTP::operator<<(std::ostream& os, const Request& req) {
   os
     << "Request("
-    << req.getMethod()
+    << Methods::ToString(req.getMethod()) << "[" << req.getMethod() << "]"
     << ", "
     << req.getPath()
     << ", "
-    << req.getProtocol()
+    << req.Request::getProtocol()
+    << ", "
+    << req.getQuery()
     << ") -> headers:\n"
-    << req.getHeaders();
+    << req.getHeaders()
+    // << " -> body:\n"
+    // << "---" << std::endl
+    // << req.getRawBody()
+    // << "---" << std::endl
+    << std::endl;
   return os;
 }
 

@@ -55,18 +55,18 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
   while (skip || pendingRequest.peek() != EOF) {
     if (skip)
       skip = false;
-    /*     if (std::isprint(pendingRequest.peek())) {
-          Logger::debug
-            << "peek: " << Logger::param<char>(pendingRequest.peek())
-            << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
-            << std::endl;
-        }
-        else {
-          Logger::debug
-            << "peek: " << std::hex << Logger::param(pendingRequest.peek()) << std::dec
-            << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
-            << std::endl;
-        } */
+    /* if (std::isprint(pendingRequest.peek())) {
+      Logger::debug
+        << "peek: " << Logger::param<char>(pendingRequest.peek())
+        << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
+        << std::endl;
+    }
+    else {
+      Logger::debug
+        << "peek: " << std::hex << Logger::param(pendingRequest.peek()) << std::dec
+        << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
+        << std::endl;
+    } */
     switch (pendingRequest.state) {
     case ReqStates::CLRFCheck:
     {
@@ -311,9 +311,9 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
   //   << "Got packet from " << Logger::param(sock) << " at state "
   //   << Logger::param(ReqStates::ToString(pendingRequest.getState())) << ": " << std::endl
   //   << Logger::param(pendingRequest) << std::endl;
-  if (pendingRequest.getState() == ReqStates::Done) {
+  if (pendingRequest.lastCheck()) {
     // handle multiform-data
-    // pendingRequest.handleMultiformData();
+    pendingRequest.handleMultiformData();
     const Request req(pendingRequest);
     Response res(req, NULL);
     Logger::info
@@ -339,26 +339,43 @@ void WebSocket::sendBadRequest(Socket::Connection& sock, int statusCode, const s
 void WebSocket::trackCGIResponse(pid_t pid, int std[2], Response& res) {
   if (this->pendingCGIResponses.count(pid) > 0)
     return;
-  if (!this->trackProcess(pid, std))
+  if (!this->trackProcess(pid, res.getRequest().getClient(), std))
     return;
   Socket::Process& process = this->getProcess(pid);
   process.write(res.getRequest().getRawBody());
-  this->pendingCGIResponses.insert(std::make_pair(pid, res));
-  this->pendingCGIProcesses.insert(std::make_pair(res.getRequest().getClient().getHandle(), pid));
+  this->pendingCGIResponses.insert(
+    std::make_pair(
+      pid,
+      (PendingResponse) {
+    res.getRequest(), res
+  }));
+  PendingResponse& pending = this->pendingCGIResponses.at(pid);
+  pending.response = Response(pending.request, res.getRoute());
+  const Socket::File& client = res.getRequest().getClient().getHandle();
+  this->pendingCGIProcesses.insert(std::make_pair(client, pid));
+  Logger::debug
+    << "Tracking cgi response to client " << Logger::param(client)
+    << " with stds " << Logger::param(std[0]) << " and " << Logger::param(std[1])
+    << " to process id " << Logger::param(pid) << std::endl;
 }
 
 void WebSocket::onProcessRead(Socket::Process& process) {
   if (this->pendingCGIResponses.count(process.getId()) == 0)
     return;
-  Response& res = this->pendingCGIResponses.at(process.getId());
+  PendingResponse& pending = this->pendingCGIResponses.at(process.getId());
+  Response& res = pending.response;
   const std::string& body = res.getBody();
   res.setBody(body + process.getReadBuffer().str());
   process.getReadBuffer().str("");
 }
 
 void WebSocket::onProcessExit(const Socket::Process& process, bool force /* = false */) {
-  Response& res = this->pendingCGIResponses.at(process.getId());
-  this->pendingCGIProcesses.erase(res.getRequest().getClient().getHandle());
+  PendingResponse& pending = this->pendingCGIResponses.at(process.getId());
+  Response& res = pending.response;
+  Logger::debug
+    << "Creating CGI response for client: " << Logger::param(process.getClient()) << std::endl;
+  this->pendingCGIProcesses.erase(process.getClient());
+  this->setClientToWrite(const_cast<Socket::Connection&>(process.getClient()));
   if (!force) {
     const HTTP::Routing::Module* mod = res.getRoute()->getModule(Routing::Types::CGI);
     if (mod) {
@@ -375,5 +392,7 @@ void WebSocket::onProcessExit(const Socket::Process& process, bool force /* = fa
       }
     }
   }
+  else
+    res.setBody("").status(408).send();
   this->pendingCGIResponses.erase(process.getId());
 }

@@ -5,22 +5,29 @@ servers:
     settings:
       max_body_size: 1024
     routes:
-      - uri: /api
+      - uri: /cgi
         settings:
-          methods: [GET]
+          methods: [GET, POST]
           max_body_size: 100
         modules:
           - type: cgi
             settings:
-              root: /home/mm
+              methods: [POST]
+              root: 'config/bin/cgi/'
               interpreters:
-                - name: python
-                  path: /usr/bin/python3
-                  extensions: [.py]
-            no_match: next 
+                # - name: python
+                #   path: /usr/bin/python3
+                #   extensions: [.py]
+                #   args: [$file]
+                - name: node.js
+                  path: /usr/bin/node
+                  extensions: [js]
+                  args: [$file]
+            no_match: next
           - type: static
             settings:
-              root: /home/mm
+              root: 'config/bin/cgi'
+              index: add.html
               directory_listing: true
             no_match: next
           - type: redirect

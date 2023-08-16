@@ -14,7 +14,7 @@ static const Settings* settings = Instance::Get<Settings>();
 
 Response::Response(const Request& request, const Route* route)
   :
-  req(request),
+  req(&request),
   headers(),
   body(),
   statusCode(-1),
@@ -38,12 +38,26 @@ Response::Response(const Response& other)
   this->init();
 }
 
+Response& Response::operator=(const Response& other) {
+  if (this == &other)
+    return *this;
+  this->req = other.req;
+  this->headers = other.headers;
+  this->body = other.body;
+  this->statusCode = other.statusCode;
+  this->statusMessage = other.statusMessage;
+  this->sent = other.sent;
+  this->route = other.route;
+  this->init();
+  return *this;
+}
+
 void Response::init() {
   this->headers.append("Server", settings->get<std::string>("misc.name"));
   this->headers.append("Date", Utils::getJSONDate());
-  if (this->req.getHeaders().has("Connection"))
-    this->headers.append("Connection", this->req.getHeaders().get<std::string>("Connection"));
-  else if (!this->req.isExpecting() || this->req.getProtocol() == "HTTP/1.0")
+  if (this->req->getHeaders().has("Connection"))
+    this->headers.append("Connection", this->req->getHeaders().get<std::string>("Connection"));
+  else if (!this->req->isExpecting() || this->req->getProtocol() == "HTTP/1.0")
     this->headers.append("Connection", "close");
 }
 
@@ -99,7 +113,7 @@ Response::operator std::string() {
 std::string Response::getHeader() const {
   std::stringstream ss;
   ss
-    << req.getProtocol() << " "
+    << this->req->getProtocol() << " "
     << this->statusCode << " "
     << this->statusMessage << "\r\n"
     << headers;
@@ -111,14 +125,14 @@ std::string Response::toString() const {
   std::stringstream ss;
   ss << this->getHeader()
     << "\r\n";
-  if (this->body.length() > 0 && this->req.getMethod() != Methods::HEAD)
+  if (this->body.length() > 0 && this->req->getMethod() != Methods::HEAD)
     ss << this->body;
   return ss.str();
 }
 
 void Response::sendHeader() {
   const std::string header = this->getHeader() + "\r\n";
-  Socket::Connection& client = const_cast<Request&>(this->req).getClient();
+  Socket::Connection& client = const_cast<Request*>(this->req)->getClient();
   Logger::info
     << "Sending headers to: " << Logger::param(client) << std::endl
     << Logger::param(header) << std::endl;
@@ -134,7 +148,7 @@ void Response::send() {
   }
   this->_preSend();
   const std::string resp = this->toString();
-  Socket::Connection& client = const_cast<Request&>(this->req).getClient();
+  Socket::Connection& client = const_cast<Request*>(this->req)->getClient();
   Logger::info
     << "Sending response to: " << Logger::param(client) << std::endl
     << Logger::param(*this) << std::endl;
@@ -149,7 +163,7 @@ void Response::redirect(const std::string& path, bool permanent) {
 }
 
 void Response::_sendChunk(const char* buffer, std::istream& stream, bool last) {
-  Socket::Connection& client = const_cast<Request&>(this->req).getClient();
+  Socket::Connection& client = const_cast<Request*>(this->req)->getClient();
 
   std::stringstream chunk;
   const size_t chunkSize = stream.gcount();
@@ -179,7 +193,7 @@ void Response::_preStream(const std::string& filePath) {
 }
 
 void Response::stream(std::istream& buff) {
-  if (this->req.getMethod() == Methods::HEAD)
+  if (this->req->getMethod() == Methods::HEAD)
     return;
 
   const int n = 1024;
@@ -218,7 +232,7 @@ void Response::sendFile(const std::string& filePath, bool stream /* = true */, s
 void Response::afterSend() {
   this->sent = true;
   if (this->headers.has("Connection") && this->headers.get<std::string>("Connection") == "close")
-    const_cast<Request&>(this->req).getClient().markToClose();
+    const_cast<Request*>(this->req)->getClient().markToClose();
 }
 
 void Response::setupStaticFileHeaders(const std::string& filePath, struct stat* fileStat /* = NULL */) {

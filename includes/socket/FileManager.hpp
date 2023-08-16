@@ -130,11 +130,13 @@ namespace Socket {
       if (::epoll_ctl(this->epollFd, EPOLL_CTL_ADD, fd, &event) == -1) {
         return false;
       }
-      SYS_FNCTL(fd, F_SETFD, FD_CLOEXEC /* | O_NONBLOCK */);
+      // SYS_FNCTL(fd, F_SETFD, /* | O_NONBLOCK */);
       this->fds.insert(File(fd));
       this->maxEvents++;
       if (this->events) delete[] this->events;
       this->events = new epoll_event_t[this->maxEvents];
+      Logger::debug
+        << "Tracking file descriptor " << Logger::param(fd) << std::endl;
       return true;
     }
 
@@ -167,7 +169,12 @@ namespace Socket {
 
     bool remove(int fd, bool close) {
       if (!this->has(fd)) return false;
-      if (::epoll_ctl(this->epollFd, EPOLL_CTL_DEL, fd, NULL) == -1) {
+      epoll_event_t event;
+      if (::epoll_ctl(this->epollFd, EPOLL_CTL_DEL, fd, &event) == -1) {
+        Logger::error
+          << "Failed to remove file descriptor " << Logger::param(fd) << " from epoll instance: "
+          << Logger::errstr()
+          << std::endl;
         return false;
       }
       this->fds.erase(fd);
@@ -176,6 +183,8 @@ namespace Socket {
       this->maxEvents--;
       if (this->events) delete[] this->events;
       this->events = new epoll_event_t[this->maxEvents];
+      Logger::debug
+        << "Stopped tracking file descriptor " << Logger::param(fd) << std::endl;
       return true;
     }
 

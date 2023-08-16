@@ -38,6 +38,12 @@ void CGI::Interpreter::init() {
     !this->node["extensions"].is<YAML::Types::Sequence>() ||
     this->node["extensions"].size() == 0)
     throw std::runtime_error("CGI interpreter must have at least 1 extension");
+  if (
+    !this->node.has("args") ||
+    !this->node["args"].is<YAML::Types::Sequence>() ||
+    this->node["args"].size() == 0)
+    throw std::runtime_error("CGI interpreter must have at least 1 arg (preferably with $file expander)");
+
 }
 
 // TODO:
@@ -56,14 +62,31 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
       << Logger::param(execPath) << ". Skipping CGI module.." << std::endl;
     return cgi->next(res);
   }
-  int std[2];
+  Logger::debug
+    << "Preparing cgi execution for script: "
+    << Logger::param(filePath)
+    << " & interpreter: " << Logger::param(this->getName()) << std::endl;
+  int stdinput[2];
+  int stdoutput[2];
 
-  if (pipe(std) < -1) {
+  if (pipe(stdinput) < -1) {
     Logger::error
       << "Failed to open a pipe for cgi req "
       << Logger::param(req) << std::endl;
     return cgi->next(res, 500);
   }
+  if (pipe(stdoutput) < -1) {
+    Logger::error
+      << "Failed to open a pipe for cgi req "
+      << Logger::param(req) << std::endl;
+    return cgi->next(res, 500);
+  }
+  std::vector<std::string> env = cgi->generateEnvironment(filePath, this, req);
+  std::vector<std::string> baseArgs = cgi->generateArgs(filePath, this, req);
+  Logger::debug
+    << "Spawning cgi process " << Logger::param(execPath)
+    << " for script " << Logger::param(Utils::basename(filePath))
+    << " with args: " << Logger::param(Utils::strJoin(baseArgs)) << std::endl;
   pid_t pid = fork();
   if (pid == -1) {
     Logger::error
@@ -71,22 +94,34 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
       << Logger::param(req) << std::endl;
     return cgi->next(res, 500);
   }
-  if (pid == 0) {
-    dup2(std[0], STDIN_FILENO);
-    close(std[0]);
-    dup2(std[1], STDOUT_FILENO);
-    close(std[1]);
-
-    std::vector<std::string> env = cgi->generateEnvironment(filePath, this, req);
+  int std[2];
+  std[0] = stdoutput[0];
+  std[1] = stdinput[1];
+  if (pid != 0) {
+    close(stdinput[0]);
+    close(stdoutput[1]);
+    serverManager->trackCGIResponse(pid, std, res);
+  }
+  else {
+    std::string scriptDirName = Utils::dirname(Utils::resolvePath(2, Utils::getCurrentWorkingDirectory().c_str(), filePath.c_str()));
+    chdir(scriptDirName.c_str());
     std::vector<char*> envp(env.size() + 1);
     for (size_t i = 0; i < env.size(); i++)
       envp[i] = const_cast<char*>(env[i].c_str());
-    std::vector<char*> args(2);
-    args[0] = const_cast<char*>(execPath.c_str());
-    args[1] = nullptr;
-    execve(execPath.c_str(), args.data(), const_cast<char**>(envp.data()));
-    exit(1);
+    std::vector<char*> args(baseArgs.size() + 1);
+    for (size_t i = 0; i < baseArgs.size(); i++)
+      args[i] = const_cast<char*>(baseArgs[i].c_str());
+    args[baseArgs.size()] = nullptr;
+    int dups[2];
+    dups[0] = dup2(stdinput[0], STDIN_FILENO);
+    dups[1] = dup2(stdoutput[1], STDOUT_FILENO);
+    close(stdinput[0]);
+    close(stdinput[1]);
+    close(stdoutput[0]);
+    close(stdoutput[1]);
+    execve(execPath.c_str(), args.data(), envp.data());
+    std::perror("execve");
+    std::exit(1);
   }
-  serverManager->trackCGIResponse(pid, std, res);
   return true;
 }

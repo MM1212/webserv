@@ -53,7 +53,7 @@ namespace Socket {
     const Process& getProcess(const pid_t pid) const;
     Process& getProcessBoundTo(const int pipeFd);
     const Process& getProcessBoundTo(const int pipeFd) const;
-    bool trackProcess(const pid_t pid, int std[2]);
+    bool trackProcess(const pid_t pid, const Connection& client, int std[2]);
 
     const Server& bind(
       const Domain::Handle domain,
@@ -86,7 +86,7 @@ namespace Socket {
     void _onClientWrite(Connection& sock);
     void _onProcessRead(Process& process);
     void _onProcessWrite(Process& process);
-    void _onProcessExit(Process& process);
+    void _onProcessExit(Process& process, bool force = false);
 
   protected:
     virtual void onClientConnect(const Connection& sock) = 0;

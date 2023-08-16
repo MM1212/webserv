@@ -17,10 +17,11 @@ std::string Headers::FormatValue(const std::string& value) {
 
 Headers::Headers() : headers() {}
 Headers::~Headers() {}
-Headers::Headers(const Headers& other) : headers(other.headers) {}
+Headers::Headers(const Headers& other) : headers(other.headers), keys(other.keys) {}
 Headers& Headers::operator=(const Headers& other) {
   if (this == &other) return *this;
   this->headers = other.headers;
+  this->keys = other.keys;
   return *this;
 }
 
@@ -40,8 +41,12 @@ bool Headers::append(const std::string& key, const std::string& value) {
 
 void Headers::remove(const std::string& key) {
   std::string formatted = this->FormatKey(key);
+  if (!this->has(formatted))
+    return;
   this->headers.erase(formatted);
-  this->keys.erase(std::remove(this->keys.begin(), this->keys.end(), formatted), this->keys.end());
+  std::vector<std::string>::iterator it = std::find(this->keys.begin(), this->keys.end(), key);
+  if (it != this->keys.end())
+    this->keys.erase(it);
 }
 
 bool Headers::has(const std::string& key) const {

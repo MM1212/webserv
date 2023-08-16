@@ -14,7 +14,7 @@
 #define DARK_BLUE	"\033[34m"
 #define DARK_MAGENTA	"\033[35m"
 #define DARK_CYAN	"\033[36m"
-#define LIGHT gray	"\033[37m"
+#define LIGHT_GRAY	"\033[37m"
 #define DARK_GRAY	"\033[90m"
 #define RED	"\033[91m"
 #define GREEN	"\033[92m"
@@ -24,6 +24,9 @@
 #define CYAN	"\033[96m"
 #define WHITE	"\033[97m"
 
+#include <cstring>
+#include <cerrno>
+
 
 namespace Logger {
 
@@ -32,6 +35,10 @@ namespace Logger {
     std::stringstream ss;
     ss << ORANGE << value << RESET;
     return ss.str();
+  }
+
+  inline std::string errstr() {
+    return param(std::strerror(errno));
   }
 
   class Stream {
@@ -81,4 +88,6 @@ namespace Logger {
   extern Stream success;
   extern Stream warning;
   extern Stream error;
+
+  extern Stream child;
 };

@@ -9,12 +9,13 @@
 #include "Request.hpp"
 #include "Response.hpp"
 #include "PendingRequest.hpp"
+#include "PendingResponse.hpp"
 
 namespace HTTP {
   class WebSocket : public Socket::Parallel {
   private:
     std::map<int, PendingRequest> pendingRequests;
-    std::map<pid_t, Response> pendingCGIResponses;
+    std::map<pid_t, PendingResponse> pendingCGIResponses;
     std::map<int, pid_t> pendingCGIProcesses;
   public:
     WebSocket();

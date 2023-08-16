@@ -154,7 +154,7 @@ std::string Utils::resolvePath(size_t count, ...) {
 std::string Utils::getCurrentWorkingDirectory() {
   char* cwd = getcwd(NULL, 0);
   std::string path(cwd);
-  delete cwd;
+  free(cwd);
   return path;
 }
 std::string Utils::httpETag(const std::string& path, const size_t lastModified, const size_t size)
@@ -181,4 +181,25 @@ bool Utils::isPathValid(const std::string& path) {
       rootCount++;
   }
   return rootCount >= 0;
+}
+
+std::string Utils::expandPath(const std::string& path) {
+  uint64_t pos;
+  std::string result = path;
+  std::string home;
+  const char* homePtr = getenv("HOME");
+  if (!homePtr)
+    home = "/root";
+  else
+    home = homePtr;
+  while ((pos = result.find_first_of('~')) != std::string::npos) {
+    std::cout << "pre: " << result << std::endl;
+    result = Utils::resolvePath(3,
+      result.substr(0, pos).c_str(),
+      home.c_str(),
+      result.substr(pos + 1).c_str()
+    );
+    std::cout << "post: " << result << std::endl;
+  }
+  return result;
 }

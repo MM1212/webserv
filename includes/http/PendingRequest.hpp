@@ -123,6 +123,8 @@ namespace HTTP {
       this->storage.clear();
       return tmp;
     }
+
+    bool lastCheck();
   private:
     States::State crlfNextState;
     States::State state;

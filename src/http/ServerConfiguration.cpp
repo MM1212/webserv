@@ -84,17 +84,9 @@ const Route* ServerConfiguration::getRoute(const std::string& path) const {
 
 const Route* ServerConfiguration::getNearestRoute(const std::string& path) const {
   std::string currentPath = path;
-  // Logger::debug
-  //   << "is " << Logger::param(path)
-  //   << " an exact match? " << std::boolalpha << (this->getRoute(path) != NULL)
-  //   << std::dec << std::endl;
   while (currentPath != "/" && currentPath.length() > 0) {
     if (this->routes.count(currentPath) == 0) {
       std::string dir = Utils::dirname(currentPath);
-      // Logger::debug
-      //   << "got dir " << Logger::param(dir)
-      //   << " from " << Logger::param(currentPath)
-      //   << std::endl;
       if (dir == currentPath)
         break;
       currentPath = dir;
@@ -146,9 +138,7 @@ void ServerConfiguration::validate() {
 void ServerConfiguration::init() {
   Logger::debug
     << "Initializing server configuration for "
-    << Logger::param(this->config.toString()) << std::endl
-    << Logger::param(this->config.expand())
-    << std::endl;
+    << Logger::param(this->config.toString()) << std::endl;
   if (this->config.has("listen"))
     this->initHosts();
   if (this->config.has("server_names"))
@@ -224,9 +214,7 @@ void ServerConfiguration::initRoutes() {
     throw std::runtime_error("Routes must be a sequence");
   Logger::debug
     << "Initializing routes "
-    << Logger::param(routes.toString()) << std::endl
-    << Logger::param(routes.expand())
-    << std::endl;
+    << Logger::param(routes.toString()) << std::endl;
   for (
     YAML::Node::const_iterator it = routes.begin<YAML::Node::Sequence>();
     it != routes.end<YAML::Node::Sequence>();

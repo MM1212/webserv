@@ -17,6 +17,11 @@ void Module::init() {
   YAML::Node& node = const_cast<YAML::Node&>(this->node);
   if (!node.has("settings"))
     node.insert(YAML::Node::NewMap("settings"));
+  const YAML::Node& settings = this->getSettings();
+  if (!settings.is<YAML::Types::Map>())
+    throw std::runtime_error("Settings must be a map");
+  if (settings.has("methods") && !settings["methods"].is<YAML::Types::Sequence>())
+    throw std::runtime_error("Methods must be a sequence");
 }
 
 Middleware Module::getNoMatch() const {
@@ -29,6 +34,18 @@ Middleware Module::getNoMatch() const {
 
 const HTTP::ServerConfiguration* Module::getServer() const {
   return this->route.server;
+}
+
+bool Module::isMethodAllowed(Methods::Method method) const {
+  const YAML::Node& settings = this->getSettings();
+  if (!settings.has("methods") || !settings["methods"].is<YAML::Types::Sequence>())
+    return true;
+  const YAML::Node& methods = settings["methods"];
+  for (uint64_t i = 0; i < methods.size(); ++i) {
+    if (Methods::FromString(methods[i].getValue()) == method)
+      return true;
+  }
+  return false;
 }
 
 bool Module::next(Response& res, int statusCode /* = -1 */) const {

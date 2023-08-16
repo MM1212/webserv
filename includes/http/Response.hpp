@@ -20,6 +20,7 @@ namespace HTTP {
     Response(const Request& req, const Route* route);
     ~Response();
     Response(const Response& other);
+    Response& operator=(const Response& other);
 
     Response& setHeaders(const Headers& headers);
     Response& setBody(const std::string& body);
@@ -32,7 +33,7 @@ namespace HTTP {
     uint32_t getStatus() const;
     const std::string& getStatusMessage() const;
     inline const Route* getRoute() const { return this->route; }
-    inline const Request& getRequest() const { return this->req; }
+    inline const Request& getRequest() const { return *this->req; }
 
     operator std::string();
     std::string toString() const;
@@ -58,7 +59,7 @@ namespace HTTP {
     void redirect(const std::string& path, bool permanent = true);
   private:
     Response();
-    const Request& req;
+    const Request* req;
     Headers headers;
     std::string body;
     long statusCode;

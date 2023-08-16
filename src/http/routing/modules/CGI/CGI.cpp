@@ -28,6 +28,7 @@ static const Settings* settings = Instance::Get<Settings>();
   conflicts between header fields returned by the script and header
   fields that it would otherwise send itself.
 */
+static const uint32_t forbiddenHeaderFieldsSize = 37;
 static const char* forbiddenHeaderFields[] = {
   "Content-Length",
   "Transfer-Encoding",
@@ -118,6 +119,10 @@ void CGI::init() {
   const YAML::Node& settings = this->getSettings();
   if (!settings.has("root") || settings["root"].getValue().empty())
     throw std::runtime_error("CGI route must have a root");
+  std::string& root = const_cast<std::string&>(settings["root"].getValue());
+  if (*root.rbegin() != '/')
+    root.append("/");
+  root = Utils::expandPath(root);
   if (
     !settings.has("interpreters") ||
     !settings["interpreters"].is<YAML::Types::Sequence>() ||
@@ -138,7 +143,11 @@ void CGI::init() {
 
 bool CGI::handle(const Request& req, Response& res) const {
   const std::string& path = this->getResolvedPath(req);
-  if (!this->doesFileMatch(path))
+  const bool doesMatch = this->doesFileMatch(path);
+  Logger::debug
+    << "cgi module triggered for " << Logger::param(path)
+    << " | running: " << doesMatch << std::endl;
+  if (!doesMatch)
     return this->next(res);
   const Interpreter& interpreter = this->getInterpreterByFile(path);
   return interpreter.run(path, req, res, this);
@@ -151,23 +160,20 @@ std::vector<std::string> CGI::generateEnvironment(
 ) const {
   (void)intr;
   static const ServerManager* serverManager = Instance::Get<ServerManager>();
-  const char*const* defaultEnv = serverManager->getEnv();
+  const char* const* defaultEnv = serverManager->getEnv();
   std::vector<std::string> env;
 
   for (size_t i = 0; defaultEnv[i]; i++)
     env.push_back(defaultEnv[i]);
-
   Headers headers = req.getHeaders();
   const Socket::Server& server = serverManager->getServer(req.getClient().getServerSock());
   const std::map<std::string, std::string>& headersMap = headers.getAll();
-
   if (headers.has("Content-Type"))
     env.push_back(EnvVar("CONTENT_TYPE", headers.get<std::string>("Content-Type")));
   if (headers.has("Content-Length"))
     env.push_back(EnvVar("CONTENT_LENGTH", req.getRawBody().size()));
   headers.remove("Content-Type");
   headers.remove("Content-Length");
-
   env.push_back(EnvVar("GATEWAY_INTERFACE", "CGI/1.1"));
   env.push_back(EnvVar("PATH_INFO", req.getPath()));
   env.push_back(EnvVar("PATH_TRANSLATED", filePath));
@@ -180,6 +186,7 @@ std::vector<std::string> CGI::generateEnvironment(
   env.push_back(EnvVar("SERVER_PORT", Utils::to<std::string>(server.port)));
   env.push_back(EnvVar("SERVER_PROTOCOL", req.getProtocol()));
   env.push_back(EnvVar("SERVER_SOFTWARE", settings->get<std::string>("misc.name")));
+  std::cerr << 6 << std::endl;
   for (
     std::map<std::string, std::string>::const_iterator it = headersMap.begin();
     it != headersMap.end();
@@ -189,13 +196,35 @@ std::vector<std::string> CGI::generateEnvironment(
     const std::string& value = it->second;
     env.push_back(EnvVar("HTTP_" + Utils::toUppercase(key), value));
   }
+  std::cerr << 7 << std::endl;
   return env;
+}
+
+std::vector<std::string> CGI::generateArgs(
+  const std::string& filePath,
+  const CGI::Interpreter* intr,
+  const Request& req
+) const {
+  (void)req;
+  const YAML::Node& baseArgs = intr->getArgs();
+  std::vector<std::string> args(baseArgs.size() + 1);
+  args[0] = intr->getPath();
+  for (uint64_t i = 0; i < baseArgs.size(); i++) {
+    std::string arg = baseArgs[i].getValue();
+    uint64_t pos;
+    while ((pos = arg.find("$file")) != std::string::npos)
+      arg.replace(pos, 5, Utils::basename(filePath));
+    args[i + 1] = arg;
+  }
+  return args;
 }
 
 void CGI::handleResponse(Response& res) const {
   std::stringstream packet(res.getBody());
   std::string line;
   Headers& headers = res.getHeaders();
+  res.setBody("");
+  res.status(200);
   while (std::getline(packet, line)) {
     if (line.empty())
       break;
@@ -214,11 +243,15 @@ void CGI::handleResponse(Response& res) const {
       res.status(statusCode);
       continue;
     }
-    for (size_t i = 0; forbiddenHeaderFields[i]; i++)
+    for (size_t i = 0; i < forbiddenHeaderFieldsSize; i++)
       if (std::strncmp(key.c_str(), forbiddenHeaderFields[i], std::strlen(forbiddenHeaderFields[i]) + 1) == 0)
         throw std::runtime_error("Invalid CGI response header: " + line);
     headers.set(key, value);
   }
-  res.setBody(packet.str());
+  if (res.getStatus() / 100 == 2) {
+    std::stringstream nPacket;
+    nPacket << packet.rdbuf();
+    res.setBody(nPacket.str());
+  }
   res.send();
 }

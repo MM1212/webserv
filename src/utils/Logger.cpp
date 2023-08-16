@@ -11,6 +11,7 @@ Stream Logger::info("INFO", BLUE, logLevel > -1 && logLevel <= 1);
 Stream Logger::success("SUCCESS", GREEN, logLevel > -1 && logLevel <= 2);
 Stream Logger::warning("WARNING", ORANGE, logLevel > -1 && logLevel <= 3);
 Stream Logger::error(std::cerr, "ERROR", RED, logLevel > -1 && logLevel <= 4);
+Stream Logger::child(std::cerr, "CHILD", LIGHT_GRAY, true);
 
 Stream::Stream(
   std::ostream& target,
