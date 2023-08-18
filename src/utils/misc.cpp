@@ -10,10 +10,12 @@ std::vector<std::string> Utils::split(const std::string& str, std::string delim)
   std::string copy(str);
   while ((pos = copy.find(delim)) != std::string::npos) {
     token = copy.substr(0, pos);
-    tokens.push_back(token);
+    if (token.size() > 0)
+      tokens.push_back(token);
     copy.erase(0, pos + delim.length());
   }
-  tokens.push_back(copy);
+  if (copy.size() > 0)
+    tokens.push_back(copy);
   return tokens;
 }
 
@@ -141,6 +143,17 @@ std::string Utils::resolvePath(size_t count, ...) {
     if (result.empty())
       result = part;
     else {
+      uint64_t pos;
+      while ((pos = result.find("/./")) != std::string::npos)
+        result.erase(pos, 2);
+      while ((pos = result.find("/../")) != std::string::npos) {
+        if (pos == 0)
+          result.erase(0, 3);
+        else {
+          uint64_t prev = result.find_last_of('/', pos - 1);
+          result.erase(prev, pos - prev + 3);
+        }
+      }
       if (result[result.size() - 1] != '/' && part[0] != '/')
         result += '/';
       else if (result[result.size() - 1] == '/' && part[0] == '/')
@@ -167,22 +180,6 @@ std::string Utils::httpETag(const std::string& path, const size_t lastModified, 
   return ss2.str();
 }
 
-bool Utils::isPathValid(const std::string& path) {
-  std::vector<std::string> parts = Utils::split(path, "/");
-  int rootCount = 0;
-  for (
-    std::vector<std::string>::iterator it = parts.begin();
-    it != parts.end();
-    ++it
-    ) {
-    if (*it == "..")
-      rootCount--;
-    else if (*it != ".")
-      rootCount++;
-  }
-  return rootCount >= 0;
-}
-
 std::string Utils::expandPath(const std::string& path) {
   uint64_t pos;
   std::string result = path;
@@ -193,13 +190,45 @@ std::string Utils::expandPath(const std::string& path) {
   else
     home = homePtr;
   while ((pos = result.find_first_of('~')) != std::string::npos) {
-    std::cout << "pre: " << result << std::endl;
     result = Utils::resolvePath(3,
       result.substr(0, pos).c_str(),
       home.c_str(),
       result.substr(pos + 1).c_str()
     );
-    std::cout << "post: " << result << std::endl;
+  }
+  return result;
+}
+
+std::string Utils::encodeURIComponent(const std::string& str) {
+  return str;
+ /*  std::string result;
+  for (size_t i = 0; i < str.size(); i++) {
+    if (std::isalnum(str[i]) || str[i] == '-' || str[i] == '_' || str[i] == '.' || str[i] == '~')
+      result += str[i];
+    else {
+      std::stringstream buf;
+      buf << '%' << std::hex << std::uppercase << (int)str[i];
+      result += buf.str();
+    }
+  }
+  return result; */
+}
+
+std::string Utils::decodeURIComponent(const std::string& str) {
+  std::string result;
+  for (size_t i = 0; i < str.size(); i++) {
+    if (str[i] == '%') {
+      if (i + 2 >= str.size())
+        throw std::runtime_error("Invalid URI");
+      std::stringstream buf;
+      buf << std::hex << str[i + 1] << str[i + 2];
+      int c;
+      buf >> c;
+      result += (char)c;
+      i += 2;
+    }
+    else
+      result += str[i];
   }
   return result;
 }

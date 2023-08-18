@@ -43,5 +43,5 @@ void Process::kill() {
 }
 
 void Process::write(const std::string& buff) {
-  this->writeBuffer.append(buff);
+  this->writeBuffer.put(buff);
 }

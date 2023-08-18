@@ -3,26 +3,27 @@ servers:
     server_names: [localhost, 127.0.0.1]
     default: true
     settings:
-      max_body_size: 1024
+      # in bytes
+      max_body_size: 2000000
     routes:
       - uri: /cgi
         settings:
-          methods: [GET, POST]
-          max_body_size: 100
+          methods: [GET, POST, DELETE]
+          # max_body_size: 100
         modules:
           - type: cgi
             settings:
               methods: [POST]
               root: 'config/bin/cgi/'
               interpreters:
-                # - name: python
-                #   path: /usr/bin/python3
-                #   extensions: [.py]
-                #   args: [$file]
-                - name: node.js
-                  path: /usr/bin/node
-                  extensions: [js]
+                - name: python
+                  path: /usr/bin/python3
+                  extensions: [py]
                   args: [$file]
+                # - name: node.js
+                #   path: /usr/bin/node
+                #   extensions: [js]
+                #   args: [$file]
             no_match: next
           - type: static
             settings:
@@ -30,8 +31,16 @@ servers:
               index: add.html
               directory_listing: true
             no_match: next
-          - type: redirect
+          # - type: redirect
+          #   settings:
+          #     uri: https://youtube.com
+          #     type: permanent
+          #     partial: false
+      - uri: /static
+        settings:
+          methods: [GET, HEAD]
+        modules:
+          - type: static
             settings:
-              uri: https://youtube.com
-              type: permanent
-              partial: false
+              root: '~'
+              directory_listing: true

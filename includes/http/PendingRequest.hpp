@@ -42,7 +42,7 @@ namespace HTTP {
       int versionMinor;
 
       inline operator std::string() const {
-        return this->type + "/" + Utils::to<std::string>(this->versionMajor) + "." + Utils::to<std::string>(this->versionMinor);
+        return this->type + "/" + Utils::toString(this->versionMajor) + "." + Utils::toString(this->versionMinor);
       }
     };
   public:
@@ -66,12 +66,14 @@ namespace HTTP {
     using Request::getProtocol;
     Protocol getProtocol() const;
     void setProtocol(const std::string& protocol);
-    
+
     void setProtocolType(const std::string& protocolType);
     void setVersionMajor(const int versionMajor);
     void setVersionMinor(const int versionMinor);
     void setBody(const std::string& body);
+    void setBody(const ByteStream& body);
     void addToBody(const std::string& body);
+    void addToBody(const ByteStream& body);
     void setHeaders(const Headers& headers);
 
     friend std::ostream& operator<<(std::ostream& os, const PendingRequest& request);
@@ -83,32 +85,49 @@ namespace HTTP {
 
     void handleMultiformData();
 
-    inline void handlePacket(std::stringstream& packet) {
+    inline void handlePacket(ByteStream& packet) {
       this->cPacket = &packet;
     }
     inline bool isParsingBody() const {
       return this->state == States::Body || this->state == States::BodyChunkData;
     }
     inline bool extract() {
-      if (this->cPacket->peek() == EOF) return false;
-      if (this->isParsingBody())
-        this->chunkData.push_back(this->cPacket->get());
+      if (this->peek() == EOF) return false;
+      if (this->isParsingBody()) {
+
+        uint64_t bytesToRead = this->getContentLength() - this->chunkData.size();
+        if (bytesToRead > this->cPacket->size()) bytesToRead = this->cPacket->size();
+        ByteStream tmp;
+        this->cPacket->take(tmp, bytesToRead);
+        std::cout << "tmp has " << tmp.size() << " bytes" << std::endl;
+        this->chunkData.put(tmp);
+        std::cout << "Extracting " << bytesToRead << " bytes from packet. ChunkData now has: " << this->chunkData.size() << std::endl;
+      }
       else
-        this->storage += static_cast<char>(this->cPacket->get());
+        this->storage += static_cast<char>(this->get());
       return true;
     }
     inline bool skip(uint32_t bytes = 1) {
-      if (this->cPacket->peek() == EOF) return false;
-      this->cPacket->ignore(bytes);
+      if (this->peek() == EOF) return false;
+      this->ignore(bytes);
       return true;
     }
     inline void reset(bool clearChunkData = false) {
       this->storage.clear();
       if (clearChunkData) this->chunkData.clear();
     }
-    inline char peek() const {
-      return this->cPacket->peek();
+    inline int peek() const {
+      return this->cPacket->peek<int>();
     }
+
+    inline int get() {
+      return this->cPacket->get<int>();
+    }
+
+    inline void ignore(uint64_t bytes = 1) {
+      this->cPacket->ignore(bytes);
+    }
+
     template <typename T>
     inline T takeFromStorage() {
       std::stringstream ss(this->storage);
@@ -131,8 +150,8 @@ namespace HTTP {
     std::string storage;
     std::string buildingHeaderKey;
     size_t chunkSize;
-    std::vector<uint8_t> chunkData;
-    std::stringstream* cPacket;
+    ByteStream chunkData;
+    ByteStream* cPacket;
 
     PendingRequest();
     friend class WebSocket;

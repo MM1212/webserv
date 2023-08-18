@@ -20,7 +20,7 @@ namespace HTTP {
         std::string name;
         std::string value;
         template <typename T>
-        EnvVar(const std::string& name, const T& value) : name(name), value(Utils::to<std::string>(value)) {}
+        EnvVar(const std::string& name, const T& value) : name(name), value(Utils::toString(value)) {}
         EnvVar(const EnvVar& other) : name(other.name), value(other.value) {}
         inline std::string toString() const { return this->name + "=" + this->value; }
         inline operator std::string() const { return this->toString(); }

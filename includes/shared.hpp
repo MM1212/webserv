@@ -10,6 +10,7 @@
 #include <error.h>
 #include <stdio.h>
 #include <utils/std.hpp>
+#include <ByteStream.hpp>
 
 #define nullptr NULL
 

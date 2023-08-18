@@ -28,7 +28,7 @@ namespace HTTP {
       Socket::Connection* client,
       Methods::Method method,
       const std::string& path,
-      const std::string& body,
+      const ByteStream& body,
       const std::string& protocol,
       const Headers& headers,
       const std::map<std::string, std::string>& params,
@@ -45,12 +45,11 @@ namespace HTTP {
     const std::string& getProtocol() const;
     const Socket::Connection& getClient() const;
     Socket::Connection& getClient();
-    template <typename T>
-    const T getBody() const {
-      return static_cast<T>(this->body);
-    }
-    inline const std::string& getRawBody() const {
+    inline const ByteStream& getBody() const {
       return this->body;
+    }
+    inline const std::string getRawBody() const {
+      return this->body.toString();
     }
 
     template <typename T>
@@ -100,7 +99,7 @@ namespace HTTP {
     Headers headers;
     Methods::Method method;
     std::string path;
-    std::string body;
+    ByteStream body;
     std::string protocol;
     Socket::Parallel* server;
     Socket::Connection* client;

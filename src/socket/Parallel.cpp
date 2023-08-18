@@ -20,7 +20,15 @@ Parallel::Parallel(int timeout)
   }
 }
 
-Parallel::~Parallel() {}
+Parallel::~Parallel() {
+  for (
+    std::map<pid_t, Process>::iterator it = this->processes.begin();
+    it != this->processes.end();
+    it++
+    ) {
+    it->second.kill();
+  }
+}
 
 const Socket::Server& Parallel::bind(
   const Domain::Handle domain,
@@ -288,27 +296,26 @@ void Parallel::_onClientDisconnect(const Connection& client) {
 
 void Parallel::_onClientRead(Connection& client) {
   static const int bufferSize = settings->get<int>("socket.read_buffer_size");
-  std::unique_ptr<char[]> buffer(bufferSize + 1);
+  ByteStream buffer(bufferSize);
   int read = recv(client.getHandle(), buffer, bufferSize, 0);
   if (read <= 0) {
     this->disconnect(client);
     return;
   }
-  buffer[read] = '\0';
-  client.getReadBuffer() << buffer;
+  client.getReadBuffer().put(buffer);
   Logger::debug
     << "got " << Logger::param(read) << " bytes from "
     << Logger::param(static_cast<std::string>(client))
     << std::endl;
     // << "---" << std::endl
-    // << Logger::param(buffer) << std::endl
+    // << Logger::param(buffer.toString()) << std::endl
     // << "---" << std::endl;
   client.ping();
   this->onClientRead(client);
 }
 
 void Parallel::_onClientWrite(Connection& client) {
-  std::string& buffer = client.getWriteBuffer();
+  ByteStream& buffer = client.getWriteBuffer();
   if (buffer.size() == 0) {
     if (client.shouldCloseOnEmptyWriteBuffer())
       this->disconnect(client);
@@ -316,10 +323,10 @@ void Parallel::_onClientWrite(Connection& client) {
       this->setClientToRead(client);
     return;
   }
-  int wrote = send(client.getHandle(), buffer.c_str(), buffer.size(), 0);
+  int wrote = send(client.getHandle(), buffer, buffer.size(), 0);
   if (wrote < 0) return;
   this->onClientWrite(client, wrote);
-  buffer = buffer.substr(wrote);
+  buffer.ignore(wrote);
   client.ping();
 }
 
@@ -389,27 +396,26 @@ bool Parallel::trackProcess(const pid_t pid, const Connection& con, int std[2]) 
 
 void Parallel::_onProcessRead(Process& process) {
   static const int bufferSize = settings->get<int>("socket.read_buffer_size");
-  std::unique_ptr<char[]> buffer(bufferSize + 1);
+  ByteStream buffer(bufferSize);
   int bytes = read(process.getIn(), buffer, bufferSize);
   if (bytes <= 0) {
     this->kill(process, true);
     return;
   }
-  buffer[bytes] = '\0';
-  process.getReadBuffer() << buffer;
+  process.getReadBuffer().put(buffer);
   Logger::debug
     << "got " << Logger::param(bytes) << " bytes from "
     << Logger::param(static_cast<pid_t>(process))
     << std::endl;
   // << "---" << std::endl
-  // << Logger::param(buffer) << std::endl
+  // << Logger::param(buffer.toString()) << std::endl
   // << "---" << std::endl;
   // TESTING
   this->onProcessRead(process);
 }
 
 void Parallel::_onProcessWrite(Process& process) {
-  std::string& buffer = process.getWriteBuffer();
+  ByteStream& buffer = process.getWriteBuffer();
   if (buffer.size() == 0) {
     const int out = process.getOut();
     this->pipesToProcesses.erase(process.getOut());
@@ -428,10 +434,17 @@ void Parallel::_onProcessWrite(Process& process) {
     }
     return;
   }
-  int wrote = write(process.getOut(), buffer.c_str(), buffer.size());
+  int wrote = write(process.getOut(), buffer, buffer.size());
   if (wrote < 0) return;
   this->onProcessWrite(process, wrote);
-  buffer = buffer.substr(wrote);
+  Logger::debug
+    << "wrote " << Logger::param(wrote) << " bytes from "
+    << Logger::param(static_cast<pid_t>(process))
+    << std::endl;
+    // << "---" << std::endl
+    // << Logger::param(buffer.toString()) << std::endl
+    // << "---" << std::endl;
+  buffer.ignore(wrote);
 }
 
 void Parallel::_onProcessExit(Process& process, bool force /* = false */) {

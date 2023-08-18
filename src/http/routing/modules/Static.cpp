@@ -81,8 +81,6 @@ bool Static::handle(const Request& req, Response& res) const {
     << " based on root " << Logger::param(this->getRoot())
     << " and req path " << Logger::param(req.getPath())
     << std::endl;
-  if (!Utils::isPathValid(path))
-    return this->next(res, 403);
   switch (req.getMethod()) {
   case Methods::GET:
   case Methods::HEAD:
@@ -114,6 +112,8 @@ bool Static::handleGet(const std::string& path, const Request& req, Response& re
     if (*req.getPath().rbegin() != '/')
       return (res.redirect(req.getPath() + "/", true), true);
     std::string listing = this->buildDirectoryListing(path);
+    Logger::debug
+      << "Directory listing size: " << Logger::param(listing.size()) << std::endl;
     return (res.status(200).send(listing), true);
   }
   else if (S_ISREG(st.st_mode))
@@ -147,12 +147,12 @@ bool Static::handleUploads(const std::string& path, const Request& req, Response
   if (req.isExpecting())
     return this->next(res, 100);
   std::ofstream file(path.c_str(), std::ios::binary | std::ios::trunc);
-  file.write(req.getRawBody().c_str(), req.getRawBody().length());
+  file.write(reinterpret_cast<const char*>(req.getBody().data()), req.getBody().size());
   if (this->getRedirection() != this->getRoot()) {
     std::string filePath(path);
     filePath.erase(0, this->getRoot().size());
     std::string location = Utils::resolvePath(2, this->getRedirection().c_str(), filePath.c_str());
-    res.getHeaders().append("Location", location);
+    res.getHeaders().append("Location", Utils::encodeURIComponent(location));
   }
   res.status(!exists ? 201 : 204).send();
   return true;
@@ -163,7 +163,7 @@ bool Static::handleFile(const std::string& path, const Request& req, Response& r
   if (stat(path.c_str(), &st) == -1)
     return this->next(res);
   if (!this->clientHasFile(req, path, &st))
-    return (res.status(200).sendFile(path), true);
+    return (res.status(200).sendFile(path, false, &st), true);
   res.setupStaticFileHeaders(path, &st);
   return this->next(res, 304);
 }

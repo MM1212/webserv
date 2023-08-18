@@ -5,6 +5,7 @@
 #include <utils/misc.hpp>
 #include <sys/types.h>
 #include <signal.h>
+#include <shared.hpp>
 
 #include "FileManager.hpp"
 #include "Connection.hpp"
@@ -18,8 +19,8 @@ namespace Socket {
     int std[2];
     pid_t id;
 
-    std::stringstream readBuffer;
-    std::string writeBuffer;
+    ByteStream readBuffer;
+    ByteStream writeBuffer;
     int timeout;
     uint64_t heartbeat;
 
@@ -56,10 +57,10 @@ namespace Socket {
       return this->out->isWritable();
     }
 
-    inline std::stringstream& getReadBuffer() {
+    inline ByteStream& getReadBuffer() {
       return this->readBuffer;
     };
-    inline std::string& getWriteBuffer() {
+    inline ByteStream& getWriteBuffer() {
       return this->writeBuffer;
     }
 

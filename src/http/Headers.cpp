@@ -1,3 +1,4 @@
+#include <utils/Logger.hpp>
 #include "http/Headers.hpp"
 
 using HTTP::Headers;
@@ -27,6 +28,7 @@ Headers& Headers::operator=(const Headers& other) {
 
 void Headers::clear() {
   this->headers.clear();
+  this->keys.clear();
 }
 
 bool Headers::append(const std::string& key, const std::string& value) {
@@ -71,6 +73,12 @@ std::string Headers::toString() const {
     it != this->keys.end();
     it++) {
     std::string key = *it;
+    if (!this->headers.count(key)) {
+      Logger::error
+        << "Headers key " << Logger::param(key) << " not found in headers map"
+        << std::endl;
+      continue;
+    }
     const std::string& value = this->headers.at(key);
     result += HTTP::capitalizeHeader(key) + ": " + value + "\r\n";
   }

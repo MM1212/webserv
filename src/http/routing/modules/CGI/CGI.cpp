@@ -168,6 +168,10 @@ std::vector<std::string> CGI::generateEnvironment(
   Headers headers = req.getHeaders();
   const Socket::Server& server = serverManager->getServer(req.getClient().getServerSock());
   const std::map<std::string, std::string>& headersMap = headers.getAll();
+  Logger::debug
+    << "Headers: " << std::endl
+    << headers
+    << std::endl;
   if (headers.has("Content-Type"))
     env.push_back(EnvVar("CONTENT_TYPE", headers.get<std::string>("Content-Type")));
   if (headers.has("Content-Length"))
@@ -179,14 +183,13 @@ std::vector<std::string> CGI::generateEnvironment(
   env.push_back(EnvVar("PATH_TRANSLATED", filePath));
   env.push_back(EnvVar("QUERY_STRING", req.getQuery()));
   env.push_back(EnvVar("REMOTE_ADDR", req.getClient().getAddress()));
-  env.push_back(EnvVar("REMOTE_PORT", Utils::to<std::string>(req.getClient().getPort())));
+  env.push_back(EnvVar("REMOTE_PORT", Utils::toString(req.getClient().getPort())));
   env.push_back(EnvVar("REQUEST_METHOD", Methods::ToString(req.getMethod())));
   env.push_back(EnvVar("SCRIPT_NAME", Utils::resolvePath(2, this->getRoot().c_str(), Utils::basename(filePath).c_str())));
   env.push_back(EnvVar("SERVER_NAME", server.address));
-  env.push_back(EnvVar("SERVER_PORT", Utils::to<std::string>(server.port)));
+  env.push_back(EnvVar("SERVER_PORT", Utils::toString(server.port)));
   env.push_back(EnvVar("SERVER_PROTOCOL", req.getProtocol()));
   env.push_back(EnvVar("SERVER_SOFTWARE", settings->get<std::string>("misc.name")));
-  std::cerr << 6 << std::endl;
   for (
     std::map<std::string, std::string>::const_iterator it = headersMap.begin();
     it != headersMap.end();
@@ -196,7 +199,6 @@ std::vector<std::string> CGI::generateEnvironment(
     const std::string& value = it->second;
     env.push_back(EnvVar("HTTP_" + Utils::toUppercase(key), value));
   }
-  std::cerr << 7 << std::endl;
   return env;
 }
 
@@ -223,9 +225,12 @@ void CGI::handleResponse(Response& res) const {
   std::stringstream packet(res.getBody());
   std::string line;
   Headers& headers = res.getHeaders();
-  res.setBody("");
   res.status(200);
+  Logger::debug
+    << "cgi body: "
+    << Logger::param(packet.str()) << std::endl;
   while (std::getline(packet, line)) {
+    std::cout << "line: " << line << std::endl;
     if (line.empty())
       break;
     size_t pos = line.find(": ");
@@ -249,9 +254,10 @@ void CGI::handleResponse(Response& res) const {
     headers.set(key, value);
   }
   if (res.getStatus() / 100 == 2) {
-    std::stringstream nPacket;
-    nPacket << packet.rdbuf();
-    res.setBody(nPacket.str());
+    ByteStream& body = res.getRawBody();
+    const int64_t bodySize = res.getRawBody().size() - packet.tellg();
+    std::cout << "bodySize: " << bodySize << std::endl;
+    body.ignore(packet.tellg());
   }
   res.send();
 }

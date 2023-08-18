@@ -46,14 +46,6 @@ void CGI::Interpreter::init() {
 
 }
 
-// TODO:
-//  - tell ServerManager of our newly created process
-//  - add process stdin to fileManager (and write to its writeBuffer the body)
-//  - add to websocket pendingCGI Processes
-//  - interpret the response from the process pipe
-//  - send the response to the client
-
-// start the proccess execPath with fork & execve
 bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Response& res, const CGI* cgi) const {
   const std::string& execPath = this->getPath();
   if (access(execPath.c_str(), F_OK | X_OK) == -1) {
@@ -86,7 +78,8 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
   Logger::debug
     << "Spawning cgi process " << Logger::param(execPath)
     << " for script " << Logger::param(Utils::basename(filePath))
-    << " with args: " << Logger::param(Utils::strJoin(baseArgs)) << std::endl;
+    << " with args: " << Logger::param(Utils::strJoin(baseArgs)) << std::endl
+    << " and env: " << Logger::param(Utils::strJoin(env, "\n")) << std::endl;
   pid_t pid = fork();
   if (pid == -1) {
     Logger::error
@@ -103,7 +96,12 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
     serverManager->trackCGIResponse(pid, std, res);
   }
   else {
-    std::string scriptDirName = Utils::dirname(Utils::resolvePath(2, Utils::getCurrentWorkingDirectory().c_str(), filePath.c_str()));
+    std::string scriptDirName = Utils::dirname(
+      Utils::resolvePath(2,
+        Utils::getCurrentWorkingDirectory().c_str(),
+        filePath.c_str()
+      )
+    );
     chdir(scriptDirName.c_str());
     std::vector<char*> envp(env.size() + 1);
     for (size_t i = 0; i < env.size(); i++)
@@ -120,6 +118,8 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
     close(stdoutput[0]);
     close(stdoutput[1]);
     execve(execPath.c_str(), args.data(), envp.data());
+    close(dups[0]);
+    close(dups[1]);
     std::perror("execve");
     std::exit(1);
   }

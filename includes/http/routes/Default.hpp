@@ -53,8 +53,6 @@ namespace HTTP {
           return true;
         }
       }
-      // TODO: cgi checks
-      // redirect checks
       inline const std::string& getRedirectUri() const {
         return this->getSettings()["redirect"]["uri"].getValue();
       }

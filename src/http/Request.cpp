@@ -8,7 +8,7 @@ Request::Request(
   Socket::Connection* client,
   Methods::Method method,
   const std::string& path,
-  const std::string& body,
+  const ByteStream& body,
   const std::string& protocol,
   const Headers& headers,
   const std::map<std::string, std::string>& params,

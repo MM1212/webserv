@@ -11,8 +11,8 @@ namespace Socket {
   private:
     File& handle;
     int serverSock;
-    std::stringstream readBuffer;
-    std::string writeBuffer;
+    ByteStream readBuffer;
+    ByteStream writeBuffer;
 
     std::string address;
     int port;
@@ -35,8 +35,8 @@ namespace Socket {
     int getServerSock() const;
     int getPort() const;
     std::string getIpAddress() const;
-    std::stringstream& getReadBuffer();
-    std::string& getWriteBuffer();
+    ByteStream& getReadBuffer();
+    ByteStream& getWriteBuffer();
     int getTimeout() const;
     uint64_t getHeartbeat() const;
     bool isAlive() const;
@@ -44,9 +44,6 @@ namespace Socket {
     bool isWritable() const;
     bool hasTimedOut() const;
     void ping();
-
-    void send(const std::string& message);
-    void read();
 
     void disconnect();
 

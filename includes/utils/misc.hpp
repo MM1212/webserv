@@ -27,6 +27,11 @@ namespace Utils
   }
 
   template <typename T, typename K>
+  struct to_return_type {
+    typedef T type;
+  };
+
+  template <typename T, typename K>
   T to(const K& value) {
     T result;
     std::stringstream ss;
@@ -37,21 +42,6 @@ namespace Utils
 
   std::string getJSONDate(time_t basetime = -1);
   void showStackTrace();
-
-  template <typename T>
-  bool debugQuit(T* inst, void (T::* func)()) {
-    static bool disabledSyncIO = false;
-    if (!disabledSyncIO) {
-      fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
-      disabledSyncIO = true;
-    }
-    if (disabledSyncIO && std::cin.peek() == 'q')
-    {
-      (inst->*func)();
-      return true;
-    }
-    return false;
-  }
 
   bool isWhitespace(const std::string& str);
   bool isInteger(const std::string& str, bool unsignedOnly = false);
@@ -83,7 +73,7 @@ namespace Utils
 
   template <typename T>
   uint64_t hash(const T& value) {
-    std::string str = to<std::string>(value);
+    std::string str = toString(value);
     const char* ptr = str.c_str();
     // joaat hash
     uint64_t hash = 0;
@@ -102,8 +92,6 @@ namespace Utils
 
   std::string httpETag(const std::string& path, const size_t lastModified, const size_t size);
 
-  bool isPathValid(const std::string& path);
-
   std::string expandPath(const std::string& path);
 
   template <typename T>
@@ -117,4 +105,7 @@ namespace Utils
     }
     return ss.str();
   }
+
+  std::string encodeURIComponent(const std::string& str);
+  std::string decodeURIComponent(const std::string& str);
 }

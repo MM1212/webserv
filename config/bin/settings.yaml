@@ -132,6 +132,10 @@ http:
   static:
     default_index: index.html
     directory_builder_template: config/bin/directory_listing_template.html
+    # how many chunks to divide the file into when sending with Transfer-Encoding: chunked
+    file_chunks: 10
+    # if the file size is not known, how many bytes to read at a time
+    file_chunk_size: 1024
   cgi:
     # in milliseconds
     timeout: 10000

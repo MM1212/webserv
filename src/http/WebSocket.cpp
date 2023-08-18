@@ -47,9 +47,8 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     return;
   }
   PendingRequest& pendingRequest = this->pendingRequests.at(sock);
-  std::stringstream packet;
-  packet << sock.getReadBuffer().rdbuf();
-  sock.getReadBuffer().str("");
+  ByteStream packet(sock.getReadBuffer());
+  sock.getReadBuffer().clear();
   pendingRequest.handlePacket(packet);
   bool skip = false;
   while (skip || pendingRequest.peek() != EOF) {
@@ -254,7 +253,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
       //   << "chunk size: " << Logger::param(pendingRequest.chunkData.size()) << std::endl
       //   << "storage size: " << Logger::param(pendingRequest.storage.size()) << std::endl;
       if (pendingRequest.chunkData.size() == contentLength) {
-        pendingRequest.body.append(reinterpret_cast<char*>(pendingRequest.chunkData.data()), pendingRequest.chunkData.size());
+        pendingRequest.setBody(pendingRequest.chunkData);
         pendingRequest.reset(true);
         pendingRequest.state = ReqStates::Done;
       }
@@ -291,7 +290,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
       //   << " and remaining size " << Logger::param(pendingRequest.chunkSize)
       //   << std::endl;
       if (pendingRequest.chunkData.size() == pendingRequest.chunkSize) {
-        pendingRequest.body.append(reinterpret_cast<char*>(pendingRequest.chunkData.data()), pendingRequest.chunkData.size());
+        pendingRequest.setBody(pendingRequest.chunkData);
         pendingRequest.chunkData.clear();
         pendingRequest.nextWithCRLF(ReqStates::BodyChunked);
       }
@@ -313,7 +312,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
   //   << Logger::param(pendingRequest) << std::endl;
   if (pendingRequest.lastCheck()) {
     // handle multiform-data
-    pendingRequest.handleMultiformData();
+    // pendingRequest.handleMultiformData();
     const Request req(pendingRequest);
     Response res(req, NULL);
     Logger::info
@@ -364,9 +363,8 @@ void WebSocket::onProcessRead(Socket::Process& process) {
     return;
   PendingResponse& pending = this->pendingCGIResponses.at(process.getId());
   Response& res = pending.response;
-  const std::string& body = res.getBody();
-  res.setBody(body + process.getReadBuffer().str());
-  process.getReadBuffer().str("");
+  const_cast<ByteStream&>(res.getRawBody()).put(process.getReadBuffer());
+  process.getReadBuffer().clear();
 }
 
 void WebSocket::onProcessExit(const Socket::Process& process, bool force /* = false */) {

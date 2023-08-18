@@ -20,12 +20,14 @@ bool Settings::isValid() const {
   try {
     if (!this->config.isValid())
       throw std::runtime_error("config file isn't valid");
+    if (!this->config.is<YAML::Types::Map>())
+      throw std::runtime_error("config file isn't a map");
+    // * YAML *
     if (!this->config["yaml"].is<YAML::Types::Map>())
       throw std::runtime_error("yaml isn't a map");
     if (!this->config["yaml"]["run_tests"].is<bool>())
       throw std::runtime_error("run_tests isn't a boolean");
-    if (!this->config.is<YAML::Types::Map>())
-      throw std::runtime_error("config file isn't a map");
+    // * Socket *
     if (!this->config["socket"].is<YAML::Types::Map>())
       throw std::runtime_error("socket isn't a map");
     if (!this->config["socket"]["max_connections"].is<int>())

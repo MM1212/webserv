@@ -41,7 +41,7 @@ namespace HTTP {
     }
 
     template <>
-    const std::string& get(const std::string& key) const {
+    std::string get(const std::string& key) const {
       std::string formatted = this->FormatKey(key);
       if (!this->has(formatted))
         throw std::runtime_error("Key " + key + " not found");

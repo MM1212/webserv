@@ -51,11 +51,11 @@ std::string Connection::getIpAddress() const {
   return this->address + ":" + Utils::toString(this->port);
 }
 
-std::stringstream& Connection::getReadBuffer() {
+ByteStream& Connection::getReadBuffer() {
   return this->readBuffer;
 }
 
-std::string& Connection::getWriteBuffer() {
+ByteStream& Connection::getWriteBuffer() {
   return this->writeBuffer;
 }
 
@@ -85,21 +85,6 @@ bool Connection::hasTimedOut() const {
 
 void Connection::ping() {
   this->heartbeat = Utils::getCurrentTime();
-}
-
-void Connection::send(const std::string& message) {
-  if (!this->isWritable() || !this->isAlive() || this->hasTimedOut()) return;
-  if (write(this->handle, message.c_str(), message.size()) >= 0)
-    this->ping();
-}
-
-void Connection::read() {
-  if (!this->isReadable() || !this->isAlive() || this->hasTimedOut()) return;
-  char buffer[1025];
-  int bytesRead = ::read(this->handle, buffer, 1024);
-  buffer[bytesRead] = '\0';
-  this->readBuffer << buffer;
-  this->ping();
 }
 
 void Connection::disconnect() {

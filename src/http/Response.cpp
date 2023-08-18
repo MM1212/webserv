@@ -68,8 +68,19 @@ Response& Response::setHeaders(const Headers& headers) {
 }
 
 Response& Response::setBody(const std::string& body) {
+  this->body.clear();
+  this->body.put(body);
+  Logger::debug
+    << "setting body to: <> of size: " << Logger::param(this->body.size())
+    << "with str size: " << Logger::param(body.size())
+    << std::endl;
+  this->headers.set("Content-Length", this->body.size());
+  return *this;
+}
+
+Response& Response::setBody(const ByteStream& body) {
   this->body = body;
-  this->headers.set("Content-Length", this->body.length());
+  this->headers.set("Content-Length", this->body.size());
   return *this;
 }
 
@@ -94,9 +105,18 @@ Headers& Response::getHeaders() const {
   return const_cast<Response*>(this)->headers;
 }
 
-const std::string& Response::getBody() const {
+const std::string Response::getBody() const {
+  return this->body.toString();
+}
+
+const ByteStream& Response::getRawBody() const {
   return this->body;
 }
+
+ByteStream& Response::getRawBody() {
+  return this->body;
+}
+
 
 uint32_t Response::getStatus() const {
   return statusCode;
@@ -107,7 +127,7 @@ const std::string& Response::getStatusMessage() const {
 }
 
 Response::operator std::string() {
-  return this->toString();
+  return this->toString<std::string>();
 }
 
 std::string Response::getHeader() const {
@@ -121,22 +141,14 @@ std::string Response::getHeader() const {
   return ss.str();
 }
 
-std::string Response::toString() const {
-  std::stringstream ss;
-  ss << this->getHeader()
-    << "\r\n";
-  if (this->body.length() > 0 && this->req->getMethod() != Methods::HEAD)
-    ss << this->body;
-  return ss.str();
-}
-
 void Response::sendHeader() {
   const std::string header = this->getHeader() + "\r\n";
   Socket::Connection& client = const_cast<Request*>(this->req)->getClient();
   Logger::info
     << "Sending headers to: " << Logger::param(client) << std::endl
     << Logger::param(header) << std::endl;
-  client.getWriteBuffer().append(header);
+  ByteStream& buffer = client.getWriteBuffer();
+  buffer.put(header);
   this->afterSend();
 }
 
@@ -147,18 +159,19 @@ void Response::send() {
     return;
   }
   this->_preSend();
-  const std::string resp = this->toString();
+  const ByteStream resp = this->toString<ByteStream>();
   Socket::Connection& client = const_cast<Request*>(this->req)->getClient();
   Logger::info
     << "Sending response to: " << Logger::param(client) << std::endl
     << Logger::param(*this) << std::endl;
-  client.getWriteBuffer().append(resp);
+  ByteStream& buffer = client.getWriteBuffer();
+  buffer.put(resp);
   this->afterSend();
 }
 
 void Response::redirect(const std::string& path, bool permanent) {
   this->status(permanent ? 301 : 307);
-  this->headers.set("Location", path);
+  this->headers.set("Location", Utils::encodeURIComponent(path));
   this->send();
 }
 
@@ -175,14 +188,15 @@ void Response::_sendChunk(const char* buffer, std::istream& stream, bool last) {
   Logger::debug
     << "Sending chunk of size: " << Logger::param(chunkSize) << std::endl;
   // << Logger::param(chunk.str()) << std::endl;
-  client.getWriteBuffer().append(chunk.str());
+  ByteStream& buff = client.getWriteBuffer();
+  buff.put(chunk.str());
   if (last)
     this->afterSend();
 }
 
 void Response::_preSend() {
   if (!this->headers.has("Content-Length"))
-    this->headers.set("Content-Length", this->body.length());
+    this->headers.set("Content-Length", this->body.size());
 }
 
 void Response::_preStream(const std::string& filePath) {
@@ -192,11 +206,16 @@ void Response::_preStream(const std::string& filePath) {
   this->headers.set("Content-Type", settings->httpMimeType(ext));
 }
 
-void Response::stream(std::istream& buff) {
+void Response::stream(std::istream& buff, size_t fileSize /* = 0 */) {
   if (this->req->getMethod() == Methods::HEAD)
     return;
+  static const int nbrOfChunks = settings->get<int>("http.static.file_chunks");
 
-  const int n = 1024;
+  int n;
+  if (fileSize == 0)
+    n = settings->get<int>("http.static.file_chunk_size");
+  else
+    n = fileSize / nbrOfChunks;
   char buffer[n];
   while (buff.read(buffer, n))
     this->_sendChunk(buffer, buff);
@@ -204,7 +223,11 @@ void Response::stream(std::istream& buff) {
   this->_sendChunk(buffer, buff, true);
 }
 
-void Response::sendFile(const std::string& filePath, bool stream /* = true */, struct stat* fileStat /* = NULL */) {
+void Response::sendFile(
+  const std::string& filePath,
+  bool stream /* = true */,
+  struct stat* fileStat /* = NULL */
+) {
   try {
     std::ifstream file(filePath.c_str());
     if (!file.is_open() || !file.good())
@@ -213,7 +236,7 @@ void Response::sendFile(const std::string& filePath, bool stream /* = true */, s
     if (stream) {
       this->_preStream(filePath);
       this->sendHeader();
-      this->stream(reinterpret_cast<std::istream&>(file));
+      this->stream(reinterpret_cast<std::istream&>(file), fileStat ? fileStat->st_size : 0);
     }
     else {
       std::stringstream ss;

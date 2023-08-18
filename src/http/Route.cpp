@@ -45,20 +45,20 @@ bool Route::hasErrorPage(int code) const {
       return false;
     return defaultRoute->hasErrorPage(code);
   }
-  return settings["error_pages"].has(Utils::to<std::string>(code));
+  return settings["error_pages"].has(Utils::toString(code));
 }
 
 const std::string& Route::getErrorPage(int code) const {
   const YAML::Node& settings = this->getSettings();
   if (!this->hasErrorPage(code))
-    throw std::runtime_error("No error page for code " + Utils::to<std::string>(code));
+    throw std::runtime_error("No error page for code " + Utils::toString(code));
   if (!settings.has("error_pages")) {
     const Route* defaultRoute = this->server->getDefaultRoute();
     if (defaultRoute == this || !defaultRoute)
-      throw std::runtime_error("No error page for code " + Utils::to<std::string>(code));
+      throw std::runtime_error("No error page for code " + Utils::toString(code));
     return defaultRoute->getErrorPage(code);
   }
-  return settings["error_pages"][Utils::to<std::string>(code)].getValue();
+  return settings["error_pages"][Utils::toString(code)].getValue();
 }
 
 int Route::getMaxBodySize() const {
@@ -95,16 +95,12 @@ void Route::handle(const Request& req, Response& res) const {
     const Routing::Module* rModule = this->modules[i];
     if (req.isExpecting() && !rModule->supportsExpect())
       continue;
-    Logger::debug
-      << "is method " << Methods::ToString(req.getMethod())
-      << " allowed for route " << Logger::param(Routing::Types::ToString(rModule->getType()))
-      << "?" << std::boolalpha << rModule->isMethodAllowed(req.getMethod()) << std::endl;
     if (!rModule->isMethodAllowed(req.getMethod()))
       continue;
     if (rModule->handle(req, res))
       return;
   }
-  res.status(501).send();
+  res.status(404).send();
 }
 
 HTTP::Routing::Module* Route::getModule(const Routing::Types::Type type) const {

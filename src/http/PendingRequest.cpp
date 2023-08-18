@@ -31,7 +31,7 @@ PendingRequest::PendingRequest(
   Socket::Parallel* server,
   Socket::Connection* client
 ) :
-  Request(server, client, Methods::UNK, "", "", "", Headers(), std::map<std::string, std::string>(), std::vector<File>()),
+  Request(server, client, Methods::UNK, "", ByteStream(), "", Headers(), std::map<std::string, std::string>(), std::vector<File>()),
   crlfNextState(States::Method),
   state(States::Method),
   buildingHeaderKey(""),
@@ -101,7 +101,7 @@ void PendingRequest::setMethod(const Methods::Method method) {
 }
 
 void PendingRequest::setPath(const std::string& path) {
-  this->path = path;
+  this->path = Utils::resolvePath(1, Utils::decodeURIComponent(path).c_str());
 }
 
 PendingRequest::Protocol PendingRequest::getProtocol() const {
@@ -149,11 +149,20 @@ void PendingRequest::setVersionMinor(const int versionMinor) {
 }
 
 void PendingRequest::setBody(const std::string& body) {
+  this->body.clear();
+  this->body.put(body);
+}
+
+void PendingRequest::setBody(const ByteStream& body) {
   this->body = body;
 }
 
 void PendingRequest::addToBody(const std::string& body) {
-  this->body.append(body);
+  this->body.put(body);
+}
+
+void PendingRequest::addToBody(const ByteStream& body) {
+  this->body.put(body);
 }
 
 void PendingRequest::setHeaders(const Headers& headers) {
@@ -180,7 +189,7 @@ std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {
 
 void PendingRequest::handleMultiformData() {
   const Headers& headers = this->getHeaders();
-  if (!headers.has("Content-Type") || headers.get<std::string>("Content-Type") != "multipart/form-data")
+  if (!headers.has("Content-Type") || headers.get<std::string>("Content-Type").compare("multipart/form-data") != 0)
     return;
   std::string boundary = headers.get<std::string>("Content-Type");
   boundary = boundary.substr(boundary.find("boundary=") + 9);
@@ -231,7 +240,7 @@ bool PendingRequest::lastCheck() {
     return true;
   case States::Body:
     if (this->chunkData.size() == this->getContentLength()) {
-      this->body.append(reinterpret_cast<const char*>(this->chunkData.data()), this->chunkData.size());
+      this->setBody(this->chunkData);
       this->reset(true);
       return true;
     }

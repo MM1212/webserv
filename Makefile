@@ -3,7 +3,7 @@ MAKE_MT = --jobs=$(shell nproc) --output-sync=target
 PROJECT_NAME = Webserv
 NAME = webserv
 
-SRC_FILES = Settings.cpp utils/Logger.cpp utils/misc.cpp \
+SRC_FILES = Settings.cpp utils/misc.cpp utils/Logger.cpp \
 						Yaml/Node.cpp Yaml/Parser.cpp Yaml/tests.cpp \
 						socket/Connection.cpp socket/Parallel.cpp socket/Process.cpp \
 						http/Methods.cpp http/Request.cpp http/PendingRequest.cpp \
