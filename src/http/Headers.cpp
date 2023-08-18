@@ -46,7 +46,7 @@ void Headers::remove(const std::string& key) {
   if (!this->has(formatted))
     return;
   this->headers.erase(formatted);
-  std::vector<std::string>::iterator it = std::find(this->keys.begin(), this->keys.end(), key);
+  std::vector<std::string>::iterator it = std::find(this->keys.begin(), this->keys.end(), formatted);
   if (it != this->keys.end())
     this->keys.erase(it);
 }

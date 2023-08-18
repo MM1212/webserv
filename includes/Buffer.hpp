@@ -26,18 +26,21 @@ public:
   inline void reserve(uint64_t size) { this->buffer.reserve(size); }
   inline void clear() { this->buffer.clear(); }
   inline void put(const T& value) { this->buffer.push_back(value); }
-  void put(const std::vector<T>& value) {
-    for (uint64_t i = 0; i < value.size(); ++i)
+  void put(const std::vector<T>& value, uint64_t amount) {
+    for (uint64_t i = 0; i < amount; ++i)
       this->buffer.push_back(value[i]);
   }
-  void put(const Buffer<T>& value) {
-    for (uint64_t i = 0; i < value.size(); ++i)
+  void put(const Buffer<T>& value, uint64_t amount) {
+    for (uint64_t i = 0; i < amount; ++i)
       this->buffer.push_back(value[i]);
   }
-  void put(const std::string& value) {
-    for (uint64_t i = 0; i < value.size(); ++i)
+  void put(const std::string& value, uint64_t amount) {
+    for (uint64_t i = 0; i < amount; ++i)
       this->buffer.push_back(value[i]);
   }
+  inline void put(const std::vector<T>& value) { this->put(value, value.size()); }
+  inline void put(const Buffer<T>& value) { this->put(value, value.size()); }
+  inline void put(const std::string& value) { this->put(value, value.size()); }
   inline T& operator[](uint64_t index) { return this->buffer[index]; }
   inline const T& operator[](uint64_t index) const { return this->buffer[index]; }
   inline T& at(uint64_t index) { return this->buffer.at(index); }
@@ -118,7 +121,7 @@ public:
   template<>
   std::string take() {
     std::string value;
-    value.reserve(this->size() + 1);
+    value.resize(this->size() + 1);
     for (uint64_t i = 0; i < this->size(); ++i)
       value[i] = this->get<char>();
     value[this->size()] = '\0';

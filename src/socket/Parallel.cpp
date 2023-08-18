@@ -302,6 +302,7 @@ void Parallel::_onClientRead(Connection& client) {
     this->disconnect(client);
     return;
   }
+  buffer.resize(read);
   client.getReadBuffer().put(buffer);
   Logger::debug
     << "got " << Logger::param(read) << " bytes from "
@@ -402,6 +403,7 @@ void Parallel::_onProcessRead(Process& process) {
     this->kill(process, true);
     return;
   }
+  buffer.resize(bytes);
   process.getReadBuffer().put(buffer);
   Logger::debug
     << "got " << Logger::param(bytes) << " bytes from "

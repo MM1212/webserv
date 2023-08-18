@@ -178,18 +178,20 @@ void Response::redirect(const std::string& path, bool permanent) {
 void Response::_sendChunk(const char* buffer, std::istream& stream, bool last) {
   Socket::Connection& client = const_cast<Request*>(this->req)->getClient();
 
-  std::stringstream chunk;
+  ByteStream chunk;
+  std::stringstream chunkBytes;
   const size_t chunkSize = stream.gcount();
-  chunk << std::hex << chunkSize << "\r\n";
-  chunk.write(buffer, chunkSize);
-  chunk << "\r\n";
+  chunkBytes << std::hex << chunkSize << "\r\n";
+  chunk.put(chunkBytes.str());
+  chunk.put(buffer, chunkSize);
+  chunk.put("\r\n");
   if (last)
-    chunk << "0\r\n\r\n";
+    chunk.put("0\r\n\r\n");
   Logger::debug
     << "Sending chunk of size: " << Logger::param(chunkSize) << std::endl;
   // << Logger::param(chunk.str()) << std::endl;
   ByteStream& buff = client.getWriteBuffer();
-  buff.put(chunk.str());
+  buff.put(chunk);
   if (last)
     this->afterSend();
 }
@@ -259,16 +261,14 @@ void Response::afterSend() {
 }
 
 void Response::setupStaticFileHeaders(const std::string& filePath, struct stat* fileStat /* = NULL */) {
-  bool noFileStat = fileStat == nullptr;
+  struct stat tmp;
   if (fileStat == nullptr) {
-    fileStat = new struct stat;
+    fileStat = &tmp;
     if (stat(filePath.c_str(), fileStat) == -1)
       throw std::runtime_error("Could not stat file " + filePath);
   }
   this->headers.set("Last-Modified", Utils::getJSONDate(fileStat->st_mtime));
   this->headers.set("ETag", Utils::httpETag(filePath, fileStat->st_mtime, fileStat->st_size));
-  if (noFileStat)
-    delete fileStat;
 }
 
 std::ostream& HTTP::operator<<(std::ostream& os, const Response& res) {

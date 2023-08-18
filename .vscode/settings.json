@@ -1,5 +1,4 @@
 {
-  "C_Cpp.formatting": "vcFormat",
   "files.associations": {
     ".env.production": "dotenv",
     "array": "cpp",
