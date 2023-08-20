@@ -181,14 +181,14 @@ void Response::_sendChunk(const char* buffer, std::istream& stream, bool last) {
   ByteStream chunk;
   std::stringstream chunkBytes;
   const size_t chunkSize = stream.gcount();
+  Logger::debug
+    << "Sending chunk of size: " << Logger::param(chunkSize) << std::endl;
   chunkBytes << std::hex << chunkSize << "\r\n";
   chunk.put(chunkBytes.str());
   chunk.put(buffer, chunkSize);
   chunk.put("\r\n");
   if (last)
     chunk.put("0\r\n\r\n");
-  Logger::debug
-    << "Sending chunk of size: " << Logger::param(chunkSize) << std::endl;
   // << Logger::param(chunk.str()) << std::endl;
   ByteStream& buff = client.getWriteBuffer();
   buff.put(chunk);
@@ -218,6 +218,8 @@ void Response::stream(std::istream& buff, size_t fileSize /* = 0 */) {
     n = settings->get<int>("http.static.file_chunk_size");
   else
     n = fileSize / nbrOfChunks;
+  Logger::debug
+    << "Streaming file with chunk size: " << Logger::param(n) << std::endl;
   char buffer[n];
   while (buff.read(buffer, n))
     this->_sendChunk(buffer, buff);

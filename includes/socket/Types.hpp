@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <cstring>
 
 namespace Socket
 {
@@ -70,6 +71,18 @@ namespace Socket
     virtual ~Host() {}
     inline operator std::string() const {
       return this->address + ":" + Utils::toString(this->port);
+    }
+    bool resolves() const {
+      struct addrinfo hints, * res;
+      std::memset(&hints, 0, sizeof hints);
+      hints.ai_family = AF_INET;
+      hints.ai_socktype = SOCK_STREAM;
+      hints.ai_flags = AI_PASSIVE;
+      int status = getaddrinfo(this->address.c_str(), NULL, &hints, &res);
+      if (status != 0)
+        return false;
+      freeaddrinfo(res);
+      return true;
     }
   };
 }

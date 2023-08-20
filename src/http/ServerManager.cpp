@@ -1,9 +1,12 @@
 #include "http/ServerManager.hpp"
 #include "http/ServerConfiguration.hpp"
+#include <csignal>
 
 using namespace HTTP;
 
-ServerManager::ServerManager() : WebSocket() {}
+ServerManager::ServerManager() : WebSocket() {
+  std::signal(SIGINT, ServerManager::onSIGINT);
+}
 ServerManager::~ServerManager() {
   for (size_t i = 0; i < this->servers.size(); i++) {
     delete this->servers[i];
@@ -95,7 +98,19 @@ void ServerManager::bindServers() {
     << " addresses.." << std::endl;
   for (std::vector<Socket::ListenAddress>::iterator it = listenAddresses.begin(); it != listenAddresses.end(); it++) {
     const Socket::ListenAddress& address = *it;
-    this->bind(Socket::Domain::INET, Socket::Type::TCP, Socket::Protocol::IP, address.address, address.port, address.maxConnections);
+    this->bind(Socket::Domain::INET, Socket::Type::TCP, Socket::Protocol::IP, address, address.maxConnections);
     Logger::info << "Listening on " << Logger::param(address.address) << ":" << Logger::param(address.port) << std::endl;
   }
+}
+
+void ServerManager::onSIGINT(int signum) {
+  static bool pressed = false;
+  (void)signum;
+  if (!pressed) {
+    Logger::warning << "CTRL+C pressed, press again to exit" << std::endl;
+    pressed = true;
+    return;
+  }
+  Logger::info << "Shutting down.." << std::endl;
+  Instance::Get<ServerManager>()->stop();
 }

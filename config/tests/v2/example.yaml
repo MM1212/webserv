@@ -15,6 +15,7 @@ servers:
             settings:
               methods: [POST]
               root: 'config/bin/cgi/'
+              path_info: 'config/bin/cgi/'
               interpreters:
                 - name: python
                   path: /usr/bin/python3

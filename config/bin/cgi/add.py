@@ -14,6 +14,11 @@ import cgitb; cgitb.enable()
 # get the form data
 form = cgi.FieldStorage()
 
+PATH_INFO = os.environ.get('PATH_INFO', './')
+
+if not os.path.exists(PATH_INFO):
+  os.makedirs(PATH_INFO)
+
 # Generator to buffer file chunks
 def fbuffer(f, chunk_size=10000):
     while True:
@@ -29,13 +34,14 @@ if fileitem.filename:
 
     # strip leading path from file name to avoid directory traversal attacks
     fn = os.path.basename(fileitem.filename)
-    f = open('uploads/' + fn, 'wb', 10000)
+    path = os.path.realpath(os.path.join(PATH_INFO, fn))
+    f = open(path, 'wb', 10000)
 
     # Read the file in chunks
     for chunk in fbuffer(fileitem.file):
       f.write(chunk)
     f.close()
-    message = 'The file "' + fn + '" was uploaded successfully\n<img src="uploads/%s" />' % (fn,)
+    message = 'The file "' + fn + '" was uploaded successfully\n<img src="%s" />' % (path,)
 
 else:
     message = 'No file was uploaded'

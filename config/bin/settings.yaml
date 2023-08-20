@@ -1,14 +1,14 @@
 yaml:
   run_tests: false
 socket:
-  max_connections: 10
+  max_connections: 100
   # in milliseconds
   keep_alive_timeout: 60000
   #! DEPRECATED, AT -1 BREAKS CGI TIMEOUT  
   # in milliseconds
   poll_timeout: 1000
   # in bytes
-  read_buffer_size: 1024
+  read_buffer_size: 8192
 http:
   # in bytes (3MB)
   max_body_size: 3145728

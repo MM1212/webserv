@@ -83,30 +83,13 @@ namespace HTTP {
       return this->getHeaders().get<size_t>("Content-Length");
     }
 
-    void handleMultiformData();
-
     inline void handlePacket(ByteStream& packet) {
       this->cPacket = &packet;
     }
     inline bool isParsingBody() const {
       return this->state == States::Body || this->state == States::BodyChunkData;
     }
-    inline bool extract() {
-      if (this->peek() == EOF) return false;
-      if (this->isParsingBody()) {
-
-        uint64_t bytesToRead = this->getContentLength() - this->chunkData.size();
-        if (bytesToRead > this->cPacket->size()) bytesToRead = this->cPacket->size();
-        ByteStream tmp;
-        this->cPacket->take(tmp, bytesToRead);
-        std::cout << "tmp has " << tmp.size() << " bytes" << std::endl;
-        this->chunkData.put(tmp);
-        std::cout << "Extracting " << bytesToRead << " bytes from packet. ChunkData now has: " << this->chunkData.size() << std::endl;
-      }
-      else
-        this->storage += static_cast<char>(this->get());
-      return true;
-    }
+    bool extract();
     inline bool skip(uint32_t bytes = 1) {
       if (this->peek() == EOF) return false;
       this->ignore(bytes);

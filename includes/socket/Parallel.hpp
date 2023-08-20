@@ -59,8 +59,7 @@ namespace Socket {
       const Domain::Handle domain,
       const Type::Handle type,
       const Protocol::Handle protocol,
-      const std::string& address,
-      const int port,
+      const Host& host,
       const int backlog
     );
 
@@ -72,6 +71,9 @@ namespace Socket {
     void kill(const Process& process, bool force = false);
 
     void run();
+    inline void stop() {
+      this->fileManager.stop();
+    }
 
     void setClientToRead(Connection& client);
     void setClientToWrite(Connection& client);

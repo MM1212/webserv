@@ -187,51 +187,18 @@ std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {
   return os;
 }
 
-void PendingRequest::handleMultiformData() {
-  const Headers& headers = this->getHeaders();
-  if (!headers.has("Content-Type") || headers.get<std::string>("Content-Type").compare("multipart/form-data") != 0)
-    return;
-  std::string boundary = headers.get<std::string>("Content-Type");
-  boundary = boundary.substr(boundary.find("boundary=") + 9);
-  std::string body = this->getRawBody();
-  std::vector<std::string> parts = Utils::split(body, "--" + boundary);
-  for (std::vector<std::string>::iterator it = parts.begin(); it != parts.end(); it++) {
-    std::string part = *it;
-    if (part.empty()) continue;
-    std::string::size_type pos = part.find("\r\n\r\n");
-    if (pos == std::string::npos) continue;
-    std::string headers = part.substr(0, pos);
-    std::string data = part.substr(pos + 4);
-    std::map<std::string, std::string> headersMap;
-    std::vector<std::string> headersLines = Utils::split(headers, "\r\n");
-    for (std::vector<std::string>::iterator it = headersLines.begin(); it != headersLines.end(); it++) {
-      std::string header = *it;
-      std::string::size_type pos = header.find(": ");
-      if (pos == std::string::npos) continue;
-      std::string key = header.substr(0, pos);
-      std::string value = header.substr(pos + 2);
-      headersMap[key] = value;
-    }
-    if (headersMap.find("Content-Disposition") == headersMap.end()) continue;
-    std::string disposition = headersMap["Content-Disposition"];
-    std::string::size_type cpos = disposition.find("name=\"");
-    if (cpos == std::string::npos) continue;
-    std::string name = disposition.substr(cpos + 6);
-    cpos = name.find("\"");
-    if (cpos == std::string::npos) continue;
-    name = name.substr(0, cpos);
-    if (headersMap.find("filename") != headersMap.end()) {
-      std::string filename = headersMap["filename"];
-      cpos = filename.find("\"");
-      if (cpos == std::string::npos) continue;
-      filename = filename.substr(0, cpos);
-      this->files.push_back(File(name, filename, data));
-    }
-    else {
-      this->params[name] = data;
-    }
+bool PendingRequest::extract() {
+  if (this->peek() == EOF) return false;
+  if (this->isParsingBody()) {
+    uint64_t bytesToRead = this->getContentLength() - this->chunkData.size();
+    if (bytesToRead > this->cPacket->size()) bytesToRead = this->cPacket->size();
+    ByteStream tmp;
+    this->cPacket->take(tmp, bytesToRead);
+    this->chunkData.put(tmp);
   }
-
+  else
+    this->storage += static_cast<char>(this->get());
+  return true;
 }
 
 bool PendingRequest::lastCheck() {

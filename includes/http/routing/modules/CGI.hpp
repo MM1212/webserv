@@ -52,6 +52,7 @@ namespace HTTP {
       inline CGI* clone() const { return new CGI(*this); }
 
       inline const std::string& getRoot() const { return this->getSettings()["root"].getValue(); }
+      const std::string& getBasePathInfo() const; 
       inline const std::vector<Interpreter>& getInterpreters() const { return this->interpreters; }
       inline bool isExtMapped(const std::string& ext) const { return this->interpreterExtMap.count(ext) > 0; }
       bool doesFileMatch(const std::string& path) const;
@@ -66,6 +67,8 @@ namespace HTTP {
       void init();
     private:
       std::string getResolvedPath(const Request& req) const;
+      std::vector<std::string> resolvePathInfo(const Request& req) const;
+      std::string resolvePathTranslated(const Request& req, const std::string& pathInfo) const;
       std::vector<std::string> generateEnvironment(const std::string& path, const Interpreter* interpreter, const Request& req) const;
       std::vector<std::string> generateArgs(const std::string& path, const Interpreter* interpreter, const Request& req) const;
     private:

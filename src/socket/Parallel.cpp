@@ -34,35 +34,36 @@ const Socket::Server& Parallel::bind(
   const Domain::Handle domain,
   const Type::Handle type,
   const Protocol::Handle protocol,
-  const std::string& address,
-  const int port,
+  const Host& host,
   const int backlog
 ) {
-  if (this->hasServer(address, port))
-    throw std::runtime_error("Server already bound to address: " + address + ":" + Utils::toString(port));
+  if (this->hasServer(host.address, host.port))
+    throw std::runtime_error("Server already bound to address: " + static_cast<std::string>(host));
+  if (!host.resolves())
+    throw std::runtime_error("Failed to resolve host: " + static_cast<std::string>(host));
   int sock = socket(domain, type, protocol);
   if (sock < 0)
     throw std::runtime_error("Failed to create socket");
   sockaddr_in serverAddress;
   serverAddress.sin_family = domain;
-  if (address == "*")
+  if (host.address == "*")
     serverAddress.sin_addr.s_addr = INADDR_ANY;
   else
-    serverAddress.sin_addr.s_addr = inet_addr(address.c_str());
-  serverAddress.sin_port = htons(port);
+    serverAddress.sin_addr.s_addr = inet_addr(host.address.c_str());
+  serverAddress.sin_port = htons(host.port);
   // reuse socket
   int reuse = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
     throw std::runtime_error("Failed to set socket to reusable");
   if (::bind(sock, (sockaddr*)&serverAddress, sizeof(serverAddress)) < 0)
-    throw std::runtime_error("Failed to bind socket " + Utils::toString(sock) + " to address " + address + ":" + Utils::toString(port));
+    throw std::runtime_error("Failed to bind socket " + Utils::toString(sock) + " to host " + static_cast<std::string>(host));
   if (listen(sock, backlog) < 0)
     throw std::runtime_error("Failed to listen on socket");
   if (!this->fileManager.add(sock, EPOLLIN | EPOLLET | EPOLLERR))
     throw std::runtime_error("Failed to add socket to file manager");
-  Server server(sock, address, port);
+  Server server(sock, host.address, host.port);
   ;
-  this->addressesToSock.insert(std::make_pair(address + ":" + Utils::toString(port), sock));
+  this->addressesToSock.insert(std::make_pair<std::string, int>(host, sock));
   const Server& ref = this->servers.insert(std::make_pair(sock, server)).first->second;
   return ref;
 }
@@ -308,9 +309,9 @@ void Parallel::_onClientRead(Connection& client) {
     << "got " << Logger::param(read) << " bytes from "
     << Logger::param(static_cast<std::string>(client))
     << std::endl;
-    // << "---" << std::endl
-    // << Logger::param(buffer.toString()) << std::endl
-    // << "---" << std::endl;
+  // << "---" << std::endl
+  // << Logger::param(buffer.toString()) << std::endl
+  // << "---" << std::endl;
   client.ping();
   this->onClientRead(client);
 }
@@ -443,9 +444,9 @@ void Parallel::_onProcessWrite(Process& process) {
     << "wrote " << Logger::param(wrote) << " bytes from "
     << Logger::param(static_cast<pid_t>(process))
     << std::endl;
-    // << "---" << std::endl
-    // << Logger::param(buffer.toString()) << std::endl
-    // << "---" << std::endl;
+  // << "---" << std::endl
+  // << Logger::param(buffer.toString()) << std::endl
+  // << "---" << std::endl;
   buffer.ignore(wrote);
 }
 

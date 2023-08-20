@@ -1,3 +1,15 @@
+/**
+ * @file FileManager.hpp
+ * @brief This file contains the FileManager class which is used to manage file descriptors using epoll.
+ * 
+ * The FileManager class provides functionality to add, remove and get file descriptors using epoll.
+ * It also provides a set of functions to check if a file descriptor is readable, writable, closed or errored.
+ * The class also has a template parameter T which is used to specify the class that will handle the onTick event.
+ * 
+ * The FileManager class is used by the Socket class to manage file descriptors for sockets & processes pipes.
+ * 
+ * @author GitHub Copilot
+ */
 #pragma once
 
 #include <shared.hpp>
@@ -13,6 +25,7 @@
 #include <netdb.h>
 #include <errno.h>
 #include <iostream>
+#include <csignal>
 
 #include <utils/Logger.hpp>
 
@@ -119,6 +132,7 @@ namespace Socket {
         throw std::runtime_error("Failed to create epoll instance");
       }
       SYS_FNCTL(this->epollFd, F_SETFD, FD_CLOEXEC);
+      // std::signal(SIGPIPE, SIG_IGN);
     }
   public:
     bool add(int fd, int flags) {
@@ -207,10 +221,11 @@ namespace Socket {
       this->timeout = timeout;
     }
 
+    inline void stop() { this->running = false; }
     void start() {
       if (this->running) return;
       this->running = true;
-      this->add(STDIN_FILENO, EPOLLIN | EPOLLET);
+      // this->add(STDIN_FILENO, EPOLLIN | EPOLLET);
       while (this->running) {
         int n = ::epoll_wait(this->epollFd, this->events, this->maxEvents, this->timeout);
         if (n == -1) {
@@ -225,10 +240,10 @@ namespace Socket {
           File& file = const_cast<File&>(*it);
           file.setEvents(event.events);
           changed[i] = file;
-          if (file == STDIN_FILENO && std::cin.get() == EOF) {
-            this->running = false;
-            break;
-          }
+          // if (file == STDIN_FILENO && std::cin.get() == EOF) {
+          //   this->running = false;
+          //   break;
+          // }
         }
         if (this->instance && this->onTick) {
           (this->instance->*this->onTick)(changed);

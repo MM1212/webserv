@@ -38,6 +38,10 @@ public:
     for (uint64_t i = 0; i < amount; ++i)
       this->buffer.push_back(value[i]);
   }
+  void put(const char* value, uint64_t amount) {
+    for (uint64_t i = 0; i < amount; ++i)
+      this->buffer.push_back(value[i]);
+  }
   inline void put(const std::vector<T>& value) { this->put(value, value.size()); }
   inline void put(const Buffer<T>& value) { this->put(value, value.size()); }
   inline void put(const std::string& value) { this->put(value, value.size()); }

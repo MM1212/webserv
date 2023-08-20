@@ -167,7 +167,7 @@ bool Static::handleFile(const std::string& path, const Request& req, Response& r
   if (stat(path.c_str(), &st) == -1)
     return this->next(res);
   if (!this->clientHasFile(req, path, &st))
-    return (res.status(200).sendFile(path, false, &st), true);
+    return (res.status(200).sendFile(path, true, &st), true);
   res.setupStaticFileHeaders(path, &st);
   return this->next(res, 304);
 }
