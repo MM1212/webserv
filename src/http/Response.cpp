@@ -155,8 +155,11 @@ void Response::sendHeader() {
 void Response::send() {
   if (this->sent) return;
   if (this->route && this->route->hasErrorPage(this->statusCode) && this->body.empty()) {
-    this->sendFile(this->route->getErrorPage(this->statusCode), false);
-    return;
+    struct stat fileStat;
+    if (stat(this->route->getErrorPage(this->statusCode).c_str(), &fileStat) == 0) {
+      this->sendFile(this->route->getErrorPage(this->statusCode), true, &fileStat);
+      return;
+    }
   }
   this->_preSend();
   const ByteStream resp = this->toString<ByteStream>();
@@ -181,12 +184,14 @@ void Response::_sendChunk(const char* buffer, std::istream& stream, bool last) {
   ByteStream chunk;
   std::stringstream chunkBytes;
   const size_t chunkSize = stream.gcount();
-  Logger::debug
-    << "Sending chunk of size: " << Logger::param(chunkSize) << std::endl;
-  chunkBytes << std::hex << chunkSize << "\r\n";
-  chunk.put(chunkBytes.str());
-  chunk.put(buffer, chunkSize);
-  chunk.put("\r\n");
+  if (chunkSize > 0) {
+    Logger::debug
+      << "Sending chunk of size: " << Logger::param(chunkSize) << std::endl;
+    chunkBytes << std::hex << chunkSize << "\r\n";
+    chunk.put(chunkBytes.str());
+    chunk.put(buffer, chunkSize);
+    chunk.put("\r\n");
+  }
   if (last)
     chunk.put("0\r\n\r\n");
   // << Logger::param(chunk.str()) << std::endl;
@@ -211,13 +216,16 @@ void Response::_preStream(const std::string& filePath) {
 void Response::stream(std::istream& buff, size_t fileSize /* = 0 */) {
   if (this->req->getMethod() == Methods::HEAD)
     return;
-  static const int nbrOfChunks = settings->get<int>("http.static.file_chunks");
+  static const uint64_t nbrOfChunks = settings->get<uint64_t>("http.static.file_chunks");
+  static const uint64_t minChunkSize = settings->get<uint64_t>("http.static.file_chunk_size");
 
-  int n;
-  if (fileSize == 0)
-    n = settings->get<int>("http.static.file_chunk_size");
+  uint64_t n;
+  if (fileSize == 0 || fileSize < minChunkSize)
+    n = settings->get<uint64_t>("http.static.file_chunk_size");
   else
     n = fileSize / nbrOfChunks;
+  if (fileSize > 0 && n > fileSize)
+    n = fileSize;
   Logger::debug
     << "Streaming file with chunk size: " << Logger::param(n) << std::endl;
   char buffer[n];
