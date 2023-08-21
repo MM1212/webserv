@@ -54,6 +54,14 @@ bool Settings::isValid() const {
       throw std::runtime_error("static isn't a map");
     if (!this->config["http"]["static"]["directory_builder_template"].is<std::string>())
       throw std::runtime_error("directory_builder_template isn't a string");
+    if (!this->config["http"]["static"]["file_chunks"].is<int>())
+      throw std::runtime_error("file_chunks isn't an integer");
+    if (!this->config["http"]["static"]["file_chunk_size"].is<int>())
+      throw std::runtime_error("file_chunk_size isn't an integer");
+    if (!this->config["http"]["cgi"].is<YAML::Types::Map>())
+      throw std::runtime_error("cgi isn't a map");
+    if (!this->config["http"]["cgi"]["timeout"].is<int>())
+      throw std::runtime_error("cgi timeout isn't an integer");
     if (!this->config["misc"].is<YAML::Types::Map>())
       throw std::runtime_error("misc isn't a map");
     if (!this->config["misc"]["log_level"].is<int>())

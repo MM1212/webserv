@@ -1,3 +1,7 @@
+/**
+ * Buffer.hpp
+ * Generic Buffer class using std::vector.
+*/
 #pragma once
 
 #include <string>

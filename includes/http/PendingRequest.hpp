@@ -1,3 +1,14 @@
+/**
+ * PendingRequest.hpp
+ * Extends HTTP::Request to add a state machine to parse the request.
+ * It adds a bunch of setters.
+ * It parses an socket packet byte by byte*.
+ * It also has a bunch of helpers to build a request.
+ * It is used by the HTTP::WebSocket class.
+ * If anything goes wrong while parsing, it will send a HTTP::Response and close the connection.
+ * *: It parses byte by byte until it ends the headers.
+ *    Then it parses the body in chunks (min between packet size & size left) depending on the Content-Length header or ChunkSize.
+*/
 #pragma once
 
 #include <string>

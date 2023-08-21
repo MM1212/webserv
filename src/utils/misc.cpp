@@ -1,4 +1,5 @@
 #include "utils/misc.hpp"
+#include <utils/Logger.hpp>
 #include <execinfo.h>
 #include <unistd.h>
 
@@ -201,17 +202,17 @@ std::string Utils::expandPath(const std::string& path) {
 
 std::string Utils::encodeURIComponent(const std::string& str) {
   return str;
- /*  std::string result;
-  for (size_t i = 0; i < str.size(); i++) {
-    if (std::isalnum(str[i]) || str[i] == '-' || str[i] == '_' || str[i] == '.' || str[i] == '~')
-      result += str[i];
-    else {
-      std::stringstream buf;
-      buf << '%' << std::hex << std::uppercase << (int)str[i];
-      result += buf.str();
-    }
-  }
-  return result; */
+  /*  std::string result;
+   for (size_t i = 0; i < str.size(); i++) {
+     if (std::isalnum(str[i]) || str[i] == '-' || str[i] == '_' || str[i] == '.' || str[i] == '~')
+       result += str[i];
+     else {
+       std::stringstream buf;
+       buf << '%' << std::hex << std::uppercase << (int)str[i];
+       result += buf.str();
+     }
+   }
+   return result; */
 }
 
 std::string Utils::decodeURIComponent(const std::string& str) {
@@ -231,4 +232,14 @@ std::string Utils::decodeURIComponent(const std::string& str) {
       result += str[i];
   }
   return result;
+}
+
+
+void Utils::showException(const std::string& msg, const std::exception& e) {
+  std::stringstream ss;
+  ss << msg << ": " << Logger::param(e.what());
+  if (errno != 0)
+    ss << " (" << Logger::param(strerror(errno)) << ")";
+  ss << std::endl;
+  Logger::error << ss;
 }

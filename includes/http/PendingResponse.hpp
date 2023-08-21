@@ -1,3 +1,7 @@
+/**
+ * PendingResponse.hpp
+ * Small workaround to store a Request & a Response together for CGI scripts.
+*/
 #pragma once
 
 #include "Request.hpp"

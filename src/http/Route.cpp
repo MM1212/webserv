@@ -113,7 +113,7 @@ HTTP::Routing::Module* Route::getModule(const Routing::Types::Type type) const {
 
 void Route::addModule(Routing::Module* module) {
   this->modules.push_back(module);
-  Logger::debug
+  Logger::info
     << "Added module: " << Logger::param(*module)
     << " to route: " << Logger::param(*this) << std::endl;
 }

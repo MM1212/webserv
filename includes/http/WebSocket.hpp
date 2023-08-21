@@ -1,3 +1,11 @@
+/**
+ * WebSocket.hpp
+ * The HTTP::WebSocket class is used to manage multiple pending HTTP::Request & HTTP::Response.
+ * It uses the Socket::Parallel class with inheritance to manage all opened connections (sockets) & cgi processes.
+ * When a socket packet is received, the class will parse it as an HTTP Request.
+ * While building the request, if something is wrong, the class will send a HTTP::Response and close the connection.
+ * If the HTTP Request is valid, the class will call the onRequest method.
+*/
 #pragma once
 
 #include <socket/Parallel.hpp>

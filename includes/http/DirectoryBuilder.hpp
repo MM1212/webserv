@@ -1,3 +1,9 @@
+/**
+ * DirectoryBuilder.hpp
+ * Singleton class that builds a directory listing.
+ * It is used by the Static Module.
+ * Based on a template provided by the Settings.
+*/
 #pragma once
 
 #include <utils/Instance.hpp>

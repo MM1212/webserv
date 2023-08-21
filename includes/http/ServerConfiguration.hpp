@@ -1,3 +1,13 @@
+/**
+ * ServerConfiguration.hpp
+ * The HTTP::ServerConfiguration class is used to store the configuration of a server.
+ * It is used by the HTTP::ServerManager class.
+ * It stores all the routes, hosts, names that the server will use.
+ * When a HTTP Request is received, it will choose the route that matches the request.
+ * If not route is found, it will send 404 Not Found.
+ * If a route is found but the default protections are not met, it will send the appropriate error code.
+ * If the route is found and the default protections are met, it will call the handle method on the Route.
+*/
 #pragma once
 
 #include <string>
@@ -54,7 +64,7 @@ namespace HTTP {
     std::vector<Socket::Host> hosts;
     std::vector<std::string> names;
     bool defaultHost;
-    Routes::Default defaultRoute;
+    Routes::Default* defaultRoute;
     std::map<std::string, const Route*> routes;
   };
 }

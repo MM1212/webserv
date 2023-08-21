@@ -1,3 +1,10 @@
+/**
+ * Headers.hpp
+ * HTTP Headers class.
+ * Stores a key-value pair of HTTP headers.
+ * All keys are formatted to be trimmed & lowercased internally.
+ * All values are formatted to be trimmed.
+*/
 #pragma once
 
 #include <string>

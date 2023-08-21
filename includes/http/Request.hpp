@@ -1,3 +1,11 @@
+/**
+ * Request.hpp
+ * Request class for HTTP.
+ * It stores an HTTP Request.
+ * Has a bunch of helper methods.
+ * Also stores the client socket.
+ * The body is stored as a ByteStream.
+*/
 #pragma once
 
 #include <string>

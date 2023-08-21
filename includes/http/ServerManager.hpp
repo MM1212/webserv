@@ -1,3 +1,12 @@
+/**
+ * ServerManager.hpp
+ * The HTTP::ServerManager class is a Singleton that manages multiple ServerConfigurations.
+ * It uses the HTTP::WebSocket class with inheritance to create & manage all pending requests.
+ * When a HTTP Request is received, the class will call the onRequest method.
+ * It will choose the best ServerConfiguration to handle the request.
+ * If no ServerConfiguration is found, it will use the default one.
+ * Upon selecting the ServerConfiguration, it will call the onRequest method.
+*/
 #pragma once
 
 #include <utils/Instance.hpp>

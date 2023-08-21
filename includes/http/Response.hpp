@@ -1,3 +1,10 @@
+/**
+ * Response.hpp
+ * Response class for HTTP.
+ * It handles an HTTP Response.
+ * Based on NodeJS's http.ServerResponse.
+ * It is used to build a response to send to the client.
+*/
 #pragma once
 
 #include <string>

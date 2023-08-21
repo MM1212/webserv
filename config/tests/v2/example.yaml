@@ -3,8 +3,6 @@ servers:
     server_names: [localhost, 127.0.0.1]
     default: true
     settings:
-      # in bytes
-      max_body_size: 2000000
     routes:
       - uri: /cgi
         settings:

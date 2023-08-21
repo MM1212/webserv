@@ -1,3 +1,9 @@
+/**
+ * Process.hpp
+ * Similar to Connection.hpp.
+ * Stores a CGI process and refs to its pipes (they live in FileManager).
+ * Also has some helper methods & timeout functionality.
+*/
 #pragma once
 
 #include <string>

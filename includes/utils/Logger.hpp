@@ -1,3 +1,9 @@
+/**
+ * Logger.hpp
+ * Logging utility using streams.
+ * If you want a parameter highlighted, use the Logger::param() method.
+ * Settings stores a log level which might disable some logs.
+*/
 #pragma once
 
 #include <string>

@@ -1,3 +1,7 @@
+/**
+ * std.hpp
+ * Add features that aren't present in cpp98.
+*/
 #pragma once
 
 #include <sstream>

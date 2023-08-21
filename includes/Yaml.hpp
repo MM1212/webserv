@@ -1,3 +1,12 @@
+/**
+ * Yaml.hpp
+ * Basic YAML Implementation.
+ * Implements Nodes & file parsing.
+ * Has support for scalars, nulls, sequences & maps.
+ * Based on the YAML 1.2 spec.
+ * Class design based on https://github.com/jbeder/yaml-cpp
+ * Has some basic unit testing to make sure none of the features are broken.
+*/
 #pragma once
 
 #include <string>

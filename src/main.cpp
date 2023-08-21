@@ -15,23 +15,29 @@ int main(int ac, char** av, char** env) {
   if (!settings->isValid())
     return 1;
   YAML::RunTests();
+  HTTP::ServerManager* serverManager = Instance::Get<HTTP::ServerManager>();
   try {
-    HTTP::ServerManager* serverManager = Instance::Get<HTTP::ServerManager>();
-    if (serverManager->loadConfig(ac > 0 ? av[0] : settings->get<std::string>("misc.default_config_file"))) {
-      serverManager->setEnv(env);
-      serverManager->bindServers();
-      serverManager->run();
-    }
+    if (!serverManager->loadConfig(ac > 0 ? av[0] : settings->get<std::string>("misc.default_config_file")))
+      return 1;
   }
   catch (const std::exception& e) {
-    Logger::error
-      << "Failed to load config file: "
-      << Logger::param(e.what())
-      << " | "
-      << Logger::param(strerror(errno))
-      << std::endl;
+    Utils::showException("Failed to load config file", e);
     return 1;
   }
-
+  serverManager->setEnv(env);
+  try {
+    serverManager->bindServers();
+  }
+  catch (const std::exception& e) {
+    Utils::showException("Failed to bind servers blocks", e);
+    return 1;
+  }
+  try {
+    serverManager->run();
+  }
+  catch (const std::exception& e) {
+    Utils::showException("Failed to run servers or an exception ocurred while executing", e);
+    return 1;
+  }
   return 0;
 }

@@ -1,3 +1,14 @@
+/**
+ * Parallel.hpp
+ * The Socket::Parallel class is used to manage multiple sockets at once.
+ * It uses the Socket::FileManager class to manage file descriptors.
+ * It also manages processes pipes.
+ * When a file descriptor is read, the onTick event is called.
+ * If the file descriptor is a client socket, the onClient methods are called.
+ * If the file descriptor is a server socket, the onNewConnection method is called.
+ * If the file descriptor is a process pipe, the onProcess methods are called.
+*/
+
 #pragma once
 
 #include "FileManager.hpp"

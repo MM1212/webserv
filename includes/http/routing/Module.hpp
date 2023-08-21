@@ -1,3 +1,8 @@
+/**
+ * Module.hpp
+ * Abstract Class for a Route Module.
+*/
+
 #pragma once
 
 #include <string>

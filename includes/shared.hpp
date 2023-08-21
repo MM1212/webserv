@@ -1,3 +1,7 @@
+/**
+ * shared.hpp
+ * Some shared imports & std definitions.
+*/
 #pragma once
 
 #include <string>

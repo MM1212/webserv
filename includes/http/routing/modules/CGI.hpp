@@ -1,3 +1,9 @@
+/**
+ * CGI.hpp
+ * CGI Module for a Route.
+ * It handles CGI scripts, interpretation, running & responses.
+*/
+
 #pragma once
 
 #include "http/routing/Module.hpp"

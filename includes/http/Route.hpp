@@ -1,3 +1,13 @@
+/**
+ * Route.hpp
+ * Stores a route configuration for a server.
+ * A route is a path that can be accessed by a client.
+ * It stores multiple modules that will handle the request as they fit.
+ * If n module doesn't handle the request (and the configuration allows), it will bounce the request to n + 1 module.
+ * If no module handles the request, it will send a 404 Not Found.
+ * If a module handles the request but the default protections are not met, it will send the appropriate error code (or bounce to the next one).
+*/
+
 #pragma once
 
 #include <string>

@@ -1,3 +1,9 @@
+/**
+ * Redirect.hpp
+ * Redirect Module for a Route.
+ * It handles temporary & permanent redirections.
+ * It also has support for partial redirections. (redirecting to a subpath of the requested path)
+*/
 #pragma once
 
 #include "http/routing/Module.hpp"

@@ -8,11 +8,13 @@
 using namespace HTTP;
 
 ServerConfiguration::ServerConfiguration(const YAML::Node& config)
-  : config(config), hosts(), names(), defaultHost(false), defaultRoute(config, this), routes() {
+  : config(config), hosts(), names(), defaultHost(false), defaultRoute(NULL), routes() {
   this->init();
 }
 
 ServerConfiguration::~ServerConfiguration() {
+  if (this->defaultRoute)
+    delete this->defaultRoute;
   for (std::map<std::string, const Route*>::iterator it = this->routes.begin(); it != this->routes.end(); ++it)
     delete it->second;
 }
@@ -100,7 +102,7 @@ const Route* ServerConfiguration::getNearestRoute(const std::string& path) const
 }
 
 const Routes::Default* ServerConfiguration::getDefaultRoute() const {
-  return &this->defaultRoute;
+  return this->defaultRoute;
 }
 
 void ServerConfiguration::handleRequest(const Request& req, Response& res) const {
@@ -133,23 +135,26 @@ void ServerConfiguration::validate() {
     throw std::runtime_error("No hosts defined");
   if (this->names.empty())
     throw std::runtime_error("No names defined");
+  if (!this->defaultRoute)
+    throw std::runtime_error("Default Route could not be created");
 }
 
 void ServerConfiguration::init() {
   Logger::debug
     << "Initializing server configuration for "
     << Logger::param(this->config.toString()) << std::endl;
+  if (!this->config.has("settings") || !this->config["settings"].is<YAML::Types::Map>())
+    const_cast<YAML::Node&>(this->config)["settings"] = YAML::Node::NewMap("settings");
   if (this->config.has("listen"))
     this->initHosts();
   if (this->config.has("server_names"))
     this->initNames();
   if (this->config.has("default") && this->config["default"].as<bool>())
     this->defaultHost = true;
-  if (!this->config.has("settings") || !this->config["settings"].is<YAML::Types::Map>())
-    const_cast<YAML::Node&>(this->config)["settings"] = YAML::Node::NewMap("settings");
+  this->defaultRoute = new Routes::Default(this->config, this);
+  this->validate();
   if (this->config.has("routes"))
     this->initRoutes();
-  this->validate();
 }
 
 void ServerConfiguration::initHosts() {
@@ -257,7 +262,7 @@ void ServerConfiguration::addRoute(const std::string& path, const Route* route) 
     << "Added route "
     << Logger::param(path)
     << " to server "
-    << Logger::param(this->config.toString())
+    << Logger::param(this->getNames()[0])
     << std::endl;
 }
 

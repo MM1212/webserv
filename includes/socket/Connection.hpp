@@ -1,3 +1,10 @@
+/**
+ * Connection.hpp
+ * A class to represent a client socket connection.
+ * Stores pending read & write buffers.
+ * Stores the client socket fd.
+ * Also has some helper methods & timeout functionality.
+*/
 #pragma once
 
 #include <string>

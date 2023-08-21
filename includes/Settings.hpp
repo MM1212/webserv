@@ -1,3 +1,9 @@
+/**
+ * Settings.hpp
+ * Settings class using Instance that loads & interprets a YAML settings file.
+ * This is useful for storing settings that are used everywhere, like HTTP status codes.
+ * Has some helper methods for mime types & status codes, everything else goes through get<T>.
+*/
 #pragma once
 
 #include <Yaml.hpp>

@@ -1,3 +1,11 @@
+/**
+ * Static.hpp
+ * Static Module for a Route.
+ * It handles static file serving, file uploading & deletion and directory listing.
+ * Has support for GET, POST, PUT, DELETE & HEAD
+ * Has support for Expect: 100-continue
+ * Has support for static file caching (with ETag & Last-Modified)
+*/
 #pragma once
 
 #include "http/routing/Module.hpp"

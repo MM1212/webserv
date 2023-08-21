@@ -1,14 +1,10 @@
 /**
- * @file FileManager.hpp
- * @brief This file contains the FileManager class which is used to manage file descriptors using epoll.
- * 
  * The FileManager class provides functionality to add, remove and get file descriptors using epoll.
  * It also provides a set of functions to check if a file descriptor is readable, writable, closed or errored.
  * The class also has a template parameter T which is used to specify the class that will handle the onTick event.
- * 
+ *
  * The FileManager class is used by the Socket class to manage file descriptors for sockets & processes pipes.
- * 
- * @author GitHub Copilot
+ *
  */
 #pragma once
 
@@ -125,6 +121,9 @@ namespace Socket {
       if (this->epollFd != -1) SYS_CLOSE(this->epollFd);
     }
   private:
+    /*
+     * Initializes the epoll pool.
+     */
     void init() {
       if (this->epollFd != -1) return;
       this->epollFd = ::epoll_create1(0);
@@ -132,9 +131,12 @@ namespace Socket {
         throw std::runtime_error("Failed to create epoll instance");
       }
       SYS_FNCTL(this->epollFd, F_SETFD, FD_CLOEXEC);
-      // std::signal(SIGPIPE, SIG_IGN);
+      std::signal(SIGPIPE, SIG_IGN);
     }
   public:
+    /*
+     * Add file descriptor with certain flags to the epoll pool
+     */
     bool add(int fd, int flags) {
       if (this->has(fd))
         this->remove(fd, false);
@@ -144,7 +146,6 @@ namespace Socket {
       if (::epoll_ctl(this->epollFd, EPOLL_CTL_ADD, fd, &event) == -1) {
         return false;
       }
-      // SYS_FNCTL(fd, F_SETFD, /* | O_NONBLOCK */);
       this->fds.insert(File(fd));
       this->maxEvents++;
       if (this->events) delete[] this->events;
@@ -181,6 +182,10 @@ namespace Socket {
       return const_cast<File&>(*it);
     }
 
+    /*
+     * Remove file descriptor from the epoll pool
+     * If close is true, the file descriptor will be closed
+     */
     bool remove(int fd, bool close) {
       if (!this->has(fd)) return false;
       epoll_event_t event;
@@ -202,6 +207,9 @@ namespace Socket {
       return true;
     }
 
+    /*
+      * Update flags of file descriptor in the epoll pool
+     */
     bool update(int fd, int flags) {
       if (!this->has(fd)) return false;
       epoll_event_t event;
@@ -222,10 +230,17 @@ namespace Socket {
     }
 
     inline void stop() { this->running = false; }
+
+    /*
+     * Start the epoll loop
+     * This function will block until stop() is called
+     * If instance is set, the onTick callback will be called every time the epoll pool returns events
+     * Each file descriptor that has events will be processed into a File object
+     * All File objects that changed will be passed to the onTick callback
+     */
     void start() {
       if (this->running) return;
       this->running = true;
-      // this->add(STDIN_FILENO, EPOLLIN | EPOLLET);
       while (this->running) {
         int n = ::epoll_wait(this->epollFd, this->events, this->maxEvents, this->timeout);
         if (n == -1) {
@@ -240,10 +255,6 @@ namespace Socket {
           File& file = const_cast<File&>(*it);
           file.setEvents(event.events);
           changed[i] = file;
-          // if (file == STDIN_FILENO && std::cin.get() == EOF) {
-          //   this->running = false;
-          //   break;
-          // }
         }
         if (this->instance && this->onTick) {
           (this->instance->*this->onTick)(changed);

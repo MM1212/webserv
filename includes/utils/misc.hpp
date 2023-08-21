@@ -1,3 +1,7 @@
+/**
+ * misc.hpp
+ * Various utility functions.
+*/
 #pragma once
 
 #include <string>
@@ -12,6 +16,7 @@
 #include <cstdlib>
 #include <stdarg.h>
 #include <cmath>
+#include <exception>
 
 namespace Utils
 {
@@ -108,4 +113,6 @@ namespace Utils
 
   std::string encodeURIComponent(const std::string& str);
   std::string decodeURIComponent(const std::string& str);
+
+  void showException(const std::string& msg, const std::exception& e);
 }
