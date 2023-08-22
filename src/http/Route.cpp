@@ -76,6 +76,8 @@ int Route::getMaxBodySize() const {
 
 bool Route::isMethodAllowed(Methods::Method method) const {
   const YAML::Node& methods = this->getSettings()["methods"];
+  if (methods.size() == 0)
+    return true;
   const std::string methodStr = Methods::ToString(method);
   for (size_t i = 0; i < methods.size(); ++i) {
     if (methods[i].getValue() == methodStr)
@@ -97,8 +99,11 @@ void Route::handle(const Request& req, Response& res) const {
     const Routing::Module* rModule = this->modules[i];
     if (req.isExpecting() && !rModule->supportsExpect())
       continue;
-    if (!rModule->isMethodAllowed(req.getMethod()))
+    if (!rModule->isMethodAllowed(req.getMethod())) {
+      if (i == this->modules.size() - 1)
+        return res.status(405).send();
       continue;
+    }
     if (rModule->handle(req, res))
       return;
   }
