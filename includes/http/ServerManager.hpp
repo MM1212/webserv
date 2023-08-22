@@ -30,7 +30,8 @@ namespace HTTP {
     ~ServerManager();
 
     inline const char*const* getEnv() const { return this->env; }
-    inline void setEnv(char** env) { this->env = env; }
+    inline uint64_t getEnvSize() const { return this->envSize; }
+    void setEnv(char** env);
     bool loadConfig(const std::string& path);
     void bindServers();
   private:
@@ -48,5 +49,6 @@ namespace HTTP {
     ServerConfiguration* defaultServer;
     const YAML::Node root;
     char** env;
+    uint64_t envSize;
   };
 };

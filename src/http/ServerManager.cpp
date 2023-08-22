@@ -114,3 +114,10 @@ void ServerManager::onSIGINT(int signum) {
   Logger::info << "Shutting down.." << std::endl;
   Instance::Get<ServerManager>()->stop();
 }
+
+void ServerManager::setEnv(char** env) {
+  this->env = env;
+  uint64_t i;
+  for (i = 0; env[i]; i++);
+  this->envSize = i;
+}
