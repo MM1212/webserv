@@ -90,11 +90,13 @@ uint64_t Utils::getCurrentTime() {
 std::string& Utils::trim(std::string& str) {
   static const std::string whitespace = " \t\n\r\f\v";
   size_t start = str.find_first_not_of(whitespace);
-  if (start == std::string::npos)
+  if (start == std::string::npos) {
+    str.clear();
     return str;
+  }
+  str.erase(0, start);
   size_t end = str.find_last_not_of(whitespace);
   str.erase(end + 1);
-  str.erase(0, start);
   return str;
 }
 
@@ -241,5 +243,5 @@ void Utils::showException(const std::string& msg, const std::exception& e) {
   if (errno != 0)
     ss << " (" << Logger::param(strerror(errno)) << ")";
   ss << std::endl;
-  Logger::error << ss;
+  Logger::error << ss.str();
 }
