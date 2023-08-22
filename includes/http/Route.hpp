@@ -22,6 +22,9 @@ namespace HTTP {
   class ServerConfiguration;
   class Request;
   class Response;
+  namespace Routes {
+    class Default;
+  }
   class Route {
   public:
     typedef Routing::Types Types;
@@ -52,5 +55,6 @@ namespace HTTP {
     void initModule(const YAML::Node& node);
 
     friend class Routing::Module;
+    friend class Routes::Default;
   };
 }

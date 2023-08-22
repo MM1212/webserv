@@ -32,6 +32,8 @@ void Route::init(bool injectMethods /* = true */) {
     if (injectMethods)
       settings["methods"].insert(YAML::Node::NewScalar("0", "GET"));
   }
+  if (injectMethods)
+    this->server->getDefaultRoute()->inheritDefaultModules(this);
   if (this->node.has("modules"))
     for (size_t i = 0; i < this->node["modules"].size(); i++)
       this->initModule(this->node["modules"][i]);

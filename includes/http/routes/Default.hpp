@@ -4,6 +4,7 @@
 #include "http/Request.hpp"
 #include "http/Response.hpp"
 #include "http/Route.hpp"
+#include "http/routing/Module.hpp"
 #include <Settings.hpp>
 
 namespace HTTP {
@@ -75,6 +76,12 @@ namespace HTTP {
           return true;
         return this->getSettings()["redirect"]["type"].getValue() == "permanent";
       }
+
+      inline bool hasDefaultModules() const {
+        const YAML::Node& settings = this->getSettings();
+        return (settings.has("default_modules") && settings["default_modules"].is<YAML::Types::Sequence>());
+      }
+      void inheritDefaultModules(Route* route) const;
       virtual void init(bool injectMethods = true);
     };
   }

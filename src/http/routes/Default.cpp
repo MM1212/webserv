@@ -28,3 +28,12 @@ void Default::init(bool injectMethods /* = true */) {
   root.insert(YAML::Node::NewScalar("uri", "__default"));
   this->Route::init(injectMethods);
 }
+
+void Default::inheritDefaultModules(Route* route) const {
+  if (!this->hasDefaultModules())
+    return;
+  const YAML::Node& modules = this->getSettings()["default_modules"];
+  for (uint64_t i = 0; i < modules.size(); i++)
+    route->initModule(modules[i]);
+  return;
+}
