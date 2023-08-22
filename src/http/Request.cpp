@@ -104,13 +104,13 @@ void Request::parseParams() {
     const Headers& headers = this->getHeaders();
     if (!headers.has("Content-Type") || headers.get<std::string>("Content-Type") != "application/x-www-form-urlencoded")
       return;
-    std::vector<std::string> pairs = Utils::split(this->getRawBody(), "&");
+    std::vector<std::string> pairs = Utils::split(this->getBody(), "&");
     for (std::vector<std::string>::iterator it = pairs.begin(); it != pairs.end(); it++) {
       std::vector<std::string> pair = Utils::split(*it, "=");
       if (pair.size() == 2)
         this->params[pair[0]] = pair[1];
     }
-    this->body.clear();
+    // this->body.clear();
   }
 }
 

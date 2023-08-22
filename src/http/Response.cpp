@@ -70,10 +70,6 @@ Response& Response::setHeaders(const Headers& headers) {
 Response& Response::setBody(const std::string& body) {
   this->body.clear();
   this->body.put(body);
-  Logger::debug
-    << "setting body to: <> of size: " << Logger::param(this->body.size())
-    << "with str size: " << Logger::param(body.size())
-    << std::endl;
   this->headers.set("Content-Length", this->body.size());
   return *this;
 }
@@ -240,8 +236,8 @@ void Response::sendFile(
   bool stream /* = true */,
   struct stat* fileStat /* = NULL */
 ) {
+  std::ifstream file(filePath.c_str());
   try {
-    std::ifstream file(filePath.c_str());
     if (!file.is_open() || !file.good())
       throw std::runtime_error("Could not open file " + filePath);
     this->setupStaticFileHeaders(filePath, fileStat);
@@ -258,6 +254,7 @@ void Response::sendFile(
     file.close();
   }
   catch (const std::exception& e) {
+    file.close();
     Logger::error
       << "Could not send file " << Logger::param(filePath) << ": " << e.what() << std::endl;
     this->status(500).send();

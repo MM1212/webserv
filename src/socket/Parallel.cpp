@@ -189,19 +189,22 @@ void Parallel::run() {
 }
 
 void Parallel::onTick(const std::vector<File>& changed) {
+  Logger::debug << "Tick" << std::endl;
   for (
     std::vector<File>::const_iterator it = changed.begin();
     it != changed.end();
     ++it
     ) {
     const File& file = *it;
-    // Logger::debug
-    //   << "fd: " << file << " | "
-    //   << "is client: " << this->hasClient(file) << " | "
-    //   << "is server: " << this->hasServer(file) << " | "
-    //   << "is process: " << this->hasProcessBoundTo(file) << " | "
-    //   << "readable: " << std::boolalpha << file.isReadable() << " | "
-    //   << "writable: " << std::boolalpha << file.isWritable() << ";" << std::endl;
+    Logger::debug
+      << "fd: " << file << " | "
+      << "is client: " << this->hasClient(file) << " | "
+      << "is server: " << this->hasServer(file) << " | "
+      << "is process: " << this->hasProcessBoundTo(file) << " | "
+      << "readable: " << std::boolalpha << file.isReadable() << " | "
+      << "writable: " << std::boolalpha << file.isWritable() << " | "
+      << "closed: " << std::boolalpha << file.isClosed() << " | "
+      << "errored: " << std::boolalpha << file.isErrored() << ";" << std::endl;
     if (this->hasServer(file))
       this->_onNewConnection(this->getServer(file));
     else if (this->hasClient(file)) {
@@ -223,13 +226,23 @@ void Parallel::onTick(const std::vector<File>& changed) {
     }
     else if (this->hasProcessBoundTo(file)) {
       Process& process = this->getProcessBoundTo(file);
-      // Logger::debug
-      //   << "pId: " << process.getId() << " | isAlive: " << std::boolalpha << process.isAlive() << std::endl
-      //   << " - is fd stdin: " << std::boolalpha << (process.hasIn() && file == process.getIn()) << " | "
-      //   << " - is fd stdout: " << std::boolalpha << (process.hasOut() && file == process.getOut()) << " | "
-      //   << std::endl;
-      if (file == process.getIn() && (file.isClosed() || file.isErrored())) {
-        this->_onProcessExit(process);
+      Logger::debug
+        << "pId: " << process.getId() << " | isAlive: " << std::boolalpha << process.isAlive() << std::endl
+        << " - is fd stdin: " << std::boolalpha << (process.hasIn() && file == process.getIn()) << " | "
+        << " - is fd stdout: " << std::boolalpha << (process.hasOut() && file == process.getOut()) << " | "
+        << std::endl;
+      if (file.isErrored() || (file == process.getIn() && !file.isReadable() && file.isClosed())) {
+        Logger::debug
+          << "process: " << process.getId() << " | "
+          << "isAlive: " << std::boolalpha << process.isAlive() << " | "
+          << "isReadable: " << std::boolalpha << process.isReadable() << " | "
+          << "hasTimedOut: " << std::boolalpha << process.hasTimedOut() << std::endl;
+        if (file.isErrored())
+          this->_onProcessExit(process, Process::ExitCodes::Force);
+        else if (process.hasTimedOut())
+          this->_onProcessExit(process, Process::ExitCodes::Timeout);
+        else
+          this->_onProcessExit(process, Process::ExitCodes::Normal);
         continue;
       }
       if (file.isReadable())
@@ -259,7 +272,12 @@ void Parallel::onTick(const std::vector<File>& changed) {
     ) {
     Process& process = it->second;
     if (process.hasTimedOut() || (!process.isAlive() && !process.isReadable())) {
-      this->_onProcessExit(process, process.hasTimedOut());
+      Logger::debug
+        << "process: " << process.getId() << " | "
+        << "isAlive: " << std::boolalpha << process.isAlive() << " | "
+        << "isReadable: " << std::boolalpha << process.isReadable() << " | "
+        << "hasTimedOut: " << std::boolalpha << process.hasTimedOut() << std::endl;
+      this->_onProcessExit(process, process.hasTimedOut() ? Process::ExitCodes::Timeout : Process::ExitCodes::Normal);
     }
   }
 }
@@ -296,9 +314,9 @@ void Parallel::_onClientDisconnect(const Connection& client) {
 }
 
 void Parallel::_onClientRead(Connection& client) {
-  static const int bufferSize = settings->get<int>("socket.read_buffer_size");
+  static const uint64_t bufferSize = settings->get<uint64_t>("socket.read_buffer_size");
   ByteStream buffer(bufferSize);
-  int read = recv(client.getHandle(), buffer, bufferSize, 0);
+  uint64_t read = recv(client.getHandle(), buffer, bufferSize, 0);
   if (read <= 0) {
     this->disconnect(client);
     return;
@@ -308,28 +326,41 @@ void Parallel::_onClientRead(Connection& client) {
   Logger::debug
     << "got " << Logger::param(read) << " bytes from "
     << Logger::param(static_cast<std::string>(client))
-    << std::endl;
-  // << "---" << std::endl
-  // << Logger::param(buffer.toString()) << std::endl
-  // << "---" << std::endl;
+    << std::endl
+    << "---" << std::endl
+    << Logger::param(buffer.toString()) << std::endl
+    << "---" << std::endl;
   client.ping();
   this->onClientRead(client);
 }
 
 void Parallel::_onClientWrite(Connection& client) {
-  ByteStream& buffer = client.getWriteBuffer();
-  if (buffer.size() == 0) {
-    if (client.shouldCloseOnEmptyWriteBuffer())
-      this->disconnect(client);
-    else
-      this->setClientToRead(client);
+  static const uint64_t bufferSize = settings->get<uint64_t>("socket.write_buffer_size");
+  if (this->_onClientEmptyBuffer(client))
     return;
-  }
-  int wrote = send(client.getHandle(), buffer, buffer.size(), 0);
-  if (wrote < 0) return;
+  ByteStream& buffer = client.getWriteBuffer();
+
+  uint64_t bytesToWrite = std::min(buffer.size(), bufferSize);
+  int wrote = send(client.getHandle(), buffer, bytesToWrite, 0);
+  if (wrote <= 0) return;
+  Logger::debug
+    << "wrote " << Logger::param(wrote) << " bytes to "
+    << Logger::param(static_cast<std::string>(client)) << "."
+    << " " << Logger::param(buffer.size() - wrote) << " bytes left to write."
+    << std::endl;
   this->onClientWrite(client, wrote);
   buffer.ignore(wrote);
   client.ping();
+}
+
+bool Parallel::_onClientEmptyBuffer(Connection& client) {
+  ByteStream& buffer = client.getWriteBuffer();
+  if (buffer.size() > 0) return false;
+  if (client.shouldCloseOnEmptyWriteBuffer())
+    this->disconnect(client);
+  else
+    this->setClientToRead(client);
+  return true;
 }
 
 void Parallel::setClientToRead(Connection& client) {
@@ -380,7 +411,7 @@ bool Parallel::trackProcess(const pid_t pid, const Connection& con, int std[2]) 
     return false;
   if (!this->fileManager.add(std[0], EPOLLIN | EPOLLHUP | EPOLLERR))
     return false;
-  if (!this->fileManager.add(std[1], EPOLLOUT | EPOLLET | EPOLLHUP | EPOLLERR)) {
+  if (!this->fileManager.add(std[1], EPOLLOUT | EPOLLHUP | EPOLLERR)) {
     this->fileManager.remove(std[0], false);
     return false;
   }
@@ -397,15 +428,17 @@ bool Parallel::trackProcess(const pid_t pid, const Connection& con, int std[2]) 
 }
 
 void Parallel::_onProcessRead(Process& process) {
-  static const int bufferSize = settings->get<int>("socket.read_buffer_size");
+  static const uint64_t bufferSize = settings->get<uint64_t>("socket.read_buffer_size");
   ByteStream buffer(bufferSize);
   int bytes = read(process.getIn(), buffer, bufferSize);
   if (bytes <= 0) {
-    this->kill(process, true);
+    this->kill(process);
     return;
   }
   buffer.resize(bytes);
   process.getReadBuffer().put(buffer);
+  process.ping();
+  const_cast<Connection&>(process.getClient()).ping();
   Logger::debug
     << "got " << Logger::param(bytes) << " bytes from "
     << Logger::param(static_cast<pid_t>(process))
@@ -418,55 +451,67 @@ void Parallel::_onProcessRead(Process& process) {
 }
 
 void Parallel::_onProcessWrite(Process& process) {
-  ByteStream& buffer = process.getWriteBuffer();
-  if (buffer.size() == 0) {
-    const int out = process.getOut();
-    this->pipesToProcesses.erase(process.getOut());
-    if (this->fileManager.remove(process.getOut(), true)) {
-      process.removeOut();
-      Logger::debug
-        << "Process " << Logger::param(static_cast<pid_t>(process))
-        << " has no more data to write.."
-        << " closing stdout fd " << Logger::param(out) << std::endl;
-    }
-    else {
-      Logger::error
-        << "failed to close stdoutfd" << Logger::param(out)
-        << " on process " << Logger::param(static_cast<pid_t>(process))
-        << std::endl;
-    }
+  static const uint64_t bufferSize = settings->get<uint64_t>("socket.write_buffer_size");
+  if (this->_onProcessEmptyBuffer(process))
     return;
-  }
-  int wrote = write(process.getOut(), buffer, buffer.size());
-  if (wrote < 0) return;
+  ByteStream& buffer = process.getWriteBuffer();
+
+  uint64_t bytesToWrite = std::min(buffer.size(), bufferSize);
+  int wrote = write(process.getOut(), buffer, bytesToWrite);
+  if (wrote <= 0) return;
+  process.ping();
+  const_cast<Connection&>(process.getClient()).ping();
   this->onProcessWrite(process, wrote);
   Logger::debug
     << "wrote " << Logger::param(wrote) << " bytes from "
-    << Logger::param(static_cast<pid_t>(process))
+    << Logger::param(static_cast<pid_t>(process)) << "."
+    << " " << Logger::param(buffer.size() - wrote) << " bytes left to write."
     << std::endl;
   // << "---" << std::endl
   // << Logger::param(buffer.toString()) << std::endl
   // << "---" << std::endl;
   buffer.ignore(wrote);
+  this->_onProcessEmptyBuffer(process);
 }
 
-void Parallel::_onProcessExit(Process& process, bool force /* = false */) {
-  this->kill(process, force);
+bool Parallel::_onProcessEmptyBuffer(Process& process) {
+  ByteStream& buffer = process.getWriteBuffer();
+  if (buffer.size() > 0) return false;
+  const int out = process.getOut();
+  this->pipesToProcesses.erase(process.getOut());
+  if (this->fileManager.remove(process.getOut(), true)) {
+    process.removeOut();
+    Logger::debug
+      << "Process " << Logger::param(static_cast<pid_t>(process))
+      << " has no more data to write.."
+      << " closing stdout fd " << Logger::param(out) << std::endl;
+  }
+  else {
+    Logger::error
+      << "failed to close stdoutfd" << Logger::param(out)
+      << " on process " << Logger::param(static_cast<pid_t>(process))
+      << std::endl;
+  }
+  return true;
 }
 
-void Parallel::kill(const Process& process, bool force /* = false */) {
+void Parallel::_onProcessExit(Process& process, Process::ExitCodes::Code exitCode) {
+  this->kill(process, exitCode);
+}
+
+void Parallel::kill(const Process& process, Process::ExitCodes::Code exitCode) {
   if (!this->hasProcess(process))
     return;
   if (process.hasIn())
     this->pipesToProcesses.erase(process.getIn());
   if (process.hasOut())
     this->pipesToProcesses.erase(process.getOut());
-  this->onProcessExit(process, force);
+  this->onProcessExit(process, exitCode);
   if (process.hasIn())
     this->fileManager.remove(process.getIn(), true);
   if (process.hasOut())
     this->fileManager.remove(process.getOut(), true);
-  if (force)
+  if (exitCode == Process::ExitCodes::Force)
     const_cast<Process&>(process).kill();
   this->processes.erase(static_cast<pid_t>(process));
 }

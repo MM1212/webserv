@@ -18,6 +18,16 @@
 
 namespace Socket {
   class Process {
+  public:
+    struct ExitCodes {
+      enum Code {
+        Normal,
+        Force,
+        Timeout,
+        ClientTimeout
+      };
+      static std::string ToString(Code code);
+    };
   private:
     const File* in;
     const File* out;
@@ -52,6 +62,7 @@ namespace Socket {
     inline bool hasTimedOut() const {
       return Utils::getCurrentTime() - this->heartbeat >= static_cast<uint32_t>(this->timeout);
     }
+    inline void ping() { this->heartbeat = Utils::getCurrentTime(); }
 
     inline void removeIn() { this->in = nullptr; }
     inline void removeOut() { this->out = nullptr; }
@@ -71,7 +82,7 @@ namespace Socket {
     }
 
     void kill();
-    void write(const std::string& buff);
+    void write(const ByteStream& buff);
 
     inline operator bool() const { return this->isAlive(); }
     inline operator pid_t() const { return this->id; }

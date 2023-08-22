@@ -100,7 +100,7 @@ public:
   }
   inline void ignore(uint64_t bytes = 1) {
     if (bytes == 0) return;
-    this->buffer.erase(this->buffer.begin(), this->buffer.begin() + bytes);
+    this->buffer.erase(this->buffer.begin(), this->buffer.begin() + std::min(bytes, this->size()));
   }
   void take(Buffer<T>& value, uint64_t bytes = 1) {
     if (bytes == 0) return;

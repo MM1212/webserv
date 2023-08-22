@@ -3,6 +3,21 @@
 
 using namespace Socket;
 
+std::string Process::ExitCodes::ToString(Code code) {
+  switch (code) {
+  case Normal:
+    return "Normal";
+  case Force:
+    return "Force";
+  case Timeout:
+    return "Timeout";
+  case ClientTimeout:
+    return "ClientTimeout";
+  default:
+    return "UNK";
+  }
+}
+
 Process::Process(
   File& in,
   File& out,
@@ -42,6 +57,6 @@ void Process::kill() {
   }
 }
 
-void Process::write(const std::string& buff) {
+void Process::write(const ByteStream& buff) {
   this->writeBuffer.put(buff);
 }

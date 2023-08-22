@@ -79,7 +79,7 @@ namespace Socket {
     void disconnect(int client);
     void disconnect(const Connection& client);
 
-    void kill(const Process& process, bool force = false);
+    void kill(const Process& process, Process::ExitCodes::Code code = Process::ExitCodes::Force);
 
     void run();
     inline void stop() {
@@ -97,9 +97,11 @@ namespace Socket {
     void _onClientDisconnect(const Connection& sock);
     void _onClientRead(Connection& sock);
     void _onClientWrite(Connection& sock);
+    bool _onClientEmptyBuffer(Connection& sock);
     void _onProcessRead(Process& process);
     void _onProcessWrite(Process& process);
-    void _onProcessExit(Process& process, bool force = false);
+    bool _onProcessEmptyBuffer(Process& process);
+    void _onProcessExit(Process& process, Process::ExitCodes::Code code = Process::ExitCodes::Force);
 
   protected:
     virtual void onClientConnect(const Connection& sock) = 0;
@@ -108,7 +110,7 @@ namespace Socket {
     virtual void onClientWrite(Connection& sock, int bytesWritten) = 0;
     virtual void onProcessRead(Process& process) = 0;
     virtual void onProcessWrite(Process& process, int bytesWritten) = 0;
-    virtual void onProcessExit(const Process& process, bool force = false) = 0;
+    virtual void onProcessExit(const Process& process, Process::ExitCodes::Code code = Process::ExitCodes::Force) = 0;
   };
 
 }

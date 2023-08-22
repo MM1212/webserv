@@ -193,28 +193,23 @@ bool CGI::handle(const Request& req, Response& res) const {
   return interpreter.run(path, req, res, this);
 }
 
-std::vector<std::string> CGI::generateEnvironment(
-  const std::string& filePath,
-  const CGI::Interpreter* intr,
+void CGI::generateEnvironment(
+  std::vector<std::string>& env,
   const Request& req
 ) const {
-  (void)intr;
   static const ServerManager* serverManager = Instance::Get<ServerManager>();
   const char* const* defaultEnv = serverManager->getEnv();
-  std::vector<std::string> env;
+  env.reserve(serverManager->getEnvSize() + 32 + req.getHeaders().getAll().size());
 
   for (size_t i = 0; defaultEnv[i]; i++)
     env.push_back(defaultEnv[i]);
   Headers headers = req.getHeaders();
   const Socket::Server& server = serverManager->getServer(req.getClient().getServerSock());
   const std::map<std::string, std::string>& headersMap = headers.getAll();
-  Logger::debug
-    << "Headers: " << std::endl
-    << headers
-    << std::endl;
+
   if (headers.has("Content-Type"))
     env.push_back(EnvVar("CONTENT_TYPE", headers.get<std::string>("Content-Type")));
-  if (req.getBody().size() > 0)
+  if (req.getRawBody().size() > 0)
     env.push_back(EnvVar("CONTENT_LENGTH", req.getRawBody().size()));
   headers.remove("Content-Type");
   headers.remove("Content-Length");
@@ -226,13 +221,13 @@ std::vector<std::string> CGI::generateEnvironment(
   const std::string pathTranslated = this->resolvePathTranslated(req, pathInfo);
 
   env.push_back(EnvVar("REQUEST_URI", requestUri));
-  env.push_back(EnvVar("PATH_INFO", pathInfo));
+  env.push_back(EnvVar("PATH_INFO", requestUri));
   env.push_back(EnvVar("PATH_TRANSLATED", pathTranslated));
   env.push_back(EnvVar("QUERY_STRING", req.getQuery()));
   env.push_back(EnvVar("REMOTE_ADDR", req.getClient().getAddress()));
   env.push_back(EnvVar("REMOTE_PORT", Utils::toString(req.getClient().getPort())));
   env.push_back(EnvVar("REQUEST_METHOD", Methods::ToString(req.getMethod())));
-  env.push_back(EnvVar("SCRIPT_NAME", Utils::resolvePath(2, this->getRoot().c_str(), Utils::basename(filePath).c_str())));
+  env.push_back(EnvVar("SCRIPT_NAME", requestUri));
   env.push_back(EnvVar("SERVER_NAME", server.address));
   env.push_back(EnvVar("SERVER_PORT", Utils::toString(server.port)));
   env.push_back(EnvVar("SERVER_PROTOCOL", req.getProtocol()));
@@ -244,9 +239,10 @@ std::vector<std::string> CGI::generateEnvironment(
     ) {
     std::string key = it->first;
     const std::string& value = it->second;
-    env.push_back(EnvVar("HTTP_" + Utils::toUppercase(key), value));
+    Utils::toUppercase(key);
+    std::replace(key.begin(), key.end(), '-', '_');
+    env.push_back(EnvVar("HTTP_" + key, value));
   }
-  return env;
 }
 
 std::vector<std::string> CGI::generateArgs(
@@ -269,15 +265,16 @@ std::vector<std::string> CGI::generateArgs(
 }
 
 void CGI::handleResponse(Response& res) const {
-  std::stringstream packet(res.getBody());
+  ByteStream& packet = res.getRawBody();
   std::string line;
-  Headers& headers = res.getHeaders();
+  Headers headers = res.getHeaders();
   res.status(200);
-  Logger::debug
-    << "cgi body: "
-    << Logger::param(packet.str()) << std::endl;
-  while (std::getline(packet, line)) {
-    std::cout << "line: " << line << std::endl;
+  // Logger::debug
+  //   << "cgi body: "
+  //   << Logger::param(packet.toString()) << std::endl;
+  while (packet.getline(line)) {
+    Utils::trim(line);
+    // std::cout << "line: " << line << " | " << static_cast<int>(line[0]) << std::endl;
     if (line.empty())
       break;
     size_t pos = line.find(": ");
@@ -289,10 +286,19 @@ void CGI::handleResponse(Response& res) const {
     std::string value = line.substr(pos + 2);
     // some overriders
     if (key == "Status") {
-      int statusCode = Utils::to<int>(value);
-      if (!Utils::isInteger(value, true) || value.size() != 3 || settings->httpStatusCode(statusCode).empty())
+      size_t pos = value.find_first_of(' ');
+      std::string statusCodeStr;
+      if (pos == std::string::npos)
+        statusCodeStr = value;
+      else
+        statusCodeStr = value.substr(0, pos);
+      int statusCode = Utils::to<int>(statusCodeStr);
+      if (!Utils::isInteger(statusCodeStr, true) || statusCodeStr.size() != 3 || settings->httpStatusCode(statusCode).empty())
         throw std::runtime_error("Invalid CGI response status: " + value);
-      res.status(statusCode);
+      if (pos != std::string::npos)
+        res.status(statusCode, value.substr(pos + 1));
+      else
+        res.status(statusCode);
       continue;
     }
     for (size_t i = 0; i < forbiddenHeaderFieldsSize; i++)
@@ -300,12 +306,6 @@ void CGI::handleResponse(Response& res) const {
         throw std::runtime_error("Invalid CGI response header: " + line);
     headers.set(key, value);
   }
-  if (res.getStatus() / 100 == 2) {
-    ByteStream& body = res.getRawBody();
-    const int64_t bodySize = res.getRawBody().size() - packet.tellg();
-    std::cout << "bodySize: " << bodySize << std::endl;
-    body.ignore(packet.tellg());
-    res.getHeaders().set("Content-Length", bodySize);
-  }
-  res.send();
+  headers.set("Content-Length", packet.size());
+  res.setHeaders(headers).send();
 }

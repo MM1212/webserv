@@ -30,7 +30,7 @@ void WebSocket::onClientConnect(const Socket::Connection& sock) {
 void WebSocket::onClientDisconnect(const Socket::Connection& sock) {
   if (this->pendingCGIProcesses.count(sock.getHandle()) > 0) {
     const pid_t pId = this->pendingCGIProcesses.at(sock.getHandle());
-    this->kill(this->getProcess(pId), true);
+    this->kill(this->getProcess(pId), Socket::Process::ExitCodes::ClientTimeout);
   }
   this->pendingRequests.erase(sock);
 }
@@ -333,7 +333,10 @@ void WebSocket::sendBadRequest(Socket::Connection& sock, int statusCode, const s
   Request req(this->pendingRequests.at(sock));
   Response resp(req, NULL);
   resp.getHeaders().set("Connection", "close");
+  this->setClientToWrite(sock);
   resp.status(statusCode).send();
+  this->pendingRequests.erase(sock);
+  this->pendingRequests.insert(std::make_pair(sock, PendingRequest(this, &sock)));
 }
 
 void WebSocket::trackCGIResponse(pid_t pid, int std[2], Response& res) {
@@ -342,7 +345,8 @@ void WebSocket::trackCGIResponse(pid_t pid, int std[2], Response& res) {
   if (!this->trackProcess(pid, res.getRequest().getClient(), std))
     return;
   Socket::Process& process = this->getProcess(pid);
-  process.write(res.getRequest().getRawBody());
+  process.getWriteBuffer() = res.getRequest().getRawBody();
+  const_cast<ByteStream&>(res.getRequest().getRawBody()).clear();
   this->pendingCGIResponses.insert(
     std::make_pair(
       pid,
@@ -368,30 +372,48 @@ void WebSocket::onProcessRead(Socket::Process& process) {
   process.getReadBuffer().clear();
 }
 
-void WebSocket::onProcessExit(const Socket::Process& process, bool force /* = false */) {
+void WebSocket::onProcessExit(const Socket::Process& process, Socket::Process::ExitCodes::Code code) {
   PendingResponse& pending = this->pendingCGIResponses.at(process.getId());
   Response& res = pending.response;
   Logger::debug
-    << "Creating CGI response for client: " << Logger::param(process.getClient()) << std::endl;
+    << "Creating CGI response for client: " << Logger::param(process.getClient())
+    << " because of " << Socket::Process::ExitCodes::ToString(code) << std::endl;
   this->pendingCGIProcesses.erase(process.getClient());
   this->setClientToWrite(const_cast<Socket::Connection&>(process.getClient()));
-  if (!force) {
+  switch (code) {
+  case Socket::Process::ExitCodes::Normal: {
     const HTTP::Routing::Module* mod = res.getRoute()->getModule(Routing::Types::CGI);
     if (mod) {
       const HTTP::Routing::CGI* cgi = reinterpret_cast<const HTTP::Routing::CGI*>(mod);
       try {
         if (cgi)
           cgi->handleResponse(res);
+        return;
       }
       catch (const std::exception& e) {
         Logger::error
           << "Error while handling CGI response: " << e.what()
           << std::endl;
-        res.status(500).send();
+        res.status(500);
       }
     }
+    else
+      res.status(500);
+    break;
   }
-  else
-    res.setBody("").status(408).send();
+  case Socket::Process::ExitCodes::Force:
+    res.status(500);
+    break;
+  case Socket::Process::ExitCodes::Timeout:
+    res.status(504);
+    break;
+  case Socket::Process::ExitCodes::ClientTimeout:
+    res.status(408);
+    break;
+  default:
+    res.status(500);
+    break;
+  }
+  res.send("");
   this->pendingCGIResponses.erase(process.getId());
 }

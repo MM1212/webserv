@@ -179,6 +179,7 @@ std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {
     << req.Request::getProtocol()
     << ") -> headers:\n"
     << req.getHeaders()
+    << "\nPendingBodySize: " << Logger::param(req.chunkData.size())
     // << " -> body:\n"
     // << "---" << std::endl
     // << req.getRawBody()
@@ -190,7 +191,7 @@ std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {
 bool PendingRequest::extract() {
   if (this->peek() == EOF) return false;
   if (this->isParsingBody()) {
-    uint64_t bytesToRead = this->getContentLength() - this->chunkData.size();
+    uint64_t bytesToRead = (this->getState() == States::Body ? this->getContentLength() : this->chunkSize) - this->chunkData.size();
     if (bytesToRead > this->cPacket->size()) bytesToRead = this->cPacket->size();
     ByteStream tmp;
     this->cPacket->take(tmp, bytesToRead);
@@ -213,6 +214,8 @@ bool PendingRequest::lastCheck() {
     }
     return false;
   case States::BodyChunkBytes:
+  case States::BodyChunked:
+  case States::BodyChunkData:
     return this->chunkSize == 0;
   default:
     return false;

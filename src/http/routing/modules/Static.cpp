@@ -147,11 +147,14 @@ bool Static::handleUploads(const std::string& path, const Request& req, Response
   if (req.isExpecting())
     return this->next(res, 100);
   std::ofstream file(path.c_str(), std::ios::binary | std::ios::trunc);
+  if (!file.is_open() || !file.good())
+    return this->next(res, 500);
   Logger::debug
     << "Uploading file " << Logger::param(path)
-    << " with size " << Logger::param(req.getBody().size())
+    << " with size " << Logger::param(req.getRawBody().size())
     << std::endl;
-  file.write(reinterpret_cast<const char*>(req.getBody().data()), req.getBody().size());
+  file.write(reinterpret_cast<const char*>(req.getRawBody().data()), req.getRawBody().size());
+  file.close();
   if (this->getRedirection() != this->getRoot()) {
     std::string filePath(path);
     filePath.erase(0, this->getRoot().size());

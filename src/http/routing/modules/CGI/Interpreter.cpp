@@ -47,7 +47,9 @@ void CGI::Interpreter::init() {
 }
 
 bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Response& res, const CGI* cgi) const {
-  const std::string& execPath = this->getPath();
+  std::string execPath = this->getPath();
+  if (execPath[0] != '/')
+    execPath = Utils::resolvePath(2, Utils::getCurrentWorkingDirectory().c_str(), execPath.c_str());
   if (access(execPath.c_str(), F_OK | X_OK) == -1) {
     Logger::error
       << "Attempted to execute a cgi script with an interpreter that doesn't exist: "
@@ -73,13 +75,14 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
       << Logger::param(req) << std::endl;
     return cgi->next(res, 500);
   }
-  std::vector<std::string> env = cgi->generateEnvironment(filePath, this, req);
+  std::vector<std::string> env;
+  cgi->generateEnvironment(env, req);
   std::vector<std::string> baseArgs = cgi->generateArgs(filePath, this, req);
   Logger::debug
     << "Spawning cgi process " << Logger::param(execPath)
     << " for script " << Logger::param(Utils::basename(filePath))
     << " with args: " << Logger::param(Utils::strJoin(baseArgs)) << std::endl
-    << " and env: " << Logger::param(Utils::strJoin(env, "\n")) << std::endl;
+    << " and env size of : " << Logger::param(env.size()) << std::endl;
   pid_t pid = fork();
   if (pid == -1) {
     Logger::error
@@ -96,6 +99,8 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
     serverManager->trackCGIResponse(pid, std, res);
   }
   else {
+    std::signal(SIGINT, SIG_DFL);
+    std::signal(SIGPIPE, SIG_DFL);
     std::string scriptDirName = Utils::dirname(
       Utils::resolvePath(2,
         Utils::getCurrentWorkingDirectory().c_str(),

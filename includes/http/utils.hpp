@@ -8,7 +8,7 @@
 
 namespace HTTP {
   static const std::string specialFieldTokens
-    = "!#$%&'*+-.^_`|~0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    = "!#$%&'*+-.^_`|~;=0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
   static const std::string specialUriTokens
     = "!#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
   bool hasFieldToken(char c);

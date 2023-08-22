@@ -8,10 +8,12 @@ socket:
   # in milliseconds
   poll_timeout: 1000
   # in bytes
-  read_buffer_size: 8192
+  read_buffer_size: 65536
+  # in bytes
+  write_buffer_size: 65536
 http:
-  # in bytes (3MB)
-  max_body_size: 3145728
+  # in bytes (100MB)
+  max_body_size: 100000000
   # in bytes
   max_uri_size: 4096
   # all HTTP status codes in a map
@@ -138,7 +140,7 @@ http:
     file_chunk_size: 1024
   cgi:
     # in milliseconds
-    timeout: 10000
+    timeout: 60000
 misc:
   # levels:
   #  -1: off

@@ -69,19 +69,16 @@ namespace HTTP {
     void send();
     template <typename T>
     void send(const T& body) {
-      std::cout << "sending generic body" << std::endl;
       this->setBody(Utils::toString(body));
       this->send();
     }
     template <>
     void send(const std::string& body) {
-      std::cout << "sending string body" << std::endl;
       this->setBody(body);
       this->send();
     }
     template <>
     void send(const ByteStream& body) {
-      std::cout << "sending bytestream body" << std::endl;
       this->setBody(body);
       this->send();
     }

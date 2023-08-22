@@ -38,7 +38,7 @@ namespace HTTP {
     virtual void onClientWrite(Socket::Connection&, int) {}
     virtual void onProcessRead(Socket::Process& process);
     virtual void onProcessWrite(Socket::Process&, int) {}
-    virtual void onProcessExit(const Socket::Process& process, bool force = false);
+    virtual void onProcessExit(const Socket::Process& process, Socket::Process::ExitCodes::Code code = Socket::Process::ExitCodes::Force);
 
     void handleClientPacket(Socket::Connection& sock);
 

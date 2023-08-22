@@ -27,6 +27,8 @@ namespace HTTP {
         std::string value;
         template <typename T>
         EnvVar(const std::string& name, const T& value) : name(name), value(Utils::toString(value)) {}
+        template<>
+        EnvVar(const std::string& name, const std::string& value) : name(name), value(value) {}
         EnvVar(const EnvVar& other) : name(other.name), value(other.value) {}
         inline std::string toString() const { return this->name + "=" + this->value; }
         inline operator std::string() const { return this->toString(); }
@@ -75,7 +77,7 @@ namespace HTTP {
       std::string getResolvedPath(const Request& req) const;
       std::vector<std::string> resolvePathInfo(const Request& req) const;
       std::string resolvePathTranslated(const Request& req, const std::string& pathInfo) const;
-      std::vector<std::string> generateEnvironment(const std::string& path, const Interpreter* interpreter, const Request& req) const;
+      void generateEnvironment(std::vector<std::string>& env, const Request& req) const;
       std::vector<std::string> generateArgs(const std::string& path, const Interpreter* interpreter, const Request& req) const;
     private:
       std::vector<Interpreter> interpreters;
