@@ -265,7 +265,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         return this->sendBadRequest(sock, 400, "Invalid chunk size");
       }
       pendingRequest.next();
-      break;
+      continue;
     }
     case ReqStates::BodyChunkBytes:
     {
@@ -280,6 +280,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
           pendingRequest.nextWithCRLF(ReqStates::BodyChunkEnd);
         else
           pendingRequest.nextWithCRLF();
+        continue;
       }
       break;
     }
@@ -290,7 +291,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
       //   << " and remaining size " << Logger::param(pendingRequest.chunkSize)
       //   << std::endl;
       if (pendingRequest.chunkData.size() == pendingRequest.chunkSize) {
-        pendingRequest.setBody(pendingRequest.chunkData);
+        pendingRequest.addToBody(pendingRequest.chunkData);
         pendingRequest.chunkData.clear();
         pendingRequest.nextWithCRLF(ReqStates::BodyChunked);
       }
