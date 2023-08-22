@@ -63,15 +63,15 @@ const std::string& Route::getErrorPage(int code) const {
   return settings["error_pages"][Utils::toString(code)].getValue();
 }
 
-int Route::getMaxBodySize() const {
+uint32_t Route::getMaxBodySize() const {
   const YAML::Node& routeSettings = this->getSettings();
   if (!routeSettings.has("max_body_size")) {
     const Route* defaultRoute = this->server->getDefaultRoute();
     if (defaultRoute == this || !defaultRoute)
-      return settings->get<int>("http.max_body_size");
+      return settings->get<uint32_t>("http.max_body_size");
     return defaultRoute->getMaxBodySize();
   }
-  return routeSettings["max_body_size"].as<int>();
+  return routeSettings["max_body_size"].as<uint32_t>();
 }
 
 bool Route::isMethodAllowed(Methods::Method method) const {

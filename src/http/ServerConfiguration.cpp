@@ -117,7 +117,7 @@ void ServerConfiguration::handleRequest(const Request& req, Response& res) const
   res.setRoute(route);
   if (!route->isMethodAllowed(req.getMethod()))
     return res.status(405).send();
-  if (route->getMaxBodySize() > 0 && req.getContentLength() > route->getMaxBodySize())
+  if (route->getMaxBodySize() > 0 && req.getRawBody().size() > route->getMaxBodySize())
     return res.status(413).send();
   try {
     route->handle(req, res);

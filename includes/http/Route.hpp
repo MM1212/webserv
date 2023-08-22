@@ -38,7 +38,7 @@ namespace HTTP {
     // settings quick getters
     bool hasErrorPage(int code) const;
     const std::string& getErrorPage(int code) const;
-    int getMaxBodySize() const;
+    uint32_t getMaxBodySize() const;
     bool isMethodAllowed(Methods::Method method) const;
 
     void handle(const Request& req, Response& res) const;
