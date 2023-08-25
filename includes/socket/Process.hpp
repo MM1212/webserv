@@ -10,7 +10,7 @@
 #include <sstream>
 #include <utils/misc.hpp>
 #include <sys/types.h>
-#include <signal.h>
+#include <csignal>
 #include <shared.hpp>
 
 #include "FileManager.hpp"

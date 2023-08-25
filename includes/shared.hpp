@@ -12,7 +12,8 @@
 #include <vector>
 #include <exception>
 #include <error.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <utils/std.hpp>
 #include <ByteStream.hpp>
 

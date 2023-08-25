@@ -3,7 +3,7 @@ MAKE_MT = --jobs=$(shell nproc) --output-sync=target
 PROJECT_NAME = Webserv
 NAME = webserv
 
-SRC_FILES = Settings.cpp utils/misc.cpp utils/Logger.cpp \
+SRC_FILES = Settings.cpp utils/misc.cpp utils/Logger.cpp utils/std.cpp \
 						Yaml/Node.cpp Yaml/Parser.cpp Yaml/tests.cpp \
 						socket/Connection.cpp socket/Parallel.cpp socket/Process.cpp \
 						http/Methods.cpp http/Request.cpp http/PendingRequest.cpp \
@@ -83,7 +83,8 @@ fclean: clean
 	@echo "$(TAG) cleaned $(YELLOW)executable$(RESET)!"
 
 
-re: fclean all
+re: fclean
+	@make $(MAKE_MT) all --jobs=$(shell nproc) --output-sync=target --no-print-directory
 
 watch:
 	@while true; do \

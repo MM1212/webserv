@@ -2,8 +2,6 @@
 #include <shared.hpp>
 #include <utils/Logger.hpp>
 #include <utils/misc.hpp>
-#include <cstdlib>
-#include <string.h>
 #include <Settings.hpp>
 #include <http/ServerManager.hpp>
 

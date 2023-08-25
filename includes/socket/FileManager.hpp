@@ -9,7 +9,6 @@
 #pragma once
 
 #include <shared.hpp>
-#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>

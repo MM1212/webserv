@@ -27,7 +27,7 @@ void Connection::init() {
   sockaddr_in clientAddress;
   socklen_t clientAddressLength = sizeof(clientAddress);
   getpeername(this->handle, (sockaddr*)&clientAddress, &clientAddressLength);
-  this->address = inet_ntoa(clientAddress.sin_addr);
+  this->address = std::inet_ntoa(clientAddress.sin_addr);
   this->port = ntohs(clientAddress.sin_port);
 }
 

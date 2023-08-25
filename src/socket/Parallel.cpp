@@ -49,7 +49,7 @@ const Socket::Server& Parallel::bind(
   if (host.address == "*")
     serverAddress.sin_addr.s_addr = INADDR_ANY;
   else
-    serverAddress.sin_addr.s_addr = inet_addr(host.address.c_str());
+    serverAddress.sin_addr.s_addr = std::inet_addr(host.address.c_str());
   serverAddress.sin_port = htons(host.port);
   // reuse socket
   int reuse = 1;
@@ -189,7 +189,6 @@ void Parallel::run() {
 }
 
 void Parallel::onTick(const std::vector<File>& changed) {
-  Logger::debug << "Tick" << std::endl;
   for (
     std::vector<File>::const_iterator it = changed.begin();
     it != changed.end();
@@ -326,10 +325,10 @@ void Parallel::_onClientRead(Connection& client) {
   Logger::debug
     << "got " << Logger::param(read) << " bytes from "
     << Logger::param(static_cast<std::string>(client))
-    << std::endl
-    << "---" << std::endl
-    << Logger::param(buffer.toString()) << std::endl
-    << "---" << std::endl;
+    << std::endl;
+    // << "---" << std::endl
+    // << Logger::param(buffer.toString()) << std::endl
+    // << "---" << std::endl;
   client.ping();
   this->onClientRead(client);
 }

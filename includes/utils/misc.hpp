@@ -12,9 +12,9 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <stdint.h>
-#include <sys/time.h>
+#include <ctime>
 #include <cstdlib>
-#include <stdarg.h>
+#include <cstdarg>
 #include <cmath>
 #include <exception>
 
