@@ -61,7 +61,7 @@ const Socket::Server& Parallel::bind(
     throw std::runtime_error("Failed to listen on socket");
   if (!this->fileManager.add(sock, EPOLLIN | EPOLLET | EPOLLERR))
     throw std::runtime_error("Failed to add socket to file manager");
-  Server server(sock, host.address, host.port);
+  Server server(sock, host.address, host.port, backlog);
   ;
   this->addressesToSock.insert(std::make_pair<std::string, int>(host, sock));
   const Server& ref = this->servers.insert(std::make_pair(sock, server)).first->second;
@@ -173,6 +173,7 @@ void Parallel::disconnect(const Connection& client) {
     << " on sock " << Logger::param(con.getServerSock()) << std::endl
     << " - timed out: " << Logger::param(con.hasTimedOut()) << std::endl
     << " - alive: " << Logger::param(con.isAlive()) << std::endl;
+  this->getServer(con.getServerSock()).onDisconnect();
   this->addressesToSock.erase(address);
   this->clients.erase(con);
   this->fileManager.remove(con.getHandle(), true);
@@ -281,22 +282,38 @@ void Parallel::onTick(const std::vector<File>& changed) {
   }
 }
 
-void Parallel::_onNewConnection(const Server& server) {
+void Parallel::_onNewConnection(Server& server) {
   struct sockaddr_in clientAddress;
   socklen_t clientAddressLength = sizeof(clientAddress);
   Logger::debug
     << "Accepting new con on host "
-    << Logger::param(server.address) << ":" << Logger::param(server.port)
+    << Logger::param(static_cast<std::string>(server))
     << " with sock " << Logger::param(server.sock) << "..."
     << std::endl;
   int clientSock = accept(server.sock, (sockaddr*)&clientAddress, &clientAddressLength);
-  if (clientSock < 0)
-    throw std::runtime_error("Failed to accept connection");
+  if (clientSock < 0) {
+    Logger::error
+      << "Failed to accept new con on host "
+      << Logger::param(static_cast<std::string>(server))
+      << " with sock " << Logger::param(server.sock) << ": " << Logger::errstr()
+      << std::endl;
+    return;
+  }
+  if (server.connections >= server.maxConnections) {
+    Logger::warning
+      << "Max connections reached on host "
+      << Logger::param(static_cast<std::string>(server))
+      << " with sock " << Logger::param(server.sock) << ", closing peer.."
+      << std::endl;
+    SYS_CLOSE(clientSock);
+    return;
+  }
   if (!this->fileManager.add(clientSock, EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR))
     throw std::runtime_error("Failed to add socket to file manager");
   const File& fileHandle = this->fileManager.get(clientSock);
   Connection client(const_cast<File&>(fileHandle), server.sock, this->timeout);
   const std::string address(client);
+  server.newConnection();
   this->addressesToSock.insert(std::make_pair(address, clientSock));
   this->clients.insert(std::make_pair(fileHandle, client));
   Logger::info
@@ -326,9 +343,9 @@ void Parallel::_onClientRead(Connection& client) {
     << "got " << Logger::param(read) << " bytes from "
     << Logger::param(static_cast<std::string>(client))
     << std::endl;
-    // << "---" << std::endl
-    // << Logger::param(buffer.toString()) << std::endl
-    // << "---" << std::endl;
+  // << "---" << std::endl
+  // << Logger::param(buffer.toString()) << std::endl
+  // << "---" << std::endl;
   client.ping();
   this->onClientRead(client);
 }

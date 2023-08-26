@@ -21,12 +21,17 @@
 namespace Socket {
   struct Server : public Host {
     int sock;
+    uint64_t maxConnections;
+    uint64_t connections;
 
     inline operator int() const {
       return this->sock;
     }
-    Server(const int sock, const std::string& address, const int port)
-      : Host(port, address), sock(sock) {}
+    Server(const int sock, const std::string& address, const int port, const uint64_t maxConnections)
+      : Host(port, address), sock(sock), maxConnections(maxConnections), connections(0) {}
+    inline void newConnection() { this->connections++; }
+    inline void onDisconnect() { this->connections = std::max(0, (int)this->connections - 1); }
+
   };
   class Parallel {
   private:
@@ -93,7 +98,7 @@ namespace Socket {
 
     void onTick(const std::vector<File>& changed);
 
-    void _onNewConnection(const Server& sock);
+    void _onNewConnection(Server& sock);
     void _onClientDisconnect(const Connection& sock);
     void _onClientRead(Connection& sock);
     void _onClientWrite(Connection& sock);

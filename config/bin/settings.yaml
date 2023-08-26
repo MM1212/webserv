@@ -1,7 +1,7 @@
 yaml:
   run_tests: false
 socket:
-  max_connections: 100
+  max_connections: 1
   # in milliseconds
   keep_alive_timeout: 60000
   #! DEPRECATED, AT -1 BREAKS CGI TIMEOUT  

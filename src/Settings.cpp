@@ -36,6 +36,8 @@ bool Settings::isValid() const {
       throw std::runtime_error("keep_alive_timeout isn't an integer");
     if (!this->config["socket"]["read_buffer_size"].is<int>())
       throw std::runtime_error("read_buffer_size isn't an integer");
+    if (!this->config["socket"]["write_buffer_size"].is<int>())
+      throw std::runtime_error("write_buffer_size isn't an integer");
     if (!this->config["http"].is<YAML::Types::Map>())
       throw std::runtime_error("http isn't a map");
     if (!this->config["http"]["max_body_size"].is<int>())
