@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <ctime>
+#include <sys/time.h>
 #include <cstdlib>
 #include <cstdarg>
 #include <cmath>
