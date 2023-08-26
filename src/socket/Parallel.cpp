@@ -196,15 +196,15 @@ void Parallel::onTick(const std::vector<File>& changed) {
     ++it
     ) {
     const File& file = *it;
-    Logger::debug
-      << "fd: " << file << " | "
-      << "is client: " << this->hasClient(file) << " | "
-      << "is server: " << this->hasServer(file) << " | "
-      << "is process: " << this->hasProcessBoundTo(file) << " | "
-      << "readable: " << std::boolalpha << file.isReadable() << " | "
-      << "writable: " << std::boolalpha << file.isWritable() << " | "
-      << "closed: " << std::boolalpha << file.isClosed() << " | "
-      << "errored: " << std::boolalpha << file.isErrored() << ";" << std::endl;
+    // Logger::debug
+    //   << "fd: " << file << " | "
+    //   << "is client: " << this->hasClient(file) << " | "
+    //   << "is server: " << this->hasServer(file) << " | "
+    //   << "is process: " << this->hasProcessBoundTo(file) << " | "
+    //   << "readable: " << std::boolalpha << file.isReadable() << " | "
+    //   << "writable: " << std::boolalpha << file.isWritable() << " | "
+    //   << "closed: " << std::boolalpha << file.isClosed() << " | "
+    //   << "errored: " << std::boolalpha << file.isErrored() << ";" << std::endl;
     if (this->hasServer(file))
       this->_onNewConnection(this->getServer(file));
     else if (this->hasClient(file)) {
@@ -251,6 +251,22 @@ void Parallel::onTick(const std::vector<File>& changed) {
         this->_onProcessWrite(process);
     }
   }
+  /* for (
+    std::set<File>::iterator it = this->fileManager.getAll().begin();
+    it != this->fileManager.getAll().end();
+    it++
+    ) {
+    const File& file = *it;
+    Logger::debug
+      << "fd: " << file << " | "
+      << "is client: " << this->hasClient(file) << " | "
+      << "is server: " << this->hasServer(file) << " | "
+      << "is process: " << this->hasProcessBoundTo(file) << " | "
+      << "readable: " << std::boolalpha << file.isReadable() << " | "
+      << "writable: " << std::boolalpha << file.isWritable() << " | "
+      << "closed: " << std::boolalpha << file.isClosed() << " | "
+      << "errored: " << std::boolalpha << file.isErrored() << ";" << std::endl;
+  } */
   for (
     std::map<int, Connection>::iterator it = this->clients.begin();
     it != this->clients.end();
@@ -331,20 +347,30 @@ void Parallel::_onClientDisconnect(const Connection& client) {
 
 void Parallel::_onClientRead(Connection& client) {
   static const uint64_t bufferSize = settings->get<uint64_t>("socket.read_buffer_size");
-  ByteStream buffer(bufferSize);
+  ByteStream& readBuffer = client.getReadBuffer();
+  const uint64_t lastSize = readBuffer.size();
+  readBuffer.resize(readBuffer.size() + bufferSize);
+  void* buffer = readBuffer.data() + lastSize;
   uint64_t read = recv(client.getHandle(), buffer, bufferSize, 0);
   if (read <= 0) {
     this->disconnect(client);
     return;
   }
-  buffer.resize(read);
-  client.getReadBuffer().put(buffer);
+  readBuffer.resize(lastSize + read);
+  /* std::stringstream ss;
+  ss << std::hex;
+  for (uint64_t i = 0; i < readBuffer.size(); i++) {
+    if (!std::isprint(readBuffer[i]))
+      ss << "(0x" << std::setw(2) << std::setfill('0') << (int)readBuffer[i] << ")";
+    else
+      ss << (char)readBuffer[i];
+  } */
   Logger::debug
     << "got " << Logger::param(read) << " bytes from "
     << Logger::param(static_cast<std::string>(client))
     << std::endl;
   // << "---" << std::endl
-  // << Logger::param(buffer.toString()) << std::endl
+  // << Logger::param(ss.str()) << std::endl
   // << "---" << std::endl;
   client.ping();
   this->onClientRead(client);
@@ -445,14 +471,16 @@ bool Parallel::trackProcess(const pid_t pid, const Connection& con, int std[2]) 
 
 void Parallel::_onProcessRead(Process& process) {
   static const uint64_t bufferSize = settings->get<uint64_t>("socket.read_buffer_size");
-  ByteStream buffer(bufferSize);
+  ByteStream& readBuffer = process.getReadBuffer();
+  const uint64_t lastSize = readBuffer.size();
+  readBuffer.resize(readBuffer.size() + bufferSize);
+  void* buffer = readBuffer.data() + lastSize;
   int bytes = read(process.getIn(), buffer, bufferSize);
   if (bytes <= 0) {
     this->kill(process);
     return;
   }
-  buffer.resize(bytes);
-  process.getReadBuffer().put(buffer);
+  readBuffer.resize(lastSize + bytes);
   process.ping();
   const_cast<Connection&>(process.getClient()).ping();
   Logger::debug

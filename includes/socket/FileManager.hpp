@@ -145,6 +145,7 @@ namespace Socket {
       if (::epoll_ctl(this->epollFd, EPOLL_CTL_ADD, fd, &event) == -1) {
         return false;
       }
+      SYS_FNCTL(this->epollFd, F_SETFD, FD_CLOEXEC);
       this->fds.insert(File(fd));
       this->maxEvents++;
       if (this->events) delete[] this->events;

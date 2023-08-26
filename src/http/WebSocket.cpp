@@ -47,14 +47,13 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     return;
   }
   PendingRequest& pendingRequest = this->pendingRequests.at(sock);
-  ByteStream packet(sock.getReadBuffer());
-  sock.getReadBuffer().clear();
+  ByteStream& packet = sock.getReadBuffer();
   pendingRequest.handlePacket(packet);
   bool skip = false;
   while (skip || pendingRequest.peek() != EOF) {
     if (skip)
       skip = false;
-    /* if (std::isprint(pendingRequest.peek())) {
+   /*  if (std::isprint(pendingRequest.peek())) {
       Logger::debug
         << "peek: " << Logger::param<char>(pendingRequest.peek())
         << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
@@ -247,6 +246,8 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     }
     case ReqStates::Body:
     {
+      if (pendingRequest.peek() == EOF)
+        continue;
       const size_t contentLength = pendingRequest.getContentLength();
       // Logger::debug
       //   << "Content-Length: " << Logger::param(contentLength) << std::endl
@@ -261,6 +262,8 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     }
     case ReqStates::BodyChunked:
     {
+      if (pendingRequest.peek() == EOF)
+        continue;
       if (!std::isxdigit(pendingRequest.peek())) {
         return this->sendBadRequest(sock, 400, "Invalid chunk size");
       }
@@ -269,6 +272,8 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     }
     case ReqStates::BodyChunkBytes:
     {
+      if (pendingRequest.peek() == EOF)
+        continue;
       if (pendingRequest.peek() == '\r') {
         std::stringstream ss;
         ss << pendingRequest.takeFromStorage<std::string>();
@@ -286,6 +291,8 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     }
     case ReqStates::BodyChunkData:
     {
+      if (pendingRequest.peek() == EOF)
+        continue;
       // Logger::debug
       //   << "Got chunk data of size " << Logger::param(pendingRequest.chunkData.size())
       //   << " and remaining size " << Logger::param(pendingRequest.chunkSize)

@@ -1,4 +1,3 @@
-MAKE_MT = --jobs=$(shell nproc) --output-sync=target 
 
 PROJECT_NAME = Webserv
 NAME = webserv

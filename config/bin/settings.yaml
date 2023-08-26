@@ -1,7 +1,7 @@
 yaml:
   run_tests: false
 socket:
-  max_connections: 1
+  max_connections: 64
   # in milliseconds
   keep_alive_timeout: 60000
   #! DEPRECATED, AT -1 BREAKS CGI TIMEOUT  
@@ -148,6 +148,6 @@ misc:
   #   1: info
   #   2: warning
   #   3: error
-  log_level: 1
+  log_level: 0
   name: 'webserv/1.0'
   default_config_file: config/tests/v2/example.yaml

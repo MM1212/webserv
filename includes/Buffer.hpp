@@ -30,19 +30,9 @@ public:
   inline void reserve(uint64_t size) { this->buffer.reserve(size); }
   inline void clear() { this->buffer.clear(); }
   inline void put(const T& value) { this->buffer.push_back(value); }
-  void put(const std::vector<T>& value, uint64_t amount) {
-    for (uint64_t i = 0; i < amount; ++i)
-      this->buffer.push_back(value[i]);
-  }
-  void put(const Buffer<T>& value, uint64_t amount) {
-    for (uint64_t i = 0; i < amount; ++i)
-      this->buffer.push_back(value[i]);
-  }
-  void put(const std::string& value, uint64_t amount) {
-    for (uint64_t i = 0; i < amount; ++i)
-      this->buffer.push_back(value[i]);
-  }
-  void put(const char* value, uint64_t amount) {
+  template <typename K>
+  void put(const K& value, uint64_t amount) {
+    this->buffer.reserve(this->buffer.size() + amount);
     for (uint64_t i = 0; i < amount; ++i)
       this->buffer.push_back(value[i]);
   }
@@ -107,7 +97,7 @@ public:
     value.clear();
     value.resize(bytes);
     for (uint64_t i = 0; i < bytes; ++i)
-      value[i] = (*this)[i];
+      value[i] = this->at(i);
     this->ignore(bytes);
   }
 
