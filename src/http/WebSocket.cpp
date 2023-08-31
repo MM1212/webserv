@@ -15,24 +15,19 @@ WebSocket::WebSocket()
 
 WebSocket::~WebSocket() {}
 
-void WebSocket::onClientConnect(const Socket::Connection& sock) {
-  this->pendingRequests.insert(
-    std::make_pair<int, PendingRequest>(
-      sock,
-      PendingRequest(
-        this,
-        const_cast<Socket::Connection*>(&sock)
-      )
-    )
-  );
-}
+void WebSocket::onClientConnect(const Socket::Connection&) {}
 
-void WebSocket::onClientDisconnect(const Socket::Connection& sock) {
+bool WebSocket::onClientDisconnect(Socket::Connection& sock) {
+  if (this->pendingRequests.count(sock) > 0 && sock.hasTimedOut()) {
+    this->sendBadRequest(sock, 408, "Client timed out");
+    return false;
+  }
   if (this->pendingCGIProcesses.count(sock.getHandle()) > 0) {
     const pid_t pId = this->pendingCGIProcesses.at(sock.getHandle());
     this->kill(this->getProcess(pId), Socket::Process::ExitCodes::ClientTimeout);
   }
   this->pendingRequests.erase(sock);
+  return true;
 }
 
 void WebSocket::onClientRead(Socket::Connection& sock) {
@@ -40,12 +35,8 @@ void WebSocket::onClientRead(Socket::Connection& sock) {
 }
 
 void WebSocket::handleClientPacket(Socket::Connection& sock) {
-  if (!this->pendingRequests.count(sock)) {
-    Logger::warning
-      << "Received packet from unknown client " << Logger::param(sock)
-      << std::endl;
-    return;
-  }
+  if (!this->pendingRequests.count(sock))
+    this->pendingRequests.insert(std::make_pair(sock, PendingRequest(this, &sock)));
   PendingRequest& pendingRequest = this->pendingRequests.at(sock);
   ByteStream& packet = sock.getReadBuffer();
   pendingRequest.handlePacket(packet);
@@ -53,18 +44,18 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
   while (skip || pendingRequest.peek() != EOF) {
     if (skip)
       skip = false;
-   /*  if (std::isprint(pendingRequest.peek())) {
-      Logger::debug
-        << "peek: " << Logger::param<char>(pendingRequest.peek())
-        << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
-        << std::endl;
-    }
-    else {
-      Logger::debug
-        << "peek: " << std::hex << Logger::param(pendingRequest.peek()) << std::dec
-        << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
-        << std::endl;
-    } */
+    /*  if (std::isprint(pendingRequest.peek())) {
+       Logger::debug
+         << "peek: " << Logger::param<char>(pendingRequest.peek())
+         << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
+         << std::endl;
+     }
+     else {
+       Logger::debug
+         << "peek: " << std::hex << Logger::param(pendingRequest.peek()) << std::dec
+         << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
+         << std::endl;
+     } */
     switch (pendingRequest.state) {
     case ReqStates::CLRFCheck:
     {
@@ -236,7 +227,6 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         this->onRequest(req, res);
         if (res.getStatus() != 100) {
           this->pendingRequests.erase(sock);
-          this->pendingRequests.insert(std::make_pair(sock, PendingRequest(this, &sock)));
           return;
         }
         else
@@ -329,7 +319,6 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
     this->setClientToWrite(sock);
     this->onRequest(req, res);
     this->pendingRequests.erase(sock);
-    this->pendingRequests.insert(std::make_pair(sock, PendingRequest(this, &sock)));
   }
 }
 
@@ -337,13 +326,15 @@ void WebSocket::sendBadRequest(Socket::Connection& sock, int statusCode, const s
   Logger::warning
     << "Sending " << Logger::param(statusCode) << " to " << Logger::param(sock) << ": " << logMsg
     << std::endl;
-  Request req(this->pendingRequests.at(sock));
+  PendingRequest& pendingRequest = this->pendingRequests.at(sock);
+  pendingRequest.setBody("");
+  pendingRequest.setProtocol("HTTP/1.1");
+  Request req(pendingRequest);
   Response resp(req, NULL);
   resp.getHeaders().set("Connection", "close");
   this->setClientToWrite(sock);
   resp.status(statusCode).send();
   this->pendingRequests.erase(sock);
-  this->pendingRequests.insert(std::make_pair(sock, PendingRequest(this, &sock)));
 }
 
 void WebSocket::trackCGIResponse(pid_t pid, int std[2], Response& res) {

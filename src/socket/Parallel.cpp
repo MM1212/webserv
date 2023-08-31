@@ -161,11 +161,14 @@ bool Parallel::kill(int sock) {
   return true;
 }
 
-void Parallel::disconnect(const Connection& client) {
+bool Parallel::disconnect(Connection& client) {
   if (!this->hasClient(client))
-    return;
+    return false;
+  if (client.isAlive() && client.getWriteBuffer().size() > 0)
+    return false;
+  if (!this->onClientDisconnect(client))
+    return false;
   const std::string address(client);
-  this->onClientDisconnect(client);
   const Connection con(client);
   Logger::warning
     << "Client disconnected " << Logger::param(address)
@@ -177,12 +180,13 @@ void Parallel::disconnect(const Connection& client) {
   this->addressesToSock.erase(address);
   this->clients.erase(con);
   this->fileManager.remove(con.getHandle(), true);
+  return true;
 }
 
-void Parallel::disconnect(int client) {
+bool Parallel::disconnect(int client) {
   if (!this->hasClient(client))
-    return;
-  this->disconnect(this->getClient(client));
+    return false;
+  return this->disconnect(this->getClient(client));
 }
 
 void Parallel::run() {
@@ -209,13 +213,13 @@ void Parallel::onTick(const std::vector<File>& changed) {
       this->_onNewConnection(this->getServer(file));
     else if (this->hasClient(file)) {
       const Connection& client = this->getClient(file);
-      if (!client.isAlive() || client.hasTimedOut()) {
+      if (!client.isAlive()) {
         // Logger::debug
         //   << "client: " << client << " | "
         //   << "isAlive: " << std::boolalpha << client.isAlive() << " | "
         //   << "hasTimedOut: " << std::boolalpha << client.hasTimedOut() << std::endl;
-        this->_onClientDisconnect(client);
-        continue;
+        if (this->_onClientDisconnect(client))
+          continue;
       }
 
       const int clientSock = client.getHandle();
@@ -273,6 +277,8 @@ void Parallel::onTick(const std::vector<File>& changed) {
     it++
     ) {
     const Connection& client = it->second;
+    if (std::find(changed.begin(), changed.end(), client.getHandle()) != changed.end())
+      continue;
     if (!client.isAlive() || client.hasTimedOut()) {
       // Logger::debug
       //   << "client: " << client << " | "
@@ -341,8 +347,8 @@ void Parallel::_onNewConnection(Server& server) {
   this->onClientConnect(this->getClient(clientSock));
 }
 
-void Parallel::_onClientDisconnect(const Connection& client) {
-  this->disconnect(client);
+bool Parallel::_onClientDisconnect(const Connection& client) {
+  return this->disconnect(client);
 }
 
 void Parallel::_onClientRead(Connection& client) {

@@ -33,7 +33,7 @@ namespace HTTP {
     void trackCGIResponse(pid_t pid, int std[2], Response& res);
   private:
     virtual void onClientConnect(const Socket::Connection& sock);
-    virtual void onClientDisconnect(const Socket::Connection& sock);
+    virtual bool onClientDisconnect(Socket::Connection& sock);
     virtual void onClientRead(Socket::Connection& sock);
     virtual void onClientWrite(Socket::Connection&, int) {}
     virtual void onProcessRead(Socket::Process& process);

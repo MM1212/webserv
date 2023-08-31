@@ -81,8 +81,8 @@ namespace Socket {
 
     bool kill(int sock);
 
-    void disconnect(int client);
-    void disconnect(const Connection& client);
+    bool disconnect(int client);
+    bool disconnect(Connection& client);
 
     void kill(const Process& process, Process::ExitCodes::Code code = Process::ExitCodes::Force);
 
@@ -99,7 +99,7 @@ namespace Socket {
     void onTick(const std::vector<File>& changed);
 
     void _onNewConnection(Server& sock);
-    void _onClientDisconnect(const Connection& sock);
+    bool _onClientDisconnect(const Connection& sock);
     void _onClientRead(Connection& sock);
     void _onClientWrite(Connection& sock);
     bool _onClientEmptyBuffer(Connection& sock);
@@ -110,7 +110,7 @@ namespace Socket {
 
   protected:
     virtual void onClientConnect(const Connection& sock) = 0;
-    virtual void onClientDisconnect(const Connection& sock) = 0;
+    virtual bool onClientDisconnect(Connection& sock) = 0;
     virtual void onClientRead(Connection& sock) = 0;
     virtual void onClientWrite(Connection& sock, int bytesWritten) = 0;
     virtual void onProcessRead(Process& process) = 0;
