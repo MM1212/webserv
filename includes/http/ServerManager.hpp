@@ -39,14 +39,14 @@ namespace HTTP {
     ServerManager();
     virtual void onRequest(const Request& req, Response& res);
     ServerConfiguration* selectServer(const Request& req) const;
-    ServerConfiguration* getDefaultServer() const;
+    ServerConfiguration* getDefaultServer(const Socket::Host host) const;
 
     void addServer(const YAML::Node& node);
 
     static void onSIGINT(int signum);
   private:
     std::vector<ServerConfiguration*> servers;
-    ServerConfiguration* defaultServer;
+    std::map<Socket::Host, ServerConfiguration*> defaultServers;
     const YAML::Node root;
     char** env;
     uint64_t envSize;

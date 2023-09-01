@@ -1,5 +1,5 @@
 servers:
-  - listen: 8080
+  - listen: 127.0.0.1:8080
     server_names: [localhost, 127.0.0.1]
     default: true
     settings:

@@ -23,20 +23,13 @@ bool ServerManager::loadConfig(const std::string& path) {
     for (size_t i = 0; i < this->root["servers"].size(); i++) {
       this->addServer(this->root["servers"][i]);
     };
-    bool hasDefault = false;
     for (size_t i = 0; i < this->servers.size(); i++) {
-      if (this->servers[i]->isDefaultHost()) {
-        if (hasDefault)
-          throw std::runtime_error("Multiple default servers");
-        hasDefault = true;
-        this->defaultServer = this->servers[i];
-        break;
-      }
+      ServerConfiguration* server = this->servers[i];
+      const std::vector<Socket::Host>& hosts = server->getHosts();
+      for (uint64_t i = 0; i < hosts.size(); i++)
+        if (!this->defaultServers.count(hosts[i]) || server->isDefaultHost())
+          this->defaultServers[hosts[i]] = server;
     }
-    if (!hasDefault && this->servers.size() > 0)
-      this->defaultServer = this->servers[0];
-    else if (!hasDefault)
-      throw std::runtime_error("No default server");
   }
   catch (const std::exception& e) {
     Logger::error
@@ -60,15 +53,13 @@ ServerConfiguration* ServerManager::selectServer(const Request& req) const {
     if (this->servers[i]->match(req))
       return this->servers[i];
   }
-  return this->getDefaultServer();
+  return this->getDefaultServer(req.getServer());
 }
 
-ServerConfiguration* ServerManager::getDefaultServer() const {
-  for (size_t i = 0; i < this->servers.size(); i++) {
-    if (this->servers[i]->isDefaultHost())
-      return this->servers[i];
-  }
-  return NULL;
+ServerConfiguration* ServerManager::getDefaultServer(const Socket::Host host) const {
+  if (this->defaultServers.count(host) > 0)
+    return this->defaultServers.at(host);
+  return nullptr;
 }
 
 void ServerManager::onRequest(const Request& req, Response& res) {
@@ -109,6 +100,7 @@ void ServerManager::onSIGINT(int signum) {
   if (!pressed) {
     Logger::warning << "CTRL+C pressed, press again to exit" << std::endl;
     pressed = true;
+    std::signal(SIGINT, ServerManager::onSIGINT);
     return;
   }
   Logger::info << "Shutting down.." << std::endl;

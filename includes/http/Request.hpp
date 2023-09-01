@@ -53,6 +53,8 @@ namespace HTTP {
     const std::string& getProtocol() const;
     const Socket::Connection& getClient() const;
     Socket::Connection& getClient();
+    const Socket::Server& getServer() const;
+    Socket::Server& getServer();
     inline const ByteStream& getRawBody() const {
       return this->body;
     }

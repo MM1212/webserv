@@ -81,6 +81,14 @@ Socket::Connection& Request::getClient() {
   return *this->client;
 }
 
+const Socket::Server& Request::getServer() const {
+  return this->server->getServer(this->client->getServerSock());
+}
+
+Socket::Server& Request::getServer() {
+  return this->server->getServer(this->client->getServerSock());
+}
+
 const std::map<std::string, std::string>& Request::getParams() const {
   return this->params;
 }

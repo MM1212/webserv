@@ -230,17 +230,17 @@ void Parallel::onTick(const std::vector<File>& changed) {
     }
     else if (this->hasProcessBoundTo(file)) {
       Process& process = this->getProcessBoundTo(file);
-      Logger::debug
-        << "pId: " << process.getId() << " | isAlive: " << std::boolalpha << process.isAlive() << std::endl
-        << " - is fd stdin: " << std::boolalpha << (process.hasIn() && file == process.getIn()) << " | "
-        << " - is fd stdout: " << std::boolalpha << (process.hasOut() && file == process.getOut()) << " | "
-        << std::endl;
+      // Logger::debug
+      //   << "pId: " << process.getId() << " | isAlive: " << std::boolalpha << process.isAlive() << std::endl
+      //   << " - is fd stdin: " << std::boolalpha << (process.hasIn() && file == process.getIn()) << " | "
+      //   << " - is fd stdout: " << std::boolalpha << (process.hasOut() && file == process.getOut()) << " | "
+      //   << std::endl;
       if (file.isErrored() || (file == process.getIn() && !file.isReadable() && file.isClosed())) {
-        Logger::debug
-          << "process: " << process.getId() << " | "
-          << "isAlive: " << std::boolalpha << process.isAlive() << " | "
-          << "isReadable: " << std::boolalpha << process.isReadable() << " | "
-          << "hasTimedOut: " << std::boolalpha << process.hasTimedOut() << std::endl;
+        // Logger::debug
+        //   << "process: " << process.getId() << " | "
+        //   << "isAlive: " << std::boolalpha << process.isAlive() << " | "
+        //   << "isReadable: " << std::boolalpha << process.isReadable() << " | "
+        //   << "hasTimedOut: " << std::boolalpha << process.hasTimedOut() << std::endl;
         if (file.isErrored())
           this->_onProcessExit(process, Process::ExitCodes::Force);
         else if (process.hasTimedOut())

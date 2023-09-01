@@ -67,6 +67,15 @@ namespace Socket
     bool operator==(const Host& other) const {
       return this->port == other.port && this->address == other.address;
     }
+    bool operator!=(const Host& other) const {
+      return !(*this == other);
+    }
+    bool operator<(const Host& other) const {
+      return this->port < other.port || this->address < other.address;
+    }
+    bool operator>(const Host& other) const {
+      return this->port > other.port || this->address > other.address;
+    }
     virtual ~Host() {}
     inline operator std::string() const {
       return this->address + ":" + Utils::toString(this->port);
