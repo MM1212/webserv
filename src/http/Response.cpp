@@ -141,8 +141,8 @@ void Response::sendHeader() {
   const std::string header = this->getHeader() + "\r\n";
   Socket::Connection& client = const_cast<Request*>(this->req)->getClient();
   Logger::info
-    << "Sending headers to: " << Logger::param(client) << std::endl
-    << Logger::param(header) << std::endl;
+    << "Sending headers to: " << Logger::param(client) << std::newl
+    << Logger::param(header) << std::newl;
   ByteStream& buffer = client.getWriteBuffer();
   buffer.put(header);
   this->afterSend();
@@ -161,8 +161,8 @@ void Response::send() {
   const ByteStream resp = this->toString<ByteStream>();
   Socket::Connection& client = const_cast<Request*>(this->req)->getClient();
   Logger::info
-    << "Sending response to: " << Logger::param(client) << std::endl
-    << Logger::param(*this) << std::endl;
+    << "Sending response to: " << Logger::param(client) << std::newl
+    << Logger::param(*this) << std::newl;
   ByteStream& buffer = client.getWriteBuffer();
   buffer.put(resp);
   this->afterSend();
@@ -182,7 +182,7 @@ void Response::_sendChunk(const char* buffer, std::istream& stream, bool last) {
   const size_t chunkSize = stream.gcount();
   if (chunkSize > 0) {
     Logger::debug
-      << "Sending chunk of size: " << Logger::param(chunkSize) << std::endl;
+      << "Sending chunk of size: " << Logger::param(chunkSize) << std::newl;
     chunkBytes << std::hex << chunkSize << "\r\n";
     chunk.put(chunkBytes.str());
     chunk.put(buffer, chunkSize);
@@ -190,7 +190,7 @@ void Response::_sendChunk(const char* buffer, std::istream& stream, bool last) {
   }
   if (last)
     chunk.put("0\r\n\r\n");
-  // << Logger::param(chunk.str()) << std::endl;
+  // << Logger::param(chunk.str()) << std::newl;
   ByteStream& buff = client.getWriteBuffer();
   buff.put(chunk);
   if (last)
@@ -223,7 +223,7 @@ void Response::stream(std::istream& buff, size_t fileSize /* = 0 */) {
   if (fileSize > 0 && n > fileSize)
     n = fileSize;
   Logger::debug
-    << "Streaming file with chunk size: " << Logger::param(n) << std::endl;
+    << "Streaming file with chunk size: " << Logger::param(n) << std::newl;
   char buffer[n];
   while (buff.read(buffer, n))
     this->_sendChunk(buffer, buff);
@@ -256,7 +256,7 @@ void Response::sendFile(
   catch (const std::exception& e) {
     file.close();
     Logger::error
-      << "Could not send file " << Logger::param(filePath) << ": " << e.what() << std::endl;
+      << "Could not send file " << Logger::param(filePath) << ": " << e.what() << std::newl;
     this->status(500).send();
   }
 }
@@ -279,7 +279,7 @@ void Response::setupStaticFileHeaders(const std::string& filePath, struct stat* 
 }
 
 std::ostream& HTTP::operator<<(std::ostream& os, const Response& res) {
-  os << "Response(" << res.getStatus() << ", " << res.getStatusMessage() << "):" << std::endl
-    << "Headers: " << std::endl << res.getHeaders() << std::endl;
+  os << "Response(" << res.getStatus() << ", " << res.getStatusMessage() << "):" << std::newl
+    << "Headers: " << std::newl << res.getHeaders() << std::newl;
   return os;
 }

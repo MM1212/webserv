@@ -124,7 +124,7 @@ uint32_t Node::size() const {
 }
 
 const Node& Node::insert(const Node& node) {
-  // std::cout << "inserted " << node << " into " << *this << std::endl;
+  // std::cout << "inserted " << node << " into " << *this << std::newl;
   switch (this->type) {
   case Types::Map:
     this->map.insert(std::make_pair(node.getKey(), node));
@@ -174,20 +174,20 @@ std::string Node::Expand(const Node& node, uint32_t indent /* = 0 */) {
     ss << node.getKey() << ": " << node.getValue();
     break;
   case Types::Sequence:
-    ss << node.getKey() << ": [" << std::endl;
+    ss << node.getKey() << ": [" << std::newl;
     for (uint32_t i = 0; i < node.size(); ++i) {
-      ss << Node::Expand(node[i], indent + 1) << std::endl;
+      ss << Node::Expand(node[i], indent + 1) << std::newl;
     }
     ss << std::setw(indent * 2) << std::setfill(' ') << "" << "]";
     break;
   case Types::Map:
-    ss << node.getKey() << ": {" << std::endl;
+    ss << node.getKey() << ": {" << std::newl;
     for (
       Map::const_iterator it = node.begin<Map>();
       it != node.end<Map>();
       ++it
       ) {
-      ss << Node::Expand(it->second, indent + 1) << std::endl;
+      ss << Node::Expand(it->second, indent + 1) << std::newl;
     }
     ss << std::setw(indent * 2) << std::setfill(' ') << "" << "}";
     break;

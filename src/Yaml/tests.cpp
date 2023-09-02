@@ -96,17 +96,17 @@ static void flows(const YAML::Node& config) {
 }
 
 static void test(const std::string& path, void (*handler)(const YAML::Node& node)) {
-  Logger::info << "Testing " << Logger::param(path) << ".." << std::endl;
+  Logger::info << "Testing " << Logger::param(path) << ".." << std::newl;
 
   try {
     const YAML::Node root = YAML::LoadFile(path);
     if (handler)
       handler(root);
-    Logger::success << "Test " << Logger::param(path) << " passed:" << std::endl
-      << Logger::param(root.expand()) << std::endl;
+    Logger::success << "Test " << Logger::param(path) << " passed:" << std::newl
+      << Logger::param(root.expand()) << std::newl;
   }
   catch (const std::exception& e) {
-    Logger::error << "Test " << Logger::param(path) << " failed: " << Logger::param(e.what()) << std::endl;
+    Logger::error << "Test " << Logger::param(path) << " failed: " << Logger::param(e.what()) << std::newl;
   }
 }
 

@@ -52,7 +52,7 @@ Process::~Process() {}
 void Process::kill() {
   if (this->isAlive()) {
     Logger::warning
-      << "Killing process " << Logger::param(this->id) << ".." << std::endl;
+      << "Killing process " << Logger::param(this->id) << ".." << std::newl;
     ::kill(this->id, SIGKILL);
   }
 }

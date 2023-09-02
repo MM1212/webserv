@@ -151,7 +151,7 @@ namespace Socket {
       if (this->events) delete[] this->events;
       this->events = new epoll_event_t[this->maxEvents];
       Logger::debug
-        << "Tracking file descriptor " << Logger::param(fd) << std::endl;
+        << "Tracking file descriptor " << Logger::param(fd) << std::newl;
       return true;
     }
 
@@ -193,7 +193,7 @@ namespace Socket {
         Logger::error
           << "Failed to remove file descriptor " << Logger::param(fd) << " from epoll instance: "
           << Logger::errstr()
-          << std::endl;
+          << std::newl;
         return false;
       }
       this->fds.erase(fd);
@@ -203,7 +203,7 @@ namespace Socket {
       if (this->events) delete[] this->events;
       this->events = new epoll_event_t[this->maxEvents];
       Logger::debug
-        << "Stopped tracking file descriptor " << Logger::param(fd) << std::endl;
+        << "Stopped tracking file descriptor " << Logger::param(fd) << std::newl;
       return true;
     }
 

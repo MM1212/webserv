@@ -186,7 +186,7 @@ bool CGI::handle(const Request& req, Response& res) const {
   const bool doesMatch = this->doesFileMatch(path);
   Logger::debug
     << "cgi module triggered for " << Logger::param(path)
-    << " | running: " << doesMatch << std::endl;
+    << " | running: " << doesMatch << std::newl;
   if (!doesMatch)
     return this->next(res);
   const Interpreter& interpreter = this->getInterpreterByFile(path);
@@ -271,10 +271,10 @@ void CGI::handleResponse(Response& res) const {
   res.status(200);
   // Logger::debug
   //   << "cgi body: "
-  //   << Logger::param(packet.toString()) << std::endl;
+  //   << Logger::param(packet.toString()) << std::newl;
   while (packet.getline(line)) {
     Utils::trim(line);
-    // std::cout << "line: " << line << " | " << static_cast<int>(line[0]) << std::endl;
+    // std::cout << "line: " << line << " | " << static_cast<int>(line[0]) << std::newl;
     if (line.empty())
       break;
     size_t pos = line.find(": ");

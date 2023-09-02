@@ -22,7 +22,7 @@ Route::Route(const Route& other) :
 
 void Route::init(bool injectMethods /* = true */) {
   Logger::debug
-    << "Initializing route: " << Logger::param(this->node) << std::endl;
+    << "Initializing route: " << Logger::param(this->node) << std::newl;
   YAML::Node& root = const_cast<YAML::Node&>(this->node);
   if (!root.has("settings"))
     root.insert(YAML::Node::NewMap("settings"));
@@ -122,7 +122,7 @@ void Route::addModule(Routing::Module* module) {
   this->modules.push_back(module);
   Logger::info
     << "Added module: " << Logger::param(*module)
-    << " to route: " << Logger::param(*this) << std::endl;
+    << " to route: " << Logger::param(*this) << std::newl;
 }
 
 void Route::initModule(const YAML::Node& node) {

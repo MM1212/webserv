@@ -113,7 +113,7 @@ void ServerConfiguration::handleRequest(const Request& req, Response& res) const
   Logger::debug
     << "Handling request for " << Logger::param(req.getPath())
     << " with route " << Logger::param(*route)
-    << std::endl;
+    << std::newl;
   res.setRoute(route);
   if (!route->isMethodAllowed(req.getMethod()))
     return res.status(405).send();
@@ -124,7 +124,7 @@ void ServerConfiguration::handleRequest(const Request& req, Response& res) const
   }
   catch (const std::exception& e) {
     Logger::error
-      << "Could not handle request: " << e.what() << std::endl;
+      << "Could not handle request: " << e.what() << std::newl;
     res.status(500).send();
   }
 }
@@ -142,7 +142,7 @@ void ServerConfiguration::validate() {
 void ServerConfiguration::init() {
   Logger::debug
     << "Initializing server configuration for "
-    << Logger::param(this->config.toString()) << std::endl;
+    << Logger::param(this->config.toString()) << std::newl;
   if (!this->config.has("settings") || !this->config["settings"].is<YAML::Types::Map>())
     const_cast<YAML::Node&>(this->config)["settings"] = YAML::Node::NewMap("settings");
   if (this->config.has("listen"))
@@ -219,7 +219,7 @@ void ServerConfiguration::initRoutes() {
     throw std::runtime_error("Routes must be a sequence");
   Logger::debug
     << "Initializing routes "
-    << Logger::param(routes.toString()) << std::endl;
+    << Logger::param(routes.toString()) << std::newl;
   for (
     YAML::Node::const_iterator it = routes.begin<YAML::Node::Sequence>();
     it != routes.end<YAML::Node::Sequence>();
@@ -263,7 +263,7 @@ void ServerConfiguration::addRoute(const std::string& path, const Route* route) 
     << Logger::param(path)
     << " to server "
     << Logger::param(this->getNames()[0])
-    << std::endl;
+    << std::newl;
 }
 
 std::ostream& HTTP::operator<<(std::ostream& os, const ServerConfiguration& server) {

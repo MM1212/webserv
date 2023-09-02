@@ -18,6 +18,7 @@
 #include <cstdarg>
 #include <cmath>
 #include <exception>
+#include <shared.hpp>
 
 namespace Utils
 {

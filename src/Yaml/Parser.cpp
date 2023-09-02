@@ -33,7 +33,7 @@ Parser::Parser(const std::string& path)
       continue;
     while (isblank(line.end()[-1]))
       line = line.substr(0, line.size() - 1);
-    this->doc << line << std::endl;
+    this->doc << line << std::newl;
   }
   file.close();
 }
@@ -80,7 +80,7 @@ void Parser::handleContext(int indent, const Node* node) {
   if (!this->current)
     return;
 
-  // std::cout << "checking current indent " << *this->current << " " << this->current->indent << " against " << indent << std::endl;
+  // std::cout << "checking current indent " << *this->current << " " << this->current->indent << " against " << indent << std::newl;
   if (indent > this->current->indent)
   {
     this->stack.push(this->current);
@@ -89,7 +89,7 @@ void Parser::handleContext(int indent, const Node* node) {
   }
   while (this->stack.size() > 0 && indent <= this->current->indent) {
     Node* parent = this->stack.top();
-    // std::cout << "leaving level " << *this->current << " to " << *parent << std::endl;
+    // std::cout << "leaving level " << *this->current << " to " << *parent << std::newl;
     this->current = parent;
     this->stack.pop();
   }
@@ -99,7 +99,7 @@ void Parser::parse(bool skipIndent, bool skipTokens) {
   if (this->doc.eof() || this->doc.peek() == EOF) return;
   int indent = this->countWhitespace();
   // std::cout << "[" << std::dec << this->doc.peek() << "](" << (char)this->doc.peek() << ")";
-  // std::cout << "c indent " << indent << " | " << "container " << *this->current << " indent: " << this->current->indent << " | " << "skipIndent: " << std::boolalpha << skipIndent << " | " << "skipTokens: " << std::boolalpha << skipTokens << std::endl;
+  // std::cout << "c indent " << indent << " | " << "container " << *this->current << " indent: " << this->current->indent << " | " << "skipIndent: " << std::boolalpha << skipIndent << " | " << "skipTokens: " << std::boolalpha << skipTokens << std::newl;
   if (this->isEmptyLine())
   {
     this->doc.ignore();
@@ -117,7 +117,7 @@ void Parser::parse(bool skipIndent, bool skipTokens) {
       this->doc.putback('-');
       goto skip_sequence;
     }
-    // std::cout << "handling sequence entry @ " << std::dec << this->doc.peek() << std::endl;
+    // std::cout << "handling sequence entry @ " << std::dec << this->doc.peek() << std::newl;
     if (!this->current->is<Types::Sequence>()) {
       if (!this->current->is<Types::Null>())
         throw std::runtime_error("Expected a Null, got: " + Types::GetLabel(this->current->type));
@@ -135,7 +135,7 @@ void Parser::parse(bool skipIndent, bool skipTokens) {
 skip_sequence:
   if (this->doc.peek() == '[') {
     this->doc.ignore();
-    // std::cout << "handling inline scalar sequence entry @" << std::dec << this->doc.peek() << std::endl;
+    // std::cout << "handling inline scalar sequence entry @" << std::dec << this->doc.peek() << std::newl;
     if (!this->current->is<Types::Sequence>()) {
       const int cIndent = this->current->indent;
       Node node = Node::NewSequence(this->scalar);
@@ -162,14 +162,14 @@ skip_sequence:
     return this->parse();
   }
   std::string key = this->retrieveScalar(skipTokens);
-  // std::cout << "got key " << key << " " << this->doc.peek() << std::endl;
+  // std::cout << "got key " << key << " " << this->doc.peek() << std::newl;
   if (this->doc.peek() == ':' && !skipTokens) {
     this->doc.ignore();
     if (!std::isspace(this->doc.peek())) {
       this->doc.putback(':');
       goto skip_map;
     }
-    // std::cout << "handling map entry @ " << std::dec << this->doc.peek() << std::endl;
+    // std::cout << "handling map entry @ " << std::dec << this->doc.peek() << std::newl;
     if (!this->current->is<Types::Map>()) {
       if (!this->current->is<Types::Null>())
         throw std::runtime_error("Expected a Null, got: " + Types::GetLabel(this->current->type));
@@ -179,7 +179,7 @@ skip_sequence:
     }
     this->scalar = key;
     this->skipWhitespace();
-    // std::cout << "going to deeper level " << std::boolalpha << (!skipIndent && this->doc.peek() == '\n') << std::endl;
+    // std::cout << "going to deeper level " << std::boolalpha << (!skipIndent && this->doc.peek() == '\n') << std::newl;
     if (!skipIndent && this->doc.peek() == '\n') {
       Node& node = const_cast<Node&>(this->current->insert(Node::NewNull(key)));
       node.indent = skipIndent ? this->current->indent : indent;
@@ -236,13 +236,13 @@ std::string Parser::retrieveScalar(bool _ignoreTokens) {
   char last = 0;
   bool ignoreTokens = _ignoreTokens;
   ScalarContext::Type ctx = ScalarContext::Normal;
-  // std::cout << "[RETRIEVE SCALAR]" << std::endl;
+  // std::cout << "[RETRIEVE SCALAR]" << std::newl;
   while (1) {
     if (this->doc.peek() == EOF || this->doc.peek() == '\n')
       break;
     // ScalarContext::Type lastCtx = ctx;
     this->parseScalarContext(ctx, this->doc.peek());
-    // std::cout << "last: " << lastCtx << " | " << "ctx: " << ctx << " for: " << (char)this->doc.peek() << "[" << this->doc.peek() << "]" << std::endl;
+    // std::cout << "last: " << lastCtx << " | " << "ctx: " << ctx << " for: " << (char)this->doc.peek() << "[" << this->doc.peek() << "]" << std::newl;
     ignoreTokens = _ignoreTokens || ctx != ScalarContext::Normal;
     if (!ignoreTokens && (std::string(":-").find_first_of(this->doc.peek()) != std::string::npos)) {
       char c = this->doc.get();
@@ -264,7 +264,7 @@ std::string Parser::retrieveScalar(bool _ignoreTokens) {
   if (ctx != ScalarContext::Normal)
     throw std::runtime_error("Invalid scalar context. Expected quotes to correctly be closed.");
   this->removeScalarQuotes(value);
-  // std::cout << "[END RETRIEVE SCALAR]: " << value << std::endl;
+  // std::cout << "[END RETRIEVE SCALAR]: " << value << std::newl;
   return value;
 }
 

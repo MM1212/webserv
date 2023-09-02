@@ -80,7 +80,7 @@ bool Static::handle(const Request& req, Response& res) const {
     << "generated path " << Logger::param(path)
     << " based on root " << Logger::param(this->getRoot())
     << " and req path " << Logger::param(req.getPath())
-    << std::endl;
+    << std::newl;
   switch (req.getMethod()) {
   case Methods::GET:
   case Methods::HEAD:
@@ -113,7 +113,7 @@ bool Static::handleGet(const std::string& path, const Request& req, Response& re
       return (res.redirect(req.getPath() + "/", true), true);
     std::string listing = this->buildDirectoryListing(path);
     Logger::debug
-      << "Directory listing size: " << Logger::param(listing.size()) << std::endl;
+      << "Directory listing size: " << Logger::param(listing.size()) << std::newl;
     return (res.status(200).send(listing), true);
   }
   else if (S_ISREG(st.st_mode))
@@ -152,7 +152,7 @@ bool Static::handleUploads(const std::string& path, const Request& req, Response
   Logger::debug
     << "Uploading file " << Logger::param(path)
     << " with size " << Logger::param(req.getRawBody().size())
-    << std::endl;
+    << std::newl;
   file.write(reinterpret_cast<const char*>(req.getRawBody().data()), req.getRawBody().size());
   file.close();
   if (this->getRedirection() != this->getRoot()) {

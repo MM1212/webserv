@@ -76,7 +76,7 @@ std::string Headers::toString() const {
     if (!this->headers.count(key)) {
       Logger::error
         << "Headers key " << Logger::param(key) << " not found in headers map"
-        << std::endl;
+        << std::newl;
       continue;
     }
     const std::string& value = this->headers.at(key);

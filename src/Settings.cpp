@@ -12,7 +12,7 @@ Settings::Settings() : config() {
     Logger::error
       << "Failed to load settings: "
       << Logger::param(e.what())
-      << std::endl;
+      << std::newl;
   }
 }
 
@@ -78,7 +78,7 @@ bool Settings::isValid() const {
     Logger::error
       << "Failed to load settings: "
       << Logger::param(e.what())
-      << std::endl;
+      << std::newl;
     return false;
   }
 }

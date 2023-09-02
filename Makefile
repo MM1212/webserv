@@ -33,7 +33,7 @@ CXX = c++
 CXXFLAGS = \
 					-I$(INCLUDES) -I. \
 					-MT $@ -MMD -MP -MF $(DEP_DIR)/$*.d \
-					-Wall -Wextra -Werror -std=c++98 \
+					-Wall -Wextra -Werror -std=c++98 -O3 \
 					-g -gdwarf-4 -fsanitize=address,undefined
 
 

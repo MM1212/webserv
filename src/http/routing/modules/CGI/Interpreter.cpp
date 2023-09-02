@@ -53,26 +53,26 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
   if (access(execPath.c_str(), F_OK | X_OK) == -1) {
     Logger::error
       << "Attempted to execute a cgi script with an interpreter that doesn't exist: "
-      << Logger::param(execPath) << ". Skipping CGI module.." << std::endl;
+      << Logger::param(execPath) << ". Skipping CGI module.." << std::newl;
     return cgi->next(res);
   }
   Logger::debug
     << "Preparing cgi execution for script: "
     << Logger::param(filePath)
-    << " & interpreter: " << Logger::param(this->getName()) << std::endl;
+    << " & interpreter: " << Logger::param(this->getName()) << std::newl;
   int stdinput[2];
   int stdoutput[2];
 
   if (pipe(stdinput) < -1) {
     Logger::error
       << "Failed to open a pipe for cgi req "
-      << Logger::param(req) << std::endl;
+      << Logger::param(req) << std::newl;
     return cgi->next(res, 500);
   }
   if (pipe(stdoutput) < -1) {
     Logger::error
       << "Failed to open a pipe for cgi req "
-      << Logger::param(req) << std::endl;
+      << Logger::param(req) << std::newl;
     return cgi->next(res, 500);
   }
   std::vector<std::string> env;
@@ -81,13 +81,13 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
   Logger::debug
     << "Spawning cgi process " << Logger::param(execPath)
     << " for script " << Logger::param(Utils::basename(filePath))
-    << " with args: " << Logger::param(Utils::strJoin(baseArgs)) << std::endl
-    << " and env size of : " << Logger::param(env.size()) << std::endl;
+    << " with args: " << Logger::param(Utils::strJoin(baseArgs)) << std::newl
+    << " and env size of : " << Logger::param(env.size()) << std::newl;
   pid_t pid = fork();
   if (pid == -1) {
     Logger::error
       << "Failed to fork for cgi req "
-      << Logger::param(req) << std::endl;
+      << Logger::param(req) << std::newl;
     return cgi->next(res, 500);
   }
   int std[2];

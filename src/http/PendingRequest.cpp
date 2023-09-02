@@ -75,7 +75,7 @@ void PendingRequest::nextWithCRLF(int nextState /* = -1 */) {
     << Logger::param(States::ToString(this->state))
     << " -> "
     << Logger::param(States::ToString(this->crlfNextState))
-    << std::endl;
+    << std::newl;
   this->state = States::CLRFCheck;
 }
 
@@ -88,7 +88,7 @@ void PendingRequest::next() {
     << Logger::param(States::ToString(this->state))
     << " -> "
     << Logger::param(States::ToString(nextState))
-    << std::endl;
+    << std::newl;
   this->state = nextState;
 }
 
@@ -181,10 +181,10 @@ std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {
     << req.getHeaders()
     << "\nPendingBodySize: " << Logger::param(req.chunkData.size())
     // << " -> body:\n"
-    // << "---" << std::endl
+    // << "---" << std::newl
     // << req.getRawBody()
-    // << "---" << std::endl
-    << std::endl;
+    // << "---" << std::newl
+    << std::newl;
   return os;
 }
 

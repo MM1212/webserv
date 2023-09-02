@@ -48,13 +48,13 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
        Logger::debug
          << "peek: " << Logger::param<char>(pendingRequest.peek())
          << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
-         << std::endl;
+         << std::newl;
      }
      else {
        Logger::debug
          << "peek: " << std::hex << Logger::param(pendingRequest.peek()) << std::dec
          << " | at: " << Logger::param(ReqStates::ToString(pendingRequest.getState()))
-         << std::endl;
+         << std::newl;
      } */
     switch (pendingRequest.state) {
     case ReqStates::CLRFCheck:
@@ -83,7 +83,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         const Methods::Method method = Methods::FromString(methodStr);
         Logger::debug
           << "method: " << Logger::param(methodStr) << " (" << Logger::param(method) << ")"
-          << std::endl;
+          << std::newl;
         if (method == Methods::UNK) {
           // send 501 (Not Implemented)
           return this->sendBadRequest(sock, 501, "Unknown method " + methodStr);
@@ -181,7 +181,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         }
         Logger::debug
           << "Got field key " << Logger::param(key)
-          << std::endl;
+          << std::newl;
         pendingRequest.buildingHeaderKey = key;
         pendingRequest.next();
         continue;
@@ -197,7 +197,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         Logger::debug
           << "Got field value " << Logger::param(value)
           << " for key " << Logger::param(key)
-          << std::endl;
+          << std::newl;
         pendingRequest.getHeaders().append(key, value);
         pendingRequest.nextWithCRLF(ReqStates::Header);
         continue;
@@ -221,7 +221,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         const Request req(pendingRequest);
         Response res(req, NULL);
         Logger::info
-          << "New request expecting from " << Logger::param(sock) << ": " << std::endl
+          << "New request expecting from " << Logger::param(sock) << ": " << std::newl
           << Logger::param(req);
         this->setClientToWrite(sock);
         this->onRequest(req, res);
@@ -240,9 +240,9 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         continue;
       const size_t contentLength = pendingRequest.getContentLength();
       // Logger::debug
-      //   << "Content-Length: " << Logger::param(contentLength) << std::endl
-      //   << "chunk size: " << Logger::param(pendingRequest.chunkData.size()) << std::endl
-      //   << "storage size: " << Logger::param(pendingRequest.storage.size()) << std::endl;
+      //   << "Content-Length: " << Logger::param(contentLength) << std::newl
+      //   << "chunk size: " << Logger::param(pendingRequest.chunkData.size()) << std::newl
+      //   << "storage size: " << Logger::param(pendingRequest.storage.size()) << std::newl;
       if (pendingRequest.chunkData.size() == contentLength) {
         pendingRequest.setBody(pendingRequest.chunkData);
         pendingRequest.reset(true);
@@ -270,7 +270,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
         ss >> std::hex >> pendingRequest.chunkSize;
         Logger::debug
           << "Got chunk size " << Logger::param(pendingRequest.chunkSize)
-          << std::endl;
+          << std::newl;
         if (pendingRequest.chunkSize == 0)
           pendingRequest.nextWithCRLF(ReqStates::BodyChunkEnd);
         else
@@ -286,7 +286,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
       // Logger::debug
       //   << "Got chunk data of size " << Logger::param(pendingRequest.chunkData.size())
       //   << " and remaining size " << Logger::param(pendingRequest.chunkSize)
-      //   << std::endl;
+      //   << std::newl;
       if (pendingRequest.chunkData.size() == pendingRequest.chunkSize) {
         pendingRequest.addToBody(pendingRequest.chunkData);
         pendingRequest.chunkData.clear();
@@ -306,15 +306,15 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
   }
   // Logger::debug
   //   << "Got packet from " << Logger::param(sock) << " at state "
-  //   << Logger::param(ReqStates::ToString(pendingRequest.getState())) << ": " << std::endl
-  //   << Logger::param(pendingRequest) << std::endl;
+  //   << Logger::param(ReqStates::ToString(pendingRequest.getState())) << ": " << std::newl
+  //   << Logger::param(pendingRequest) << std::newl;
   if (pendingRequest.lastCheck()) {
     // handle multiform-data
     // pendingRequest.handleMultiformData();
     const Request req(pendingRequest);
     Response res(req, NULL);
     Logger::info
-      << "New request from " << Logger::param(sock) << ": " << std::endl
+      << "New request from " << Logger::param(sock) << ": " << std::newl
       << Logger::param(req);
     this->setClientToWrite(sock);
     this->onRequest(req, res);
@@ -325,7 +325,7 @@ void WebSocket::handleClientPacket(Socket::Connection& sock) {
 void WebSocket::sendBadRequest(Socket::Connection& sock, int statusCode, const std::string& logMsg) {
   Logger::warning
     << "Sending " << Logger::param(statusCode) << " to " << Logger::param(sock) << ": " << logMsg
-    << std::endl;
+    << std::newl;
   PendingRequest& pendingRequest = this->pendingRequests.at(sock);
   pendingRequest.setBody("");
   pendingRequest.setProtocol("HTTP/1.1");
@@ -358,7 +358,7 @@ void WebSocket::trackCGIResponse(pid_t pid, int std[2], Response& res) {
   Logger::debug
     << "Tracking cgi response to client " << Logger::param(client)
     << " with stds " << Logger::param(std[0]) << " and " << Logger::param(std[1])
-    << " to process id " << Logger::param(pid) << std::endl;
+    << " to process id " << Logger::param(pid) << std::newl;
 }
 
 void WebSocket::onProcessRead(Socket::Process& process) {
@@ -375,7 +375,7 @@ void WebSocket::onProcessExit(const Socket::Process& process, Socket::Process::E
   Response& res = pending.response;
   Logger::debug
     << "Creating CGI response for client: " << Logger::param(process.getClient())
-    << " because of " << Socket::Process::ExitCodes::ToString(code) << std::endl;
+    << " because of " << Socket::Process::ExitCodes::ToString(code) << std::newl;
   this->pendingCGIProcesses.erase(process.getClient());
   this->setClientToWrite(const_cast<Socket::Connection&>(process.getClient()));
   switch (code) {
@@ -391,7 +391,7 @@ void WebSocket::onProcessExit(const Socket::Process& process, Socket::Process::E
       catch (const std::exception& e) {
         Logger::error
           << "Error while handling CGI response: " << e.what()
-          << std::endl;
+          << std::newl;
         res.status(500);
       }
     }

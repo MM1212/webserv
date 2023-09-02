@@ -50,10 +50,10 @@ void Utils::showStackTrace() {
   void* buff[10];
   int size = backtrace(buff, 10);
   char** symbols = backtrace_symbols(buff, size);
-  std::cerr << "Stack trace:" << std::endl;
+  std::cerr << "Stack trace:" << std::newl;
   for (int i = 0; i < size; i++)
   {
-    std::cerr << symbols[i] << std::endl;
+    std::cerr << symbols[i] << std::newl;
   }
 }
 
@@ -242,6 +242,6 @@ void Utils::showException(const std::string& msg, const std::exception& e) {
   ss << msg << ": " << Logger::param(e.what());
   if (errno != 0)
     ss << " (" << Logger::param(strerror(errno)) << ")";
-  ss << std::endl;
+  ss << std::newl;
   Logger::error << ss.str();
 }

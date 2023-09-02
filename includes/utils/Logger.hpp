@@ -72,8 +72,10 @@ namespace Logger {
 
     template <typename T>
     std::ostream& operator<<(const T& value) {
-      this->vstream.str("");
-      if (!this->enabled) return this->vstream;
+      if (!this->enabled) {
+        this->vstream.clear();
+        return this->vstream;
+      };
       return this->target << this->buildHeader() << " " << value;
     }
 

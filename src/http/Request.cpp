@@ -135,10 +135,10 @@ std::ostream& HTTP::operator<<(std::ostream& os, const Request& req) {
     << ") -> headers:\n"
     << req.getHeaders()
     // << " -> body:\n"
-    // << "---" << std::endl
+    // << "---" << std::newl
     // << req.getRawBody()
-    // << "---" << std::endl
-    << std::endl;
+    // << "---" << std::newl
+    << std::newl;
   return os;
 }
 

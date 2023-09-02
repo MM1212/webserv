@@ -35,7 +35,7 @@ bool ServerManager::loadConfig(const std::string& path) {
     Logger::error
       << "Failed to load configuration file: "
       << Logger::param(e.what())
-      << std::endl;
+      << std::newl;
     return false;
   }
   return true;
@@ -86,11 +86,11 @@ void ServerManager::bindServers() {
   Logger::debug
     << "Attempting to bind "
     << Logger::param(listenAddresses.size())
-    << " addresses.." << std::endl;
+    << " addresses.." << std::newl;
   for (std::vector<Socket::ListenAddress>::iterator it = listenAddresses.begin(); it != listenAddresses.end(); it++) {
     const Socket::ListenAddress& address = *it;
     this->bind(Socket::Domain::INET, Socket::Type::TCP, Socket::Protocol::IP, address, address.maxConnections);
-    Logger::info << "Listening on " << Logger::param(address.address) << ":" << Logger::param(address.port) << std::endl;
+    Logger::info << "Listening on " << Logger::param(address.address) << ":" << Logger::param(address.port) << std::newl;
   }
 }
 
@@ -98,12 +98,12 @@ void ServerManager::onSIGINT(int signum) {
   static bool pressed = false;
   (void)signum;
   if (!pressed) {
-    Logger::warning << "CTRL+C pressed, press again to exit" << std::endl;
+    Logger::warning << "CTRL+C pressed, press again to exit" << std::newl;
     pressed = true;
     std::signal(SIGINT, ServerManager::onSIGINT);
     return;
   }
-  Logger::info << "Shutting down.." << std::endl;
+  Logger::info << "Shutting down.." << std::newl;
   Instance::Get<ServerManager>()->stop();
 }
 

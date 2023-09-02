@@ -37,4 +37,5 @@ namespace std {
   };
 
   static std::string crlf("\r\n");
+  static const char newl = '\n';
 }
