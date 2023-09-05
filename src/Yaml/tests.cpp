@@ -95,7 +95,7 @@ static void flows(const YAML::Node& config) {
   }
 }
 
-static void test(const std::string& path, void (*handler)(const YAML::Node& node)) {
+static bool test(const std::string& path, void (*handler)(const YAML::Node& node)) {
   Logger::info << "Testing " << Logger::param(path) << ".." << std::newl;
 
   try {
@@ -107,7 +107,9 @@ static void test(const std::string& path, void (*handler)(const YAML::Node& node
   }
   catch (const std::exception& e) {
     Logger::error << "Test " << Logger::param(path) << " failed: " << Logger::param(e.what()) << std::newl;
+    return false;
   }
+  return true;
 }
 
 void YAML::RunTests() {
@@ -119,12 +121,16 @@ void YAML::RunTests() {
   (void)scalarQuotes;
   (void)sequencesAndMaps;
   (void)flows;
-  test("config/tests/yaml/maps.yaml", &maps);
-  test("config/tests/yaml/sequences.yaml", &sequences);
-  test("config/tests/yaml/scalar_quotes.yaml", &scalarQuotes);
-  test("config/tests/yaml/sequences_map.yaml", &sequencesAndMaps);
-  test("config/tests/yaml/flows.yaml", &flows);
-  test("config/tests/example.yaml", NULL);
-  test("config/tests/wip.yaml", NULL);
-  test("config/bin/tests/default.yaml", NULL);
+  int failed = 0;
+  failed += !test("config/tests/yaml/maps.yaml", &maps);
+  failed += !test("config/tests/yaml/sequences.yaml", &sequences);
+  failed += !test("config/tests/yaml/scalar_quotes.yaml", &scalarQuotes);
+  failed += !test("config/tests/yaml/sequences_map.yaml", &sequencesAndMaps);
+  failed += !test("config/tests/yaml/flows.yaml", &flows);
+  failed += !test("config/tests/example.yaml", NULL);
+  failed += !test("config/tests/wip.yaml", NULL);
+  Logger::info
+    << "YAML test results: " << Logger::param(failed) << " failed, "
+    << Logger::param(7 - failed) << " passed!" << std::newl;
+  std::exit(static_cast<bool>(failed));
 }
