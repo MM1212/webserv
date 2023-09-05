@@ -2,7 +2,7 @@
 #include <utils/Logger.hpp>
 #include <utils/misc.hpp>
 
-const std::string Settings::path = "config/bin/settings.yaml";
+const char* Settings::path = "config/bin/settings.yaml";
 
 Settings::Settings() : config() {
   try {

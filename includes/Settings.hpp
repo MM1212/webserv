@@ -12,7 +12,7 @@
 #include <shared.hpp>
 
 class Settings {
-  static const std::string path;
+  static const char* path;
 public:
   bool isValid() const;
 

@@ -94,6 +94,9 @@ namespace HTTP {
 
     void stream(std::istream& buff, size_t fileSize = 0);
 
+    /**
+     * bool stream parameter is deprecated and overriden to true.
+    */
     void sendFile(const std::string& filePath, bool stream = true, struct stat* fileStat = nullptr);
     void redirect(const std::string& path, bool permanent = true);
   private:

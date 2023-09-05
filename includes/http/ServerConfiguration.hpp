@@ -50,10 +50,10 @@ namespace HTTP {
     const Routes::Default* getDefaultRoute() const;
 
     void handleRequest(const Request& req, Response& res) const;
+    void init();
 
     friend std::ostream& operator<<(std::ostream& os, const ServerConfiguration& server);
   private:
-    void init();
     void initHosts();
     void parseHostNode(const YAML::Node& node);
     void initNames();

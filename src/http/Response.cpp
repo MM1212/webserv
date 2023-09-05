@@ -236,6 +236,7 @@ void Response::sendFile(
   bool stream /* = true */,
   struct stat* fileStat /* = NULL */
 ) {
+  stream = true;
   std::ifstream file(filePath.c_str());
   try {
     if (!file.is_open() || !file.good())

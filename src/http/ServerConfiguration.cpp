@@ -8,9 +8,7 @@
 using namespace HTTP;
 
 ServerConfiguration::ServerConfiguration(const YAML::Node& config)
-  : config(config), hosts(), names(), defaultHost(false), defaultRoute(NULL), routes() {
-  this->init();
-}
+  : config(config), hosts(), names(), defaultHost(false), defaultRoute(NULL), routes() {}
 
 ServerConfiguration::~ServerConfiguration() {
   if (this->defaultRoute)
@@ -33,16 +31,21 @@ ServerConfiguration::ServerConfiguration(const ServerConfiguration& other)
     if (this->routes[it->first])
       const_cast<Route*>(this->routes[it->first])->init();
   }
-  this->init();
 }
 
 
 bool ServerConfiguration::match(const Request& req) const {
   ServerManager* serverManager = Instance::Get<ServerManager>();
   Socket::Server& server = serverManager->getServer(req.getClient().getServerSock());
-  if (this->hasHost(Socket::Host(server.port, server.address)))
+  if (!this->hasHost(server))
     return false;
-  if (this->hasName(req.getHost()))
+  std::string host = req.getHost();
+  if (host.empty())
+    return false;
+  uint64_t pos;
+  if ((pos = host.find(':')) != std::string::npos)
+    host.erase(pos, host.size() - pos);
+  if (!this->hasName(host))
     return false;
   return true;
 }
@@ -240,14 +243,16 @@ void ServerConfiguration::initRoutes() {
     if (*uri.rbegin() == '/' && uri.size() > 1)
       uri.erase(uri.size() - 1, 1);
     Route* routeRef = new Route(this, route);
-    if (routeRef)
-      routeRef->init();
     try {
+      if (routeRef)
+        routeRef->init();
+      else
+        throw std::runtime_error("Failed to create route");
       this->addRoute(route["uri"].getValue(), routeRef);
     }
     catch (const std::exception& e) {
       delete routeRef;
-      throw e;
+      throw std::runtime_error("Failed to initialize route: " + std::string(e.what()));
     }
   }
 }

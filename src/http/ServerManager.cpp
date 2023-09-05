@@ -30,6 +30,26 @@ bool ServerManager::loadConfig(const std::string& path) {
         if (!this->defaultServers.count(hosts[i]) || server->isDefaultHost())
           this->defaultServers[hosts[i]] = server;
     }
+    // check for duplicated server names
+    for (size_t i = 0; i < this->servers.size(); i++) {
+      ServerConfiguration* server = this->servers[i];
+      const std::vector<std::string>& names = server->getNames();
+      for (size_t k = 0; k < this->servers.size(); k++) {
+        // check if has colliding hosts
+        const std::vector<Socket::Host>& hosts = this->servers[k]->getHosts();
+        bool hasCollidingHost = false;
+        for (size_t j = 0; j < hosts.size(); j++)
+          if (i != k && server->hasHost(hosts[j])) {
+            hasCollidingHost = true;
+            break;
+          }
+        if (!hasCollidingHost)
+          continue;
+        for (size_t j = 0; j < names.size(); j++)
+          if (i != k && this->servers[k]->hasName(names[j]))
+            throw std::runtime_error("Duplicated server name: " + names[j]);
+      }
+    }
   }
   catch (const std::exception& e) {
     Logger::error
@@ -46,6 +66,7 @@ void ServerManager::addServer(const YAML::Node& node) {
   if (!server)
     throw std::runtime_error("Failed to create server");
   this->servers.push_back(server);
+  server->init();
 }
 
 ServerConfiguration* ServerManager::selectServer(const Request& req) const {
