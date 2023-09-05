@@ -1,0 +1,52 @@
+servers:
+  - listen: 8080
+    server_names: [localhost]
+    default: true
+    settings:
+      methods: [POST]
+      default_modules:
+        - type: cgi
+          settings:
+            methods: [POST]
+            root: 'bin/showcase/42/root'
+            interpreters:
+              - name: test
+                path: bin/showcase/42/cgi/ubuntu_cgi_tester
+                extensions: [bla]
+                args: [$file]
+    routes:
+      - uri: /
+        settings:
+          methods: [GET]
+        modules:
+          - type: static
+            settings:
+              methods: [GET]
+              root: '~'
+              directory_listing: true
+      - uri: /put_test/
+        settings:
+          methods: [PUT]
+        modules:
+          - type: static
+            settings:
+              methods: [PUT]
+              root: 'bin/showcase/42/root'
+      - uri: /post_body/
+        settings:
+          methods: [POST]
+          max_body_size: 100
+        modules:
+          - type: static
+            settings:
+              methods: [POST]
+              root: 'bin/showcase/42/root'
+      - uri: /directory
+        settings:
+          methods: [GET]
+        modules:
+          - type: static
+            settings:
+              methods: [GET]
+              root: 'bin/showcase/42/root/YoupiBanane'
+              index: youpi.bad_extension
