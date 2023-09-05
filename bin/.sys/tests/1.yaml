@@ -1,0 +1,33 @@
+servers:
+  - listen: 8080
+    server_names: [localhost, 127.0.0.1]
+    default: true
+    settings:
+      static:
+        root: /var/www
+    routes:
+      - uri: /api
+        settings:
+          methods: [GET, POST]
+        modules:
+          - type: static
+            settings:
+              root: "~"
+              directory_listing: true
+      - uri: /upload
+        settings:
+          methods: [POST, PUT, DELETE]
+        modules:
+          - type: static
+            settings:
+              root: "~"
+              send_to: /api/
+      - uri: /youtube
+        settings:
+          methods: [GET]
+        modules:
+          - type: redirect
+            settings:
+              uri: https://youtube.com
+              type: permanent
+              partial: true

@@ -1,0 +1,23 @@
+servers:
+  - listen: 8080
+    server_names: localhost
+    routes:
+      - uri: /
+        settings:
+          methods: [GET, POST]
+        modules:
+          - type: cgi
+            settings:
+              methods: [POST]
+              root: 'bin/showcase/cgi/scripts'
+              path_info: 'bin/showcase/cgi/scripts'
+              interpreters:
+                - name: python
+                  path: /usr/bin/python3
+                  extensions: [py]
+                  args: [$file]
+          - type: static
+            settings:
+              root: 'bin/showcase/cgi/root'
+              index: add.html
+              directory_listing: false

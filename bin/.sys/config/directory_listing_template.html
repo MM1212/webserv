@@ -1,0 +1,122 @@
+<!-- directory listing template based on nginx -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Index of {{path}}</title>
+    <script src="https://code.iconify.design/1/1.0.6/iconify.min.js"></script>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: monospace;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th {
+        text-align: left;
+      }
+      td,
+      th {
+        border: 1px solid #ddd;
+        padding: 8px;
+      }
+      th.sorted {
+        background-color: #bcbcbc;
+      }
+      tr:nth-child(even) {
+        background-color: #f2f2f2;
+      }
+      th:hover {
+        background-color: #ddd;
+        cursor: pointer;
+      }
+      .dir-flags-wrapper svg {
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="margin-right: auto">Index of {{path}}</h1>
+    <table class="dir-entries">
+      <thead>
+        <tr>
+          <th data-entry-type="name">Name</th>
+          <th data-entry-type="last-modified">Last modified</th>
+          <th data-entry-type="size">Size</th>
+          <th data-entry-type="flags">Flags</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{files}}
+      </tbody>
+    </table>
+    <script>
+      const formatter = Intl.NumberFormat(undefined, {
+        notation: 'compact',
+        style: 'unit',
+        unit: 'byte',
+        unitDisplay: 'narrow',
+      });
+      const sizeElems = document.querySelectorAll('.dir-size');
+      sizeElems.forEach((elem) => {
+        const content = elem.textContent;
+        if (isNaN(parseInt(content))) return;
+        elem.textContent = formatter.format(parseInt(content));
+      });
+      const dateElems = document.querySelectorAll('.dir-last-modified');
+      dateElems.forEach((elem) => {
+        const content = elem.textContent;
+        if (isNaN(parseInt(content))) return;
+        elem.textContent = new Date(parseInt(content) * 1000);
+      });
+
+      const table = document.querySelector('.dir-entries');
+      const headers = table.querySelectorAll('th');
+      const rows = table.querySelectorAll('tr.dir-entry');
+      headers.forEach(
+        (header) =>
+          (header.onclick = (e) => {
+            const type = e.target.dataset.entryType;
+            const idx = Array.from(headers).indexOf(e.target);
+            const sortedHeader = table.querySelector('th.sorted');
+            const direction =
+              sortedHeader && sortedHeader != e.target
+                ? 'asc'
+                : table.dataset.sortDirection ?? 'asc';
+
+            const sortFn = (a, b) => {
+              const aVal =
+                a.children[idx].dataset.value ?? a.children[idx].textContent;
+              const bVal =
+                b.children[idx].dataset.value ?? b.children[idx].textContent;
+              const aTarget = direction === 'asc' ? aVal : bVal;
+              const bTarget = direction === 'asc' ? bVal : aVal;
+              if (type === 'name') {
+                return aTarget.localeCompare(bTarget);
+              } else if (type === 'last-modified') {
+                return (
+                  new Date(parseInt(aTarget)) - new Date(parseInt(bTarget))
+                );
+              } else if (type === 'size') {
+                return parseInt(aTarget) - parseInt(bTarget);
+              } else if (type === 'flags') {
+                return parseInt(aTarget) - parseInt(bTarget);
+              }
+            };
+            const sortedRows = Array.from(rows).sort(sortFn);
+            const tBody = table.querySelector('tbody');
+            table.dataset.sortDirection = direction === 'asc' ? 'desc' : 'asc';
+            sortedHeader?.classList.remove('sorted');
+            e.target.classList.add('sorted');
+            tBody.replaceChildren(...sortedRows);
+          })
+      );
+      headers[0].dispatchEvent(new Event('click'));
+    </script>
+  </body>
+</html>

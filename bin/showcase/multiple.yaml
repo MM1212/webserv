@@ -1,0 +1,48 @@
+servers:
+  - listen: 8080
+    server_names: localhost
+    routes:
+      - uri: /
+        settings:
+          methods: [GET, HEAD]
+        modules:
+          - type: static
+            settings:
+              root: ~
+              directory_listing: true
+  - listen: 8080
+    server_names: 127.0.0.1
+    routes:
+      - uri: /
+        settings:
+          methods: [GET]
+        modules:
+          - type: redirect
+            settings:
+              uri: https://google.com
+              type: temporary
+              partial: true
+  - listen: 8080
+    server_names: example.com
+    default: true
+    routes:
+      - uri: /
+        settings:
+          methods: [GET]
+        modules:
+          - type: redirect
+            settings:
+              uri: https://youtube.com
+              type: temporary
+              partial: true
+  - listen: 3000
+    server_names: localhost
+    routes:
+      - uri: /
+        settings:
+          methods: [GET]
+        modules:
+          - type: static
+            settings:
+              root: '.'
+              directory_listing: false

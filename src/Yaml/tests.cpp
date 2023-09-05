@@ -122,13 +122,14 @@ void YAML::RunTests() {
   (void)sequencesAndMaps;
   (void)flows;
   int failed = 0;
-  failed += !test("config/tests/yaml/maps.yaml", &maps);
-  failed += !test("config/tests/yaml/sequences.yaml", &sequences);
-  failed += !test("config/tests/yaml/scalar_quotes.yaml", &scalarQuotes);
-  failed += !test("config/tests/yaml/sequences_map.yaml", &sequencesAndMaps);
-  failed += !test("config/tests/yaml/flows.yaml", &flows);
-  failed += !test("config/tests/example.yaml", NULL);
-  failed += !test("config/tests/wip.yaml", NULL);
+  failed += !test("bin/.sys/tests/yaml/maps.yaml", &maps);
+  failed += !test("bin/.sys/tests/yaml/sequences.yaml", &sequences);
+  failed += !test("bin/.sys/tests/yaml/scalar_quotes.yaml", &scalarQuotes);
+  failed += !test("bin/.sys/tests/yaml/sequences_map.yaml", &sequencesAndMaps);
+  failed += !test("bin/.sys/tests/yaml/flows.yaml", &flows);
+  failed += !test("bin/.sys/tests/wip.yaml", NULL);
+  failed += !test("bin/.sys/tests/1.yaml", NULL);
+  failed += !test("bin/.sys/tests/2.yaml", NULL);
   Logger::info
     << "YAML test results: " << Logger::param(failed) << " failed, "
     << Logger::param(7 - failed) << " passed!" << std::newl;

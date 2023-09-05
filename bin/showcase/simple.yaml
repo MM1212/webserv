@@ -1,0 +1,13 @@
+servers:
+  - listen: 8080
+    server_names: localhost
+    routes:
+      - uri: /
+        settings:
+          methods: [GET, HEAD]
+        modules:
+          - type: static
+            settings:
+              root: ~
+              directory_listing: true
+          
