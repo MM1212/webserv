@@ -28,9 +28,12 @@ void Route::init(bool injectMethods /* = true */) {
     root.insert(YAML::Node::NewMap("settings"));
   YAML::Node& settings = root["settings"];
   if (!settings.has("methods")) {
-    settings.insert(YAML::Node::NewSequence("methods"));
-    if (injectMethods)
+    if (injectMethods) {
+      settings.insert(YAML::Node::NewSequence("methods"));
       settings["methods"].insert(YAML::Node::NewScalar("0", "GET"));
+    }
+    else
+      settings.insert(YAML::Node::NewNull("methods"));
   }
   if (injectMethods)
     this->server->getDefaultRoute()->inheritDefaultModules(this);
@@ -76,7 +79,7 @@ uint32_t Route::getMaxBodySize() const {
 
 bool Route::isMethodAllowed(Methods::Method method) const {
   const YAML::Node& methods = this->getSettings()["methods"];
-  if (methods.size() == 0)
+  if (!methods.is<YAML::Types::Sequence>())
     return true;
   const std::string methodStr = Methods::ToString(method);
   for (size_t i = 0; i < methods.size(); ++i) {
