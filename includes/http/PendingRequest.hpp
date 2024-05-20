@@ -18,6 +18,7 @@
 #include "Methods.hpp"
 #include "Headers.hpp"
 #include "Request.hpp"
+#include "HTTPStream.hpp"
 
 namespace HTTP {
   class WebSocket;
@@ -26,23 +27,11 @@ namespace HTTP {
   public:
     struct States {
       enum State {
-        Unk = -2,
-        CLRFCheck = -1,
-        Method,
         Uri,
-        Protocol,
-        VersionMajor,
-        VersionMinor,
-        Header,
-        HeaderKey,
-        HeaderValue,
-        HeaderEnd,
+        Headers,
         Body,
-        BodyChunked,
-        BodyChunkBytes,
+        BodyChunkSize,
         BodyChunkData,
-        BodyChunkEnd,
-        BodyEnd,
         Done
       };
       static std::string ToString(State state);
@@ -67,7 +56,6 @@ namespace HTTP {
 
     States::State getState() const;
     void setState(const States::State state);
-    void nextWithCRLF(int nextState = -1);
     void next();
     Headers& getHeaders();
     using Request::getHeaders;
@@ -84,7 +72,7 @@ namespace HTTP {
     void setBody(const std::string& body);
     void setBody(const ByteStream& body);
     void addToBody(const std::string& body);
-    void addToBody(const ByteStream& body);
+    void addToBody(const ByteStream& body, size_t size = -1);
     void setHeaders(const Headers& headers);
 
     friend std::ostream& operator<<(std::ostream& os, const PendingRequest& request);
@@ -94,32 +82,15 @@ namespace HTTP {
       return this->getHeaders().get<size_t>("Content-Length");
     }
 
-    inline void handlePacket(ByteStream& packet) {
+    inline void handlePacket(HTTPStream& packet) {
       this->cPacket = &packet;
     }
     inline bool isParsingBody() const {
       return this->state == States::Body || this->state == States::BodyChunkData;
     }
-    bool extract();
-    inline bool skip(uint32_t bytes = 1) {
-      if (this->peek() == EOF) return false;
-      this->ignore(bytes);
-      return true;
-    }
     inline void reset(bool clearChunkData = false) {
       this->storage.clear();
       if (clearChunkData) this->chunkData.clear();
-    }
-    inline int peek() const {
-      return this->cPacket->peek<int>();
-    }
-
-    inline int get() {
-      return this->cPacket->get<int>();
-    }
-
-    inline void ignore(uint64_t bytes = 1) {
-      this->cPacket->ignore(bytes);
     }
 
     template <typename T>
@@ -139,13 +110,12 @@ namespace HTTP {
 
     bool lastCheck();
   private:
-    States::State crlfNextState;
     States::State state;
     std::string storage;
     std::string buildingHeaderKey;
     size_t chunkSize;
     ByteStream chunkData;
-    ByteStream* cPacket;
+    HTTPStream* cPacket;
 
     PendingRequest();
     friend class WebSocket;

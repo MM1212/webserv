@@ -203,18 +203,17 @@ std::string Utils::expandPath(const std::string& path) {
 }
 
 std::string Utils::encodeURIComponent(const std::string& str) {
-  return str;
-  /*  std::string result;
-   for (size_t i = 0; i < str.size(); i++) {
-     if (std::isalnum(str[i]) || str[i] == '-' || str[i] == '_' || str[i] == '.' || str[i] == '~')
-       result += str[i];
-     else {
-       std::stringstream buf;
-       buf << '%' << std::hex << std::uppercase << (int)str[i];
-       result += buf.str();
-     }
-   }
-   return result; */
+  std::string result;
+  for (size_t i = 0; i < str.size(); i++) {
+    if (std::isalnum(str[i]) || str[i] == '-' || str[i] == '_' || str[i] == '.' || str[i] == '~')
+      result += str[i];
+    else {
+      std::stringstream buf;
+      buf << std::hex << (int)str[i];
+      result += '%' + buf.str();
+    }
+  }
+  return result;
 }
 
 std::string Utils::decodeURIComponent(const std::string& str) {

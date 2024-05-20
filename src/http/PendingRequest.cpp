@@ -6,21 +6,11 @@ using namespace HTTP;
 
 std::string PendingRequest::States::ToString(State state) {
   switch (state) {
-  case States::CLRFCheck: return "CLRFCheck";
-  case States::Method: return "Method";
   case States::Uri: return "Uri";
-  case States::Protocol: return "Protocol";
-  case States::VersionMajor: return "VersionMajor";
-  case States::VersionMinor: return "VersionMinor";
-  case States::Header: return "Header";
-  case States::HeaderKey: return "HeaderKey";
-  case States::HeaderValue: return "HeaderValue";
-  case States::HeaderEnd: return "HeaderEnd";
   case States::Body: return "Body";
-  case States::BodyChunked: return "BodyChunked";
-  case States::BodyChunkBytes: return "BodyChunkBytes";
+  case States::Headers: return "Headers";
+  case States::BodyChunkSize: return "BodyChunkSize";
   case States::BodyChunkData: return "BodyChunkData";
-  case States::BodyChunkEnd: return "BodyChunkEnd";
   case States::Done: return "Done";
   default:
     return "UNK" + Utils::toString(state);
@@ -32,8 +22,7 @@ PendingRequest::PendingRequest(
   Socket::Connection* client
 ) :
   Request(server, client, Methods::UNK, "", ByteStream(), "", Headers(), std::map<std::string, std::string>(), std::vector<File>()),
-  crlfNextState(States::Method),
-  state(States::Method),
+  state(States::Uri),
   buildingHeaderKey(""),
   chunkSize(0),
   chunkData() {}
@@ -43,7 +32,6 @@ PendingRequest::~PendingRequest() {}
 
 PendingRequest::PendingRequest(const PendingRequest& other) :
   Request(other),
-  crlfNextState(other.crlfNextState),
   state(other.state),
   storage(other.storage),
   buildingHeaderKey(other.buildingHeaderKey) {}
@@ -51,7 +39,6 @@ PendingRequest::PendingRequest(const PendingRequest& other) :
 PendingRequest& PendingRequest::operator=(const PendingRequest& other) {
   if (this == &other) return *this;
   this->Request::operator=(other);
-  this->crlfNextState = other.crlfNextState;
   this->state = other.state;
   this->storage = other.storage;
   this->buildingHeaderKey = other.buildingHeaderKey;
@@ -66,23 +53,8 @@ void PendingRequest::setState(const States::State state) {
   this->state = state;
 }
 
-void PendingRequest::nextWithCRLF(int nextState /* = -1 */) {
-  this->crlfNextState = static_cast<States::State>(this->state + 1);
-  if (nextState != -1)
-    this->crlfNextState = static_cast<States::State>(nextState);
-  Logger::debug
-    << "PendingRequest::crlfCheck(): "
-    << Logger::param(States::ToString(this->state))
-    << " -> "
-    << Logger::param(States::ToString(this->crlfNextState))
-    << std::newl;
-  this->state = States::CLRFCheck;
-}
-
 void PendingRequest::next() {
   States::State nextState = static_cast<States::State>(this->state + 1);
-  if (this->state == States::CLRFCheck)
-    nextState = this->crlfNextState;
   Logger::debug
     << "PendingRequest::next(): "
     << Logger::param(States::ToString(this->state))
@@ -101,7 +73,7 @@ void PendingRequest::setMethod(const Methods::Method method) {
 }
 
 void PendingRequest::setPath(const std::string& path) {
-  this->path = Utils::resolvePath(1, Utils::decodeURIComponent(path).c_str());
+  this->path = Utils::resolvePath(1, path.c_str());
 }
 
 PendingRequest::Protocol PendingRequest::getProtocol() const {
@@ -161,8 +133,11 @@ void PendingRequest::addToBody(const std::string& body) {
   this->body.put(body);
 }
 
-void PendingRequest::addToBody(const ByteStream& body) {
-  this->body.put(body);
+void PendingRequest::addToBody(const ByteStream& body, size_t size) {
+  if (size == static_cast<size_t>(-1))
+    this->body.put(body);
+  else
+    this->body.put(body, size);
 }
 
 void PendingRequest::setHeaders(const Headers& headers) {
@@ -188,20 +163,6 @@ std::ostream& HTTP::operator<<(std::ostream& os, const PendingRequest& req) {
   return os;
 }
 
-bool PendingRequest::extract() {
-  if (this->peek() == EOF) return false;
-  if (this->isParsingBody()) {
-    uint64_t bytesToRead = (this->getState() == States::Body ? this->getContentLength() : this->chunkSize) - this->chunkData.size();
-    if (bytesToRead > this->cPacket->size()) bytesToRead = this->cPacket->size();
-    ByteStream tmp;
-    this->cPacket->take(tmp, bytesToRead);
-    this->chunkData.put(tmp);
-  }
-  else
-    this->storage += static_cast<char>(this->get());
-  return true;
-}
-
 bool PendingRequest::lastCheck() {
   switch (this->getState()) {
   case States::Done:
@@ -213,8 +174,7 @@ bool PendingRequest::lastCheck() {
       return true;
     }
     return false;
-  case States::BodyChunkBytes:
-  case States::BodyChunked:
+  case States::BodyChunkSize:
   case States::BodyChunkData:
     return this->chunkSize == 0;
   default:

@@ -374,10 +374,10 @@ void Parallel::_onClientRead(Connection& client) {
   Logger::debug
     << "got " << Logger::param(read) << " bytes from "
     << Logger::param(static_cast<std::string>(client))
-    << std::newl;
-  // << "---" << std::newl
-  // << Logger::param(ss.str()) << std::newl
-  // << "---" << std::newl;
+    << std::newl
+    << "---" << std::newl
+    << Logger::param(readBuffer.toString()) << std::newl
+    << "---" << std::newl;
   client.ping();
   this->onClientRead(client);
 }
