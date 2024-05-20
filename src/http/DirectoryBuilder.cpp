@@ -144,7 +144,7 @@ std::string DirectoryBuilder::build(const std::string& path, const Routing::Stat
       (fileName.find(".") == 0 && route.ignoreHiddenFiles()))
       continue;
     const std::string filePath(Utils::resolvePath(2, path.c_str(), ent->d_name));
-    const std::string urlPath(Utils::resolvePath(2, ".", ent->d_name));
+    const std::string urlPath(Utils::resolvePath(1, Utils::encodeURIComponent(ent->d_name).c_str()));
     Entry entry(filePath, urlPath);
     listing += entry;
   }

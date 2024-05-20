@@ -108,18 +108,18 @@ void Request::parseParams() {
         this->params[pair[0]] = pair[1];
     }
   }
-  {
-    const Headers& headers = this->getHeaders();
-    if (!headers.has("Content-Type") || headers.get<std::string>("Content-Type") != "application/x-www-form-urlencoded")
-      return;
+  const Headers& headers = this->getHeaders();
+  if (headers.has("Content-Type") && headers.get<std::string>("Content-Type") == "application/x-www-form-urlencoded") {    
     std::vector<std::string> pairs = Utils::split(this->getBody(), "&");
     for (std::vector<std::string>::iterator it = pairs.begin(); it != pairs.end(); it++) {
       std::vector<std::string> pair = Utils::split(*it, "=");
       if (pair.size() == 2)
         this->params[pair[0]] = pair[1];
     }
-    // this->body.clear();
   }
+  Logger::debug << "Request::parseParams" << "pre-path: " << this->path << std::endl;
+  this->path = Utils::resolvePath(1, Utils::decodeURIComponent(this->path).c_str());
+  Logger::debug << "Request::parseParams" << "post-path: " << this->path << std::endl;
 }
 
 std::ostream& HTTP::operator<<(std::ostream& os, const Request& req) {

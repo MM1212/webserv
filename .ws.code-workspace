@@ -68,7 +68,8 @@
       "map": "cpp",
       "unordered_set": "cpp",
       "set": "cpp",
-      "csignal": "cpp"
+      "csignal": "cpp",
+      "span": "cpp"
     }
   },
   "launch": {
