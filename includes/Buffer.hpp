@@ -8,6 +8,7 @@
 #include <sstream>
 #include <vector>
 #include <stdint.h>
+#include <cstring>
 
 template <typename T>
 class Buffer {
@@ -96,8 +97,7 @@ public:
     if (bytes == 0) return;
     value.clear();
     value.resize(bytes);
-    for (uint64_t i = 0; i < bytes; ++i)
-      value[i] = this->at(i);
+    std::memmove(value.data(), value.data() + bytes, value.size() - bytes);
     this->ignore(bytes);
   }
 
