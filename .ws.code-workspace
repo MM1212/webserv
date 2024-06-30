@@ -6,6 +6,10 @@
   ],
   "settings": {
     "C_Cpp.formatting": "vcFormat",
+    "C_Cpp.vcFormat.indent.caseLabels": true,
+    "C_Cpp.vcFormat.indent.lambdaBracesWhenParameter": false,
+    "files.trimTrailingWhitespace": true,
+    "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": true,
     "files.associations": {
       ".env.production": "dotenv",
       "array": "cpp",
@@ -69,7 +73,8 @@
       "unordered_set": "cpp",
       "set": "cpp",
       "csignal": "cpp",
-      "span": "cpp"
+      "span": "cpp",
+      "lglm.cpp": "c"
     }
   },
   "launch": {

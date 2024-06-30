@@ -15,7 +15,6 @@
 #include <sstream>
 #include <stack>
 #include <stdint.h>
-#include <shared.hpp>
 #include <typeinfo>
 
 namespace YAML {
