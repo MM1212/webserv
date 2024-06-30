@@ -122,8 +122,21 @@ const std::string& Response::getStatusMessage() const {
   return statusMessage;
 }
 
-Response::operator std::string() {
-  return this->toString<std::string>();
+std::string Response::toString() const {
+  std::stringstream ss;
+  ss << this->getHeader()
+    << "\r\n";
+  if (this->body.size() > 0 && this->req->getMethod() != Methods::HEAD)
+    ss << this->body.toString();
+  return ss.str();
+}
+ByteStream Response::toByteStream() const {
+  ByteStream ss;
+  ss.put(this->getHeader());
+  ss.put("\r\n");
+  if (this->body.size() > 0 && this->req->getMethod() != Methods::HEAD)
+    ss.put(this->body);
+  return ss;
 }
 
 std::string Response::getHeader() const {
@@ -158,7 +171,7 @@ void Response::send() {
     }
   }
   this->_preSend();
-  const ByteStream resp = this->toString<ByteStream>();
+  const ByteStream resp = this->toByteStream();
   Socket::Connection& client = const_cast<Request*>(this->req)->getClient();
   Logger::info
     << "Sending response to: " << Logger::param(client) << std::newl

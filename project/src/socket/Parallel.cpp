@@ -63,7 +63,7 @@ const Socket::Server& Parallel::bind(
     throw std::runtime_error("Failed to add socket to file manager");
   Server server(sock, host.address, host.port, backlog);
   ;
-  this->addressesToSock.insert(std::make_pair<std::string, int>(host, sock));
+  this->addressesToSock.emplace(static_cast<std::string>(host), sock);
   const Server& ref = this->servers.insert(std::make_pair(sock, server)).first->second;
   return ref;
 }
@@ -285,6 +285,10 @@ void Parallel::onTick(const std::vector<File>& changed) {
       //   << "isAlive: " << std::boolalpha << client.isAlive() << " | "
       //   << "hasTimedOut: " << std::boolalpha << client.hasTimedOut() << std::newl;
       this->_onClientDisconnect(client);
+      if (this->clients.size() == 0)
+        break;
+      else
+        it = this->clients.begin();
     }
   }
   for (

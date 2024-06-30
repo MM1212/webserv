@@ -64,18 +64,21 @@ namespace HTTP {
 
     template <typename T>
     T getParam(const std::string& key) const {
+      if constexpr (std::is_same_v<T, std::string>)
+        return this->_getParamString(key);
+      else if constexpr (std::is_same_v<T, bool>)
+        return this->_getParamBool(key);
       T value;
       if (!std::istringstream(this->params.at(key)) >> value)
         throw std::runtime_error("Could not convert key " + key);
       return value;
     }
-    template <>
-    std::string getParam<std::string>(const std::string& key) const {
+  private:
+    std::string _getParamString(const std::string& key) const {
       return this->params.at(key);
     }
 
-    template <>
-    bool getParam<bool>(const std::string& key) const {
+    bool _getParamBool(const std::string& key) const {
       bool value;
       std::istringstream ss(this->params.at(key));
       ss >> std::boolalpha >> value;
@@ -83,7 +86,7 @@ namespace HTTP {
         throw std::runtime_error("Could not convert key " + key);
       return value;
     }
-
+  public:
     const std::map<std::string, std::string>& getParams() const;
     const std::string getQuery() const;
     inline const std::vector<File>& getFiles() const {

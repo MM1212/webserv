@@ -3,6 +3,9 @@ project "lua"
   language "C++"
   kind "StaticLib"
 
+  targetdir (PROJECT_VENDOR_DIR)
+	objdir (PROJECT_OBJ_DIR)
+
   if os.istarget('windows') then
     flags { "LinkTimeOptimization" }
 
@@ -25,18 +28,18 @@ project "lua"
     'LUA_C99_MATHLIB', -- Include c99 math functions in lmathlib
     -- disabled (worse yield performance)
     --'LUA_CPP_EXCEPTIONS', -- @EXPERIMENT: unprotected calls are wrapped in typed C++ exceptions
-    'GRIT_POWER_COMPOUND', -- Add compound operators
-    'GRIT_POWER_INTABLE', -- Support for unpacking named values from tables using the 'in' keyword
-    'GRIT_POWER_TABINIT', -- Syntactic sugar to improve the syntax for specifying sets
-    'GRIT_POWER_SAFENAV', -- An indexing operation that suppresses errors on accesses into undefined table
-    'GRIT_POWER_CCOMMENT', -- Support for C-style block comments
-    'GRIT_POWER_DEFER_OLD', -- Import func2close from ltests.h into the base library as _G.defer
-    'GRIT_POWER_JOAAT', -- Enable compile time Jenkins' one-at-a-time hashing
-    'GRIT_POWER_EACH', -- __iter metamethod support; see documentation
-    'GRIT_POWER_WOW', -- Expose lua_createtable and other compatibility functions common in other custom runtimes
-    'GRIT_POWER_CHRONO', -- Enable nanosecond resolution timers and x86 rdtsc sampling in loslib.c
-    'GRIT_COMPAT_IPAIRS', -- Reintroduce compatibility for the __ipairs metamethod
-    'GRIT_POWER_BLOB', -- Enable an API to create non-internalized contiguous byte sequences
+    --'GRIT_POWER_COMPOUND', -- Add compound operators
+    --'GRIT_POWER_INTABLE', -- Support for unpacking named values from tables using the 'in' keyword
+    --'GRIT_POWER_TABINIT', -- Syntactic sugar to improve the syntax for specifying sets
+    --'GRIT_POWER_SAFENAV', -- An indexing operation that suppresses errors on accesses into undefined table
+    --'GRIT_POWER_CCOMMENT', -- Support for C-style block comments
+    --'GRIT_POWER_DEFER_OLD', -- Import func2close from ltests.h into the base library as _G.defer
+    --'GRIT_POWER_JOAAT', -- Enable compile time Jenkins' one-at-a-time hashing
+    --'GRIT_POWER_EACH', -- __iter metamethod support; see documentation
+    --'GRIT_POWER_WOW', -- Expose lua_createtable and other compatibility functions common in other custom runtimes
+    --'GRIT_POWER_CHRONO', -- Enable nanosecond resolution timers and x86 rdtsc sampling in loslib.c
+    --'GRIT_COMPAT_IPAIRS', -- Reintroduce compatibility for the __ipairs metamethod
+    --'GRIT_POWER_BLOB', -- Enable an API to create non-internalized contiguous byte sequences
 
   }
 

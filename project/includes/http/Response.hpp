@@ -45,41 +45,23 @@ namespace HTTP {
     inline const Route* getRoute() const { return this->route; }
     inline const Request& getRequest() const { return *this->req; }
 
-    operator std::string();
-    template <typename T>
-    T toString() const;
-    template <>
-    std::string toString() const {
-      std::stringstream ss;
-      ss << this->getHeader()
-        << "\r\n";
-      if (this->body.size() > 0 && this->req->getMethod() != Methods::HEAD)
-        ss << this->body.toString();
-      return ss.str();
+    explicit operator std::string() const {
+      return this->toString();
     }
-    template <>
-    ByteStream toString() const {
-      ByteStream ss;
-      ss.put(this->getHeader());
-      ss.put("\r\n");
-      if (this->body.size() > 0 && this->req->getMethod() != Methods::HEAD)
-        ss.put(this->body);
-      return ss;
+    explicit operator ByteStream() const {
+      return this->toByteStream();
     }
+    std::string toString() const;
+    ByteStream toByteStream() const;
     void send();
     template <typename T>
     void send(const T& body) {
-      this->setBody(Utils::toString(body));
-      this->send();
-    }
-    template <>
-    void send(const std::string& body) {
-      this->setBody(body);
-      this->send();
-    }
-    template <>
-    void send(const ByteStream& body) {
-      this->setBody(body);
+      if constexpr (std::is_same_v<T, std::string>)
+        this->setBody(body);
+      else if constexpr (std::is_same_v<T, ByteStream>)
+        this->setBody(body);
+      else
+        this->setBody(Utils::toString(body));
       this->send();
     }
     void sendHeader();

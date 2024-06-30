@@ -4,10 +4,11 @@
       "name": "Linux",
       "includePath": [
         "${workspaceFolder}/project/includes",
+        "${workspaceFolder}/vendor/lua",
         "/usr/include"
       ],
       "defines": [],
-      "cppStandard": "c++98",
+      "cppStandard": "c++20",
       "intelliSenseMode": "linux-clang-x64"
     }
   ],

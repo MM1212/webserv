@@ -1,5 +1,5 @@
 project "Webserv"
-  kind "StaticLib"
+  kind "ConsoleApp"
   language "C++"
   cppdialect "C++20"
   staticruntime "on"
@@ -10,6 +10,7 @@ project "Webserv"
   files {
     "includes/**.h",
     "includes/**.hpp",
+    "src/Settings.cpp",
     "src/**.cpp"
   }
 

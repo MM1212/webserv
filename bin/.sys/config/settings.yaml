@@ -4,7 +4,7 @@ socket:
   max_connections: 64
   # in milliseconds
   keep_alive_timeout: 60000
-  #! DEPRECATED, AT -1 BREAKS CGI TIMEOUT  
+  #! DEPRECATED, AT -1 BREAKS CGI TIMEOUT
   # in milliseconds
   poll_timeout: 1000
   # in bytes
@@ -148,6 +148,6 @@ misc:
   #   1: info
   #   2: warning
   #   3: error
-  log_level: 0
+  log_level: 1
   name: 'webserv/1.0'
   default_config_file: bin/showcase/simple.yaml

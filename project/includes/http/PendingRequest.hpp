@@ -89,29 +89,12 @@ namespace HTTP {
       return this->state == States::Body || this->state == States::BodyChunkData;
     }
     inline void reset(bool clearChunkData = false) {
-      this->storage.clear();
       if (clearChunkData) this->chunkData.clear();
-    }
-
-    template <typename T>
-    inline T takeFromStorage() {
-      std::stringstream ss(this->storage);
-      T tmp;
-      ss >> tmp;
-      this->storage.clear();
-      return tmp;
-    }
-    template <>
-    inline std::string takeFromStorage<std::string>() {
-      std::string tmp = this->storage;
-      this->storage.clear();
-      return tmp;
     }
 
     bool lastCheck();
   private:
     States::State state;
-    std::string storage;
     std::string buildingHeaderKey;
     size_t chunkSize;
     ByteStream chunkData;

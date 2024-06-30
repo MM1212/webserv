@@ -49,6 +49,10 @@ public:
 
   template <typename U>
   U peek() const {
+    if constexpr (std::is_same_v<U, std::string>)
+      return this->peekString();
+    else if constexpr (std::is_same_v<U, int>)
+      return this->_peekInt();
     std::stringstream ss;
     for (uint64_t i = 0; i < sizeof(U); ++i)
       ss << this->buffer[i];
@@ -56,39 +60,42 @@ public:
     ss >> value;
     return value;
   }
-  template<>
-  int peek<int>() const {
+private:
+  int _peekInt() const {
     if (this->empty()) return -1;
     return static_cast<int>(this->buffer[0]);
   }
 
-  template<>
-  std::string peek<std::string>() const {
+  std::string peekString() const {
     std::stringstream ss;
     for (uint64_t i = 0; i < this->buffer.size(); ++i)
       ss << this->buffer[i];
     return ss.str();
   }
-
+public:
   template <typename U>
   U get() {
+    if constexpr (std::is_same_v<U, T>)
+      return this->_getType();
+    else if constexpr (std::is_same_v<U, int>)
+      return this->_getInt();
     const U value = this->peek<U>();
     this->buffer.erase(this->buffer.begin());
     return value;
   }
-  template <>
-  T get() {
+private:
+  T _getType() {
     const T& value = this->peek();
     this->buffer.erase(this->buffer.begin());
     return value;
   }
-  template <>
-  int get() {
+  int _getInt() {
     if (this->empty()) return -1;
     const int value = this->peek();
     this->buffer.erase(this->buffer.begin());
     return value;
   }
+public:
   inline void ignore(uint64_t bytes = 1) {
     if (bytes == 0) return;
     this->buffer.erase(this->buffer.begin(), this->buffer.begin() + std::min(bytes, this->size()));
@@ -103,6 +110,10 @@ public:
 
   template <typename U>
   U take() {
+    if constexpr (std::is_same_v<U, std::string>)
+      return this->_takeString();
+    else if constexpr (std::is_same_v<U, int>)
+      return this->_takeInt();
     std::stringstream ss;
     for (uint64_t i = 0; i < sizeof(U); ++i)
       ss << this->get<uint8_t>();
@@ -111,13 +122,12 @@ public:
     return value;
   }
 
-  template<>
-  int take() {
+private:
+  int _takeInt() {
     return this->get<int>();
   }
 
-  template<>
-  std::string take() {
+  std::string _takeString() {
     std::string value;
     value.resize(this->size() + 1);
     for (uint64_t i = 0; i < this->size(); ++i)
@@ -125,7 +135,7 @@ public:
     value[this->size()] = '\0';
     return value;
   }
-
+public:
   std::string toString() const {
     return this->peek<std::string>();
   }

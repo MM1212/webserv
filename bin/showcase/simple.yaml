@@ -10,4 +10,11 @@ servers:
             settings:
               root: ~
               directory_listing: true
-          
+      - uri: /script
+        settings:
+          methods: [GET, HEAD]
+        modules:
+          - type: script
+            settings:
+              path: bin/showcase/simple.script.lua
+

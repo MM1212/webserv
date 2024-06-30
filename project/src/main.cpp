@@ -4,6 +4,7 @@
 #include <utils/misc.hpp>
 #include <Settings.hpp>
 #include <http/ServerManager.hpp>
+#include <lua.hpp>
 
 static Settings* settings = Instance::Get<Settings>();
 

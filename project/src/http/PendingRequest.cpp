@@ -33,14 +33,12 @@ PendingRequest::~PendingRequest() {}
 PendingRequest::PendingRequest(const PendingRequest& other) :
   Request(other),
   state(other.state),
-  storage(other.storage),
   buildingHeaderKey(other.buildingHeaderKey) {}
 
 PendingRequest& PendingRequest::operator=(const PendingRequest& other) {
   if (this == &other) return *this;
   this->Request::operator=(other);
   this->state = other.state;
-  this->storage = other.storage;
   this->buildingHeaderKey = other.buildingHeaderKey;
   return *this;
 }

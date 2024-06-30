@@ -7,6 +7,7 @@ std::string Types::ToString(Type type) {
   case Static: return "Static";
   case Redirect: return "Redirect";
   case CGI: return "CGI";
+  case Script: return "Script";
   case Default: return "Default";
   default: return "Unknown";
   }
@@ -17,6 +18,7 @@ Types::Type Types::FromString(const std::string& type) {
   if (type == "redirect") return Redirect;
   if (type == "cgi") return CGI;
   if (type == "default") return Default;
+  if (type == "script") return Script;
   return None;
 }
 

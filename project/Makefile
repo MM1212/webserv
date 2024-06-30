@@ -23,7 +23,7 @@ INCLUDES += -Iincludes -I../vendor/lua
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
+LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
@@ -33,24 +33,24 @@ endef
 
 ifeq ($(config),debug)
 TARGETDIR = ../bin/Debug-linux-x86_64/Webserv
-TARGET = $(TARGETDIR)/libWebserv.a
+TARGET = $(TARGETDIR)/Webserv
 OBJDIR = ../objs/Debug-linux-x86_64/Webserv
 DEFINES += -D_LINUX -D_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fPIC -g -gdwarf-2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -fPIC -g -std=c++20 -gdwarf-2
-LIBS += ../vendor/scripts/bin/Debug/liblua.a
-LDDEPS += ../vendor/scripts/bin/Debug/liblua.a
+LIBS += ../bin/Debug-linux-x86_64/vendor/lua/liblua.a
+LDDEPS += ../bin/Debug-linux-x86_64/vendor/lua/liblua.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -m64
 
 else ifeq ($(config),release)
 TARGETDIR = ../bin/Release-linux-x86_64/Webserv
-TARGET = $(TARGETDIR)/libWebserv.a
+TARGET = $(TARGETDIR)/Webserv
 OBJDIR = ../objs/Release-linux-x86_64/Webserv
 DEFINES += -D_LINUX -D_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -fPIC
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -fPIC -std=c++20
-LIBS += ../vendor/scripts/bin/Release/liblua.a
-LDDEPS += ../vendor/scripts/bin/Release/liblua.a
+LIBS += ../bin/Release-linux-x86_64/vendor/lua/liblua.a
+LDDEPS += ../bin/Release-linux-x86_64/vendor/lua/liblua.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -m64 -s
 
 endif
@@ -83,6 +83,7 @@ GENERATED += $(OBJDIR)/Redirect.o
 GENERATED += $(OBJDIR)/Request.o
 GENERATED += $(OBJDIR)/Response.o
 GENERATED += $(OBJDIR)/Route.o
+GENERATED += $(OBJDIR)/Scripting.o
 GENERATED += $(OBJDIR)/ServerConfiguration.o
 GENERATED += $(OBJDIR)/ServerManager.o
 GENERATED += $(OBJDIR)/Settings.o
@@ -113,6 +114,7 @@ OBJECTS += $(OBJDIR)/Redirect.o
 OBJECTS += $(OBJDIR)/Request.o
 OBJECTS += $(OBJDIR)/Response.o
 OBJECTS += $(OBJDIR)/Route.o
+OBJECTS += $(OBJDIR)/Scripting.o
 OBJECTS += $(OBJDIR)/ServerConfiguration.o
 OBJECTS += $(OBJDIR)/ServerManager.o
 OBJECTS += $(OBJDIR)/Settings.o
@@ -243,6 +245,9 @@ $(OBJDIR)/Interpreter.o: src/http/routing/modules/CGI/Interpreter.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Redirect.o: src/http/routing/modules/Redirect.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Scripting.o: src/http/routing/modules/Scripting.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Static.o: src/http/routing/modules/Static.cpp

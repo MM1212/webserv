@@ -12,7 +12,8 @@ namespace HTTP {
         Default,
         Static,
         Redirect,
-        CGI
+        CGI,
+        Script,
       };
       static std::string ToString(Type type);
       static Type FromString(const std::string& type);

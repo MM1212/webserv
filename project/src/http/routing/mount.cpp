@@ -9,9 +9,10 @@ Module* Module::Create(const std::string& type, const Route& route, const YAML::
 
 Module* Module::Create(const Types::Type type, const Route& route, const YAML::Node& node) {
   switch (type) {
-  case Types::Static: return new Static(route, node);
-  case Types::Redirect: return new Redirect(route, node);
+    case Types::Static: return new Static(route, node);
+    case Types::Redirect: return new Redirect(route, node);
     case Types::CGI: return new CGI(route, node);
-  default: return nullptr;
+    case Types::Script: return new Script(route, node);
+    default: return nullptr;
   }
 }

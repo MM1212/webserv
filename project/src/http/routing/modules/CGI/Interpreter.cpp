@@ -6,7 +6,6 @@
 
 using namespace HTTP::Routing;
 
-static HTTP::ServerManager* serverManager = Instance::Get<HTTP::ServerManager>();
 
 CGI::Interpreter::Interpreter(const YAML::Node& node) : node(node) {
   this->init();
@@ -96,6 +95,7 @@ bool CGI::Interpreter::run(const std::string& filePath, const Request& req, Resp
   if (pid != 0) {
     close(stdinput[0]);
     close(stdoutput[1]);
+    static HTTP::ServerManager* serverManager = Instance::Get<HTTP::ServerManager>();
     serverManager->trackCGIResponse(pid, std, res);
   }
   else {

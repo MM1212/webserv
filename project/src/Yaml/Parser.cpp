@@ -41,7 +41,7 @@ Parser::Parser(const std::string& path)
 Parser::Parser(const std::stringstream& stream)
   : root("__root__"), current(&this->root) {
   this->root.indent = -1;
-  this->doc << stream;
+  this->doc << stream.rdbuf();
 }
 
 void Parser::skipWhitespace() {

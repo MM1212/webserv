@@ -16,6 +16,7 @@
 #include <stack>
 #include <stdint.h>
 #include <typeinfo>
+#include <string_view>
 
 namespace YAML {
   class Node;
@@ -63,11 +64,9 @@ namespace YAML {
       else
         this->value = ss.str();
     }
-    template <>
     Node(const std::string& key, const Sequence& sequence)
       : key(key), sequence(sequence),
       type(Types::Sequence), indent(0) {}
-    template <>
     Node(const std::string& key, const Map& map)
       : key(key), map(map),
       type(Types::Map), indent(0) {}
@@ -115,40 +114,34 @@ namespace YAML {
 
     template <typename T>
     T as() const {
-      T value;
-      std::stringstream ss(this->value);
-      ss >> value;
-      if (ss.fail())
-        throw std::runtime_error("Failed to convert " + this->value + " to " + typeid(T).name());
-      return value;
-    }
-
-    template <>
-    std::string as<std::string>() const {
-      return this->value;
-    }
-
-    template <>
-    Node as<Node>() const {
-      return *this;
-    }
-
-    template <>
-    bool as<bool>() const {
-      if (this->value == "true")
-        return true;
-      else if (this->value == "false")
-        return false;
-      else if (this->as<int>() != 0)
-        return true;
-      else if (this->as<double>() != 0.0)
-        return true;
-      else if (this->as<int>() == 0)
-        return false;
-      else if (this->as<double>() == 0.0)
-        return false;
-      else
-        throw std::runtime_error("Expected a boolean, got: " + this->value);
+      if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view>)
+        return this->value;
+      else if constexpr (std::is_same_v<T, bool>) {
+        if (this->value == "true")
+          return true;
+        else if (this->value == "false")
+          return false;
+        else if (this->as<int>() != 0)
+          return true;
+        else if (this->as<double>() != 0.0)
+          return true;
+        else if (this->as<int>() == 0)
+          return false;
+        else if (this->as<double>() == 0.0)
+          return false;
+        else
+          throw std::runtime_error("Expected a boolean, got: " + this->value);
+      }
+      else if constexpr (std::is_same_v<T, Node>)
+        return *this;
+      else {
+        T value;
+        std::stringstream ss(this->value);
+        ss >> value;
+        if (ss.fail())
+          throw std::runtime_error("Failed to convert " + this->value + " to " + typeid(T).name());
+        return value;
+      }
     }
 
     template <Types::Type T>
@@ -157,18 +150,15 @@ namespace YAML {
     inline bool is() const {
       if (!this->is<Types::Scalar>())
         return false;
+      if constexpr (std::is_same_v<T, bool>) {
+        bool value;
+        std::stringstream ss(this->value);
+        ss >> std::boolalpha >> value;
+        return !ss.fail();
+      }
       T value;
       std::stringstream ss(this->value);
       ss >> value;
-      return !ss.fail();
-    }
-    template <>
-    inline bool is<bool>() const {
-      if (!this->is<Types::Scalar>())
-        return false;
-      bool value;
-      std::stringstream ss(this->value);
-      ss >> std::boolalpha >> value;
       return !ss.fail();
     }
     inline bool isValid() const { return this->type != Types::Undefined; };
@@ -185,7 +175,6 @@ namespace YAML {
       return *this;
     }
 
-    template <>
     Node& operator=(const Node& other) {
       if (this == &other) return *this;
       this->key = other.key;
@@ -198,7 +187,6 @@ namespace YAML {
       return *this;
     }
 
-    template <>
     Node& operator=(const Map& other) {
       if (!this->is<Types::Map>())
         throw std::runtime_error("Node is not a map");
@@ -206,7 +194,6 @@ namespace YAML {
       return *this;
     }
 
-    template <>
     Node& operator=(const Sequence& other) {
       if (!this->is<Types::Sequence>())
         throw std::runtime_error("Node is not a sequence");
@@ -215,87 +202,83 @@ namespace YAML {
     }
 
     template <typename T>
-    inline typename T::iterator begin();
+    inline typename T::iterator begin() {
+      if constexpr (std::is_same_v<T, Map>) {
+        if (!this->is<Types::Map>())
+          throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+        return this->map.begin();
+      }
+      if constexpr (std::is_same_v<T, Sequence>) {
+        if (!this->is<Types::Sequence>())
+          throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+        return this->sequence.begin();
+      }
+    }
     template <typename T>
-    inline typename T::const_iterator begin() const;
+    inline typename T::const_iterator begin() const {
+      if constexpr (std::is_same_v<T, Map>) {
+        if (!this->is<Types::Map>())
+          throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+        return this->map.begin();
+      }
+      if constexpr (std::is_same_v<T, Sequence>) {
+        if (!this->is<Types::Sequence>())
+          throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+        return this->sequence.begin();
+      }
+    }
     template <typename T>
-    inline typename T::iterator end();
+    inline typename T::iterator end() {
+      if constexpr (std::is_same_v<T, Map>) {
+        if (!this->is<Types::Map>())
+          throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+        return this->map.end();
+      }
+      if constexpr (std::is_same_v<T, Sequence>) {
+        if (!this->is<Types::Sequence>())
+          throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+        return this->sequence.end();
+      }
+    }
     template <typename T>
-    inline typename T::const_iterator end() const;
-
-    template <>
-    inline Map::const_iterator begin<Map>() const {
-      if (!this->is<Types::Map>())
-        throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
-      return this->map.begin();
-    }
-    template <>
-    inline Sequence::const_iterator begin<Sequence>() const {
-      if (!this->is<Types::Sequence>())
-        throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
-      return this->sequence.begin();
-    }
-    template <>
-    inline Map::iterator begin<Map>() {
-      if (!this->is<Types::Map>())
-        throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
-      return this->map.begin();
-    }
-    template <>
-    inline Sequence::iterator begin<Sequence>() {
-      if (!this->is<Types::Sequence>())
-        throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
-      return this->sequence.begin();
-    }
-
-    template <>
-    inline Map::const_iterator end<Map>() const {
-      if (!this->is<Types::Map>())
-        throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
-      return this->map.end();
-    }
-    template <>
-    inline Sequence::const_iterator end<Sequence>() const {
-      if (!this->is<Types::Sequence>())
-        throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
-      return this->sequence.end();
-    }
-    template <>
-    inline Map::iterator end<Map>() {
-      if (!this->is<Types::Map>())
-        throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
-      return this->map.end();
-    }
-    template <>
-    inline Sequence::iterator end<Sequence>() {
-      if (!this->is<Types::Sequence>())
-        throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
-      return this->sequence.end();
+    inline typename T::const_iterator end() const {
+      if constexpr (std::is_same_v<T, Map>) {
+        if (!this->is<Types::Map>())
+          throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+        return this->map.end();
+      }
+      if constexpr (std::is_same_v<T, Sequence>) {
+        if (!this->is<Types::Sequence>())
+          throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+        return this->sequence.end();
+      }
     }
 
     template <typename T>
-    inline Node& last();
+    inline Node& last() {
+      if constexpr (std::is_same_v<T, Map>) {
+        if (!this->is<Types::Map>())
+          throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+        return this->map.rbegin()->second;
+      }
+      if constexpr (std::is_same_v<T, Sequence>) {
+        if (!this->is<Types::Sequence>())
+          throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+        return *this->sequence.rbegin();
+      }
+    }
     template <typename T>
-    inline const Node& last() const;
-
-    template <>
-    inline const Node& last<Map>() const {
-      return this->map.rbegin()->second;
-    }
-
-    template <>
-    inline const Node& last<Sequence>() const {
-      return *this->sequence.rbegin();
-    }
-
-    template <>
-    inline Node& last<Map>() {
-      return this->map.rbegin()->second;
-    }
-
-    template <>
-    inline Node& last<Sequence>() {
-      return *this->sequence.rbegin();
+    inline const Node& last() const {
+      if constexpr (std::is_same_v<T, Map>) {
+        if (!this->is<Types::Map>())
+          throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+        return this->map.rbegin()->second;
+      }
+      if constexpr (std::is_same_v<T, Sequence>) {
+        if (!this->is<Types::Sequence>())
+          throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+        return *this->sequence.rbegin();
+      }
     }
 
     inline bool has(const std::string& key) const {
@@ -314,18 +297,30 @@ namespace YAML {
     void remove(const std::string& key);
     void remove(size_t idx);
     template <typename T>
-    void remove(typename T::iterator it);
-    template <typename T>
-    void remove(typename T::const_iterator it);
-
-    template <>
-    void remove<Map>(Map::iterator it) {
-      this->map.erase(it);
+    void remove(typename T::iterator it) {
+      if constexpr (std::is_same_v<T, Map>) {
+        if (!this->is<Types::Map>())
+          throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+        this->map.erase(it);
+      }
+      else if constexpr (std::is_same_v<T, Sequence>) {
+        if (!this->is<Types::Sequence>())
+          throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+        this->sequence.erase(it);
+      }
     }
-
-    template <>
-    void remove<Sequence>(Sequence::iterator it) {
-      this->sequence.erase(it);
+    template <typename T>
+    void remove(typename T::const_iterator it) {
+      if constexpr (std::is_same_v<T, Map>) {
+        if (!this->is<Types::Map>())
+          throw std::runtime_error("Expected a Map, got: " + Types::GetLabel(this->type));
+        this->map.erase(it);
+      }
+      else if constexpr (std::is_same_v<T, Sequence>) {
+        if (!this->is<Types::Sequence>())
+          throw std::runtime_error("Expected a Sequence, got: " + Types::GetLabel(this->type));
+        this->sequence.erase(it);
+      }
     }
 
     std::string expand(uint32_t indent = 0) const;
