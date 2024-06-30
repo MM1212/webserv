@@ -1,4 +1,0 @@
-[submodule "vendor/lua"]
-	path = vendor/lua
-	url = git@github.com:citizenfx/lua.git
-	branch = luaglm-dev/cfx
